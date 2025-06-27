@@ -1,5 +1,6 @@
 [package]
 name = "luct-core"
+description = "Core types and parsers for certificate transparency"
 edition = { workspace = true }
 authors = { workspace = true }
 version = { workspace = true }

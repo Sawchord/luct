@@ -1,5 +1,6 @@
 [package]
 name = "luct-client"
+description = "Client library to fetch and validate certificate transparency logs"
 edition = { workspace = true }
 authors = { workspace = true }
 version = { workspace = true }

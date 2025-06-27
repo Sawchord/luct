@@ -1,5 +1,6 @@
 [package]
 name = "luct-server"
+description = "Server implementing a certificate transparency log"
 edition = { workspace = true }
 authors = { workspace = true }
 version = { workspace = true }

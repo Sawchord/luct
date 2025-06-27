@@ -1,5 +1,6 @@
 [package]
 name = "luct-scanner"
+description = "Tool to provide additional checks on TLS certificates"
 edition = { workspace = true }
 authors = { workspace = true }
 version = { workspace = true }
