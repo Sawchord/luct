@@ -1,0 +1,15 @@
+[workspace]
+
+members = ["luct-client", "luct-core", "luct-server", "luct-scanner"]
+
+resolver = "2"
+
+[workspace.package]
+authors = ["Leon Tan"]
+edition = "2024"
+version = "0.0.0"
+readme = "./README.md"
+publish = false
+categories = []
+keywords = ["Certificate transparency"]
+license = "MIT OR Apache-2.0"
