@@ -11,5 +11,5 @@ version = "0.0.0"
 readme = "./README.md"
 publish = true
 categories = []
-keywords = ["Certificate transparency"]
+keywords = []
 license = "MIT OR Apache-2.0"
