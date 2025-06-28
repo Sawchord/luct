@@ -3,7 +3,10 @@ use crate::utils::{
     vec::CodecVec,
 };
 use digest::DynDigest;
-use p256::ecdsa::{Signature as EcdsaSignature, VerifyingKey, signature::Verifier};
+use p256::{
+    ecdsa::{Signature as EcdsaSignature, VerifyingKey, signature::Verifier},
+    pkcs8::DecodePublicKey,
+};
 use sha2::{Digest, Sha224, Sha256, Sha384, Sha512};
 use std::{
     fmt::Display,
@@ -78,9 +81,9 @@ impl<T: Encode> Signature<T> {
 
         match &self.algorithm.signature {
             SignatureAlgorithm::Ecdsa => {
-                dbg!(&key);
-                let verifying_key = VerifyingKey::from_sec1_bytes(key)
+                let verifying_key = VerifyingKey::from_public_key_der(key)
                     .map_err(|_| SignatureValidationError::MalformedKey)?;
+
                 let signature = EcdsaSignature::from_der(self.signature.as_ref())
                     .map_err(|_| SignatureValidationError::MalformedSignature)?;
 
@@ -96,8 +99,6 @@ impl<T: Encode> Signature<T> {
         }
     }
 }
-
-// TODO: Implement signature validation
 
 /// See RFC 5246 7.4.1.4.1
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
