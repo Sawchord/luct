@@ -55,7 +55,7 @@ key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrX
 mdd = 86400
     ";
 
-    fn get_log() -> CtLog {
+    pub(crate) fn get_log() -> CtLog {
         toml::from_str(ARGON2025H1).unwrap()
     }
 

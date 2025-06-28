@@ -21,6 +21,12 @@ impl CodecVecLen for u16 {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct CodecVec<L>(Vec<u8>, PhantomData<L>);
 
+impl<L> AsRef<[u8]> for CodecVec<L> {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl<L: CodecVecLen> Encode for CodecVec<L> {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         let len = self.0.len();

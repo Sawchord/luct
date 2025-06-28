@@ -2,10 +2,15 @@ use crate::utils::{
     codec::{CodecError, Decode, Encode},
     vec::CodecVec,
 };
+use digest::DynDigest;
+use p256::ecdsa::{Signature as EcdsaSignature, VerifyingKey, signature::Verifier};
+use sha2::{Digest, Sha224, Sha256, Sha384, Sha512};
 use std::{
-    io::{Read, Write},
+    fmt::Display,
+    io::{Cursor, Read, Write},
     marker::PhantomData,
 };
+use thiserror::Error;
 
 /// See RFC 5246 4.7
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -30,6 +35,65 @@ impl<T> Decode for Signature<T> {
             signature: CodecVec::decode(&mut reader)?,
             inner: PhantomData,
         })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum SignatureValidationError {
+    #[error("The hash algorithm {0} is not supported by the implementation")]
+    UnsupportedHashAlgorithm(HashAlgorithm),
+
+    #[error("The signature algorithm {0} is not supported by the implementation")]
+    UnsupportedSignatureAlgorithm(SignatureAlgorithm),
+
+    #[error("The key could not be parsed for the specified signature algorithm")]
+    MalformedKey,
+
+    #[error("The signature could not be parsed for the specified signautre algorithm")]
+    MalformedSignature,
+
+    #[error("The signature verification failed")]
+    InvalidSignature,
+
+    #[error("Error encoding a value: {0}")]
+    CodecError(#[from] CodecError),
+}
+
+impl<T: Encode> Signature<T> {
+    pub fn validate(&self, val: &T, key: &[u8]) -> Result<(), SignatureValidationError> {
+        let mut data = Cursor::new(vec![]);
+        val.encode(&mut data)?;
+
+        let _digest: Box<dyn DynDigest> = match &self.algorithm.hash {
+            HashAlgorithm::Sha224 => Box::new(Sha224::new()),
+            HashAlgorithm::Sha256 => Box::new(Sha256::new()),
+            HashAlgorithm::Sha384 => Box::new(Sha384::new()),
+            HashAlgorithm::Sha512 => Box::new(Sha512::new()),
+            alg => {
+                return Err(SignatureValidationError::UnsupportedHashAlgorithm(
+                    alg.clone(),
+                ));
+            }
+        };
+
+        match &self.algorithm.signature {
+            SignatureAlgorithm::Ecdsa => {
+                dbg!(&key);
+                let verifying_key = VerifyingKey::from_sec1_bytes(key)
+                    .map_err(|_| SignatureValidationError::MalformedKey)?;
+                let signature = EcdsaSignature::from_der(self.signature.as_ref())
+                    .map_err(|_| SignatureValidationError::MalformedSignature)?;
+
+                verifying_key
+                    .verify(&data.into_inner(), &signature)
+                    .map_err(|_| SignatureValidationError::InvalidSignature)?;
+
+                Ok(())
+            }
+            alg => Err(SignatureValidationError::UnsupportedSignatureAlgorithm(
+                alg.clone(),
+            )),
+        }
     }
 }
 
@@ -61,7 +125,7 @@ impl Decode for SignatureAndHashAlgorithm {
 
 /// See RFC 5246 7.4.1.4.1
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum HashAlgorithm {
+pub enum HashAlgorithm {
     None,
     Md5,
     Sha1,
@@ -104,9 +168,23 @@ impl Decode for HashAlgorithm {
     }
 }
 
+impl Display for HashAlgorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            HashAlgorithm::None => write!(f, "None"),
+            HashAlgorithm::Md5 => write!(f, "Md5"),
+            HashAlgorithm::Sha1 => write!(f, "Sha1"),
+            HashAlgorithm::Sha224 => write!(f, "Sha224"),
+            HashAlgorithm::Sha256 => write!(f, "Sha256"),
+            HashAlgorithm::Sha384 => write!(f, "Sha384"),
+            HashAlgorithm::Sha512 => write!(f, "Sha512"),
+        }
+    }
+}
+
 /// See RFC 5246 7.4.1.4.1
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum SignatureAlgorithm {
+pub enum SignatureAlgorithm {
     Anonymous,
     Rsa,
     Dsa,
@@ -136,6 +214,17 @@ impl Decode for SignatureAlgorithm {
             2 => Ok(SignatureAlgorithm::Dsa),
             3 => Ok(SignatureAlgorithm::Ecdsa),
             x => Err(CodecError::UnknownVariant("SignatureAlgorithm", x as u64)),
+        }
+    }
+}
+
+impl Display for SignatureAlgorithm {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            SignatureAlgorithm::Anonymous => write!(f, "Anonymous"),
+            SignatureAlgorithm::Rsa => write!(f, "Rsa"),
+            SignatureAlgorithm::Dsa => write!(f, "Dsa"),
+            SignatureAlgorithm::Ecdsa => write!(f, "Ecdsa"),
         }
     }
 }

@@ -22,6 +22,10 @@ serde_json = { version = "1" }
 toml = { version = "0.8" }
 base64 = { version = "0.22" }
 
+p256 = { version = "0.13" }
+digest = { version = "0.10" }
+sha2 = { version = "0.10" }
+
 url = { version = "2", features = ["serde"] }
 
 thiserror = { version = "2" }

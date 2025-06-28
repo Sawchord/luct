@@ -1,27 +1,36 @@
 use std::io::{Read, Write};
 
 use crate::{
-    Version,
+    CtLog, Version,
     utils::{
         base64::Base64,
         codec::{Codec, CodecError, Decode, Encode},
-        signature::Signature,
+        signature::{Signature, SignatureValidationError},
     },
     v1::SignatureType,
 };
 use serde::{Deserialize, Serialize};
 
+impl CtLog {
+    pub fn validate_sth(&self, sth: &SthResponse) -> Result<(), SignatureValidationError> {
+        let tree_head_tbs = TreeHeadSignature::try_from(sth)
+            .map_err(|_| SignatureValidationError::MalformedSignature)?;
+
+        sth.tree_head_signature.validate(&tree_head_tbs, &self.key)
+    }
+}
+
 /// See RFC 6962 4.3
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SthResponse {
-    tree_size: usize,
+    tree_size: u64,
     // TODO: Use a dedicated timestamp type
     timestamp: u64,
     sha256_root_hash: Base64<Vec<u8>>,
     tree_head_signature: Base64<Codec<Signature<TreeHeadSignature>>>,
 }
 
-/// See RFC
+/// See RFC 6962 3.5
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct TreeHeadSignature {
     version: Version,
@@ -63,8 +72,29 @@ impl Decode for TreeHeadSignature {
     }
 }
 
+impl TryFrom<&SthResponse> for TreeHeadSignature {
+    type Error = ();
+
+    fn try_from(value: &SthResponse) -> Result<Self, Self::Error> {
+        if value.sha256_root_hash.len() != 32 {
+            return Err(());
+        }
+        let mut sha256_root_hash = [0u8; 32];
+        sha256_root_hash.copy_from_slice(&value.sha256_root_hash);
+
+        Ok(Self {
+            version: Version::V1,
+            timestamp: value.timestamp,
+            tree_size: value.tree_size,
+            sha256_root_hash,
+        })
+    }
+}
+
 #[cfg(test)]
 mod test {
+    use crate::tests::get_log;
+
     use super::*;
 
     const ARGON2025H1_STH2806: &str = "{
@@ -77,5 +107,12 @@ mod test {
     #[test]
     fn decode_sth() {
         let _sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+    }
+
+    #[test]
+    fn validate_sth() {
+        let log = get_log();
+        let sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+        log.validate_sth(&sth).unwrap();
     }
 }
