@@ -1,5 +1,5 @@
 use base64::{Engine, prelude::BASE64_STANDARD};
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::ops::{Deref, DerefMut};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -32,7 +32,7 @@ impl<T: AsRef<[u8]>> Serialize for Base64<T> {
 impl<'de, T: From<Vec<u8>>> Deserialize<'de> for Base64<T> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: serde::Deserializer<'de>,
+        D: Deserializer<'de>,
     {
         let encoded = <String>::deserialize(deserializer)?;
         BASE64_STANDARD

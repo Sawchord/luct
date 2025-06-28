@@ -17,6 +17,7 @@ serde = { workspace = true }
 base64 = { workspace = true }
 url = { workspace = true }
 
+thiserror = { workspace = true }
 
 [dev-dependencies]
 toml = { workspace = true }
