@@ -13,3 +13,15 @@ publish = true
 categories = []
 keywords = []
 license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+
+
+serde = { version = "1", features = ["derive"] }
+serde_json = { version = "1" }
+toml = { version = "0.8" }
+base64 = { version = "0.22" }
+
+url = { version = "2", features = ["serde"] }
+
+thiserror = { version = "2" }
