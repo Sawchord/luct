@@ -2,12 +2,10 @@ use crate::utils::{
     codec::{CodecError, Decode, Encode},
     vec::CodecVec,
 };
-use digest::DynDigest;
 use p256::{
     ecdsa::{Signature as EcdsaSignature, VerifyingKey, signature::Verifier},
     pkcs8::DecodePublicKey,
 };
-use sha2::{Digest, Sha224, Sha256, Sha384, Sha512};
 use std::{
     fmt::Display,
     io::{Cursor, Read, Write},
@@ -67,20 +65,29 @@ impl<T: Encode> Signature<T> {
         let mut data = Cursor::new(vec![]);
         val.encode(&mut data)?;
 
-        let _digest: Box<dyn DynDigest> = match &self.algorithm.hash {
-            HashAlgorithm::Sha224 => Box::new(Sha224::new()),
-            HashAlgorithm::Sha256 => Box::new(Sha256::new()),
-            HashAlgorithm::Sha384 => Box::new(Sha384::new()),
-            HashAlgorithm::Sha512 => Box::new(Sha512::new()),
-            alg => {
-                return Err(SignatureValidationError::UnsupportedHashAlgorithm(
-                    alg.clone(),
-                ));
-            }
-        };
+        // let _digest: Box<dyn DynDigest> = match &self.algorithm.hash {
+        //     HashAlgorithm::Sha224 => Box::new(Sha224::new()),
+        //     HashAlgorithm::Sha256 => Box::new(Sha256::new()),
+        //     HashAlgorithm::Sha384 => Box::new(Sha384::new()),
+        //     HashAlgorithm::Sha512 => Box::new(Sha512::new()),
+        //     alg => {
+        //         return Err(SignatureValidationError::UnsupportedHashAlgorithm(
+        //             alg.clone(),
+        //         ));
+        //     }
+        // };
 
         match &self.algorithm.signature {
             SignatureAlgorithm::Ecdsa => {
+                match &self.algorithm.hash {
+                    HashAlgorithm::Sha256 => (),
+                    alg => {
+                        return Err(SignatureValidationError::UnsupportedHashAlgorithm(
+                            alg.clone(),
+                        ));
+                    }
+                }
+
                 let verifying_key = VerifyingKey::from_public_key_der(key)
                     .map_err(|_| SignatureValidationError::MalformedKey)?;
 
