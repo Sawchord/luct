@@ -1,0 +1,56 @@
+use crate::utils::codec::{CodecError, Decode, Encode};
+use std::{
+    io::{Read, Write},
+    marker::PhantomData,
+};
+
+pub(crate) trait CodecVecLen: TryFrom<usize> + TryInto<usize> + Encode + Decode {
+    const MAX: usize;
+}
+
+impl CodecVecLen for u8 {
+    const MAX: usize = 1;
+}
+impl CodecVecLen for u16 {
+    const MAX: usize = 2;
+}
+// TODO: Implement for u24
+// impl CodecVecLen for u32 {}
+// impl CodecVecLen for u64 {}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) struct CodecVec<L>(Vec<u8>, PhantomData<L>);
+
+impl<L: CodecVecLen> Encode for CodecVec<L> {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let len = self.0.len();
+        // TODO: Fix the error reporting
+        let len: L = self
+            .0
+            .len()
+            .try_into()
+            .map_err(|_| CodecError::VectorTooLong {
+                received: len,
+                max: L::MAX,
+            })?;
+        len.encode(&mut writer)?;
+
+        writer.write_all(&self.0)?;
+
+        Ok(())
+    }
+}
+
+impl<L: CodecVecLen> Decode for CodecVec<L> {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let len = L::decode(&mut reader)?;
+        let len: usize = len.try_into().map_err(|_| CodecError::VectorTooLong {
+            received: 0,
+            max: L::MAX,
+        })?;
+
+        let mut buf = vec![0u8; len];
+        reader.read_exact(&mut buf)?;
+        Ok(Self(buf, PhantomData))
+    }
+}

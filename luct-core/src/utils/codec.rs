@@ -13,12 +13,11 @@ pub enum CodecError {
     #[error("There is no variant with the discriminant {1} in {0}")]
     UnknownVariant(&'static str, u64),
 
-    #[error("{name} field contained {received} byte (maximum is {max} bytes)")]
-    TooLong {
-        name: &'static str,
-        received: usize,
-        max: usize,
-    },
+    #[error("A field contained {received} bytes (maximum is {max} bytes)")]
+    VectorTooLong { received: usize, max: usize },
+
+    #[error("A fiedl contained {received} bytes (expected {expected} bytes)")]
+    VectorTooShort { received: usize, expected: usize },
 }
 
 impl From<std::io::Error> for CodecError {
@@ -54,6 +53,12 @@ impl<T> DerefMut for Codec<T> {
     }
 }
 
+impl<T> From<T> for Codec<T> {
+    fn from(value: T) -> Self {
+        Self(value)
+    }
+}
+
 impl<T: Encode> Serialize for Codec<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
@@ -75,5 +80,35 @@ impl<'de, T: Decode> Deserialize<'de> for Codec<T> {
         T::decode(data)
             .map_err(serde::de::Error::custom)
             .map(|v| Self(v))
+    }
+}
+
+impl Encode for u8 {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        Ok(writer.write_all(&[*self])?)
+    }
+}
+
+impl Decode for u8 {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = [0u8];
+        reader.read_exact(&mut buf)?;
+        Ok(buf[0])
+    }
+}
+
+impl Encode for u16 {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let val = self.to_be_bytes();
+        writer.write_all(&val)?;
+        Ok(())
+    }
+}
+
+impl Decode for u16 {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = [0u8; 2];
+        reader.read_exact(&mut buf)?;
+        Ok(u16::from_be_bytes(buf))
     }
 }

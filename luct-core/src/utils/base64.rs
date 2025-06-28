@@ -19,6 +19,12 @@ impl<T> DerefMut for Base64<T> {
     }
 }
 
+impl<T> From<T> for Base64<T> {
+    fn from(value: T) -> Self {
+        Self(value)
+    }
+}
+
 impl<T: AsRef<[u8]>> Serialize for Base64<T> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

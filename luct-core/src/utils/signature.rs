@@ -1,34 +1,39 @@
-use crate::utils::codec::{CodecError, Decode, Encode};
+use crate::utils::{
+    codec::{CodecError, Decode, Encode},
+    vec::CodecVec,
+};
 use std::{
     io::{Read, Write},
     marker::PhantomData,
 };
 
 /// See RFC 5246 4.7
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Signature<T> {
     algorithm: SignatureAndHashAlgorithm,
-    signature: Vec<u8>,
+    signature: CodecVec<u16>,
     inner: PhantomData<T>,
 }
 
 impl<T> Encode for Signature<T> {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         self.algorithm.encode(&mut writer)?;
-
-        let len: u16 = self
-            .signature
-            .len()
-            .try_into()
-            .map_err(|_| CodecError::TooLong {
-                name: "signature",
-                received: self.signature.len(),
-                max: u16::MAX as usize,
-            })?;
-
-        writer.write_all(&self.signature)?;
+        self.signature.encode(&mut writer)?;
         Ok(())
     }
 }
+
+impl<T> Decode for Signature<T> {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self {
+            algorithm: SignatureAndHashAlgorithm::decode(&mut reader)?,
+            signature: CodecVec::decode(&mut reader)?,
+            inner: PhantomData,
+        })
+    }
+}
+
+// TODO: Implement signature validation
 
 /// See RFC 5246 7.4.1.4.1
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
