@@ -37,6 +37,7 @@ where
     fn decode(reader: impl Read) -> Result<Self, CodecError>;
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Codec<T>(T);
 
 impl<T> Deref for Codec<T> {
