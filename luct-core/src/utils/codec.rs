@@ -13,6 +13,9 @@ pub enum CodecError {
     #[error("There is no variant with the discriminant {1} in {0}")]
     UnknownVariant(&'static str, u64),
 
+    #[error("The variant used here is invalid")]
+    UnexpectedVariant,
+
     #[error("A field contained {received} bytes (maximum is {max} bytes)")]
     VectorTooLong { received: usize, max: usize },
     // #[error("A fiedl contained {received} bytes (expected {expected} bytes)")]
@@ -110,5 +113,51 @@ impl Decode for u16 {
         let mut buf = [0u8; 2];
         reader.read_exact(&mut buf)?;
         Ok(u16::from_be_bytes(buf))
+    }
+}
+
+impl Encode for u32 {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let val = self.to_be_bytes();
+        writer.write_all(&val)?;
+        Ok(())
+    }
+}
+
+impl Decode for u32 {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = [0u8; 4];
+        reader.read_exact(&mut buf)?;
+        Ok(u32::from_be_bytes(buf))
+    }
+}
+
+impl Encode for u64 {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let val = self.to_be_bytes();
+        writer.write_all(&val)?;
+        Ok(())
+    }
+}
+
+impl Decode for u64 {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = [0u8; 8];
+        reader.read_exact(&mut buf)?;
+        Ok(u64::from_be_bytes(buf))
+    }
+}
+
+impl<const N: usize> Encode for [u8; N] {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        Ok(writer.write_all(self)?)
+    }
+}
+
+impl<const N: usize> Decode for [u8; N] {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = [0u8; N];
+        reader.read_exact(&mut buf)?;
+        Ok(buf)
     }
 }

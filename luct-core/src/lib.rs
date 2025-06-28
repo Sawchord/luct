@@ -1,5 +1,9 @@
-use crate::utils::base64::Base64;
+use crate::utils::{
+    base64::Base64,
+    codec::{CodecError, Decode, Encode},
+};
 use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
 use url::Url;
 
 pub(crate) mod utils;
@@ -11,6 +15,33 @@ pub struct CtLog {
     log_id: Base64<Vec<u8>>,
     key: Base64<Vec<u8>>,
     mdd: u64,
+}
+
+/// See RFC 6962 3.2
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub(crate) enum Version {
+    V1,
+}
+
+impl Encode for Version {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let discriminant = match self {
+            Version::V1 => 0,
+        };
+        Ok(writer.write_all(&[discriminant])?)
+    }
+}
+
+impl Decode for Version {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = vec![0u8];
+        reader.read_exact(&mut buf)?;
+
+        match buf[0] {
+            0 => Ok(Version::V1),
+            x => Err(CodecError::UnknownVariant("Version", x as u64)),
+        }
+    }
 }
 
 #[cfg(test)]

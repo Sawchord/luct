@@ -1,9 +1,13 @@
 use std::io::{Read, Write};
 
-use crate::utils::{
-    base64::Base64,
-    codec::{Codec, CodecError, Decode, Encode},
-    signature::Signature,
+use crate::{
+    Version,
+    utils::{
+        base64::Base64,
+        codec::{Codec, CodecError, Decode, Encode},
+        signature::Signature,
+    },
+    v1::SignatureType,
 };
 use serde::{Deserialize, Serialize};
 
@@ -20,24 +24,42 @@ pub struct SthResponse {
 /// See RFC
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct TreeHeadSignature {
-    // TODO:
-    // Version version;
+    version: Version,
     // SignatureType signature_type = tree_hash;
-    // uint64 timestamp;
-    // uint64 tree_size;
-    // opaque sha256_root_hash[32];
+    timestamp: u64,
+    tree_size: u64,
+    sha256_root_hash: [u8; 32],
 }
 
 impl Encode for TreeHeadSignature {
-    fn encode(&self, _writer: impl Write) -> Result<(), CodecError> {
-        // TODO: Update with fields
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        self.version.encode(&mut writer)?;
+        SignatureType::TreeHash.encode(&mut writer)?;
+        self.timestamp.encode(&mut writer)?;
+        self.tree_size.encode(&mut writer)?;
+        self.sha256_root_hash.encode(&mut writer)?;
         Ok(())
     }
 }
 
 impl Decode for TreeHeadSignature {
-    fn decode(_reader: impl Read) -> Result<Self, CodecError> {
-        Ok(Self {})
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let version = Version::decode(&mut reader)?;
+        let signature_type = SignatureType::decode(&mut reader)?;
+        match signature_type {
+            SignatureType::CertificateTimeStamp => return Err(CodecError::UnexpectedVariant),
+            SignatureType::TreeHash => (),
+        }
+        let timestamp = u64::decode(&mut reader)?;
+        let tree_size = u64::decode(&mut reader)?;
+        let sha256_root_hash = <[u8; 32]>::decode(&mut reader)?;
+
+        Ok(Self {
+            version,
+            timestamp,
+            tree_size,
+            sha256_root_hash,
+        })
     }
 }
 
