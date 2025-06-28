@@ -1,6 +1,7 @@
 use crate::utils::codec::{CodecError, Decode, Encode};
 use std::io::{Read, Write};
 
+mod sct;
 mod sth;
 
 /// See RFC 5246 3.2

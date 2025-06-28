@@ -14,9 +14,14 @@ impl CodecVecLen for u8 {
 impl CodecVecLen for u16 {
     const MAX: usize = 2;
 }
-// TODO: Implement for u24
-// impl CodecVecLen for u32 {}
-// impl CodecVecLen for u64 {}
+
+impl CodecVecLen for u32 {
+    const MAX: usize = 4;
+}
+
+impl CodecVecLen for u64 {
+    const MAX: usize = 8;
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct CodecVec<L>(Vec<u8>, PhantomData<L>);
