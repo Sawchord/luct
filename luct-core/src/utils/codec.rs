@@ -7,8 +7,24 @@ use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Error)]
 pub enum CodecError {
-    #[error("There is no variant with the discriminant {0} in this enum")]
-    UnknownVariant(u64),
+    #[error("Error of underlying IO: {0}")]
+    IoError(std::io::ErrorKind),
+
+    #[error("There is no variant with the discriminant {1} in {0}")]
+    UnknownVariant(&'static str, u64),
+
+    #[error("{name} field contained {received} byte (maximum is {max} bytes)")]
+    TooLong {
+        name: &'static str,
+        received: usize,
+        max: usize,
+    },
+}
+
+impl From<std::io::Error> for CodecError {
+    fn from(value: std::io::Error) -> Self {
+        Self::IoError(value.kind())
+    }
 }
 
 pub(crate) trait Encode {
