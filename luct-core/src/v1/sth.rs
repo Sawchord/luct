@@ -14,7 +14,7 @@ pub struct SthResponse {
     // TODO: Use a dedicated timestamp type
     timestamp: u64,
     sha256_root_hash: Base64<Vec<u8>>,
-    //tree_head_signature: Base64<Codec<Signature<TreeHeadSignature>>>,
+    tree_head_signature: Base64<Codec<Signature<TreeHeadSignature>>>,
 }
 
 /// See RFC
@@ -43,10 +43,17 @@ impl Decode for TreeHeadSignature {
 
 #[cfg(test)]
 mod test {
+    use super::*;
+
     const ARGON2025H1_STH2806: &str = "{
     \"tree_size\":1425614114,
     \"timestamp\":1751114416696,
     \"sha256_root_hash\":\"LHtW79pwJohJF5Yn/tyozEroOnho4u3JAGn7WeHSR54=\",
     \"tree_head_signature\":\"BAMARzBFAiEAg4w8LlTFKd3KL6lo5Zde9OupHYNN0DDk8U54PenirI4CIHL8ucpkJw5zFLh8UvLA+Zf+f8Ms+tLsVtzHuqnO0qjm\"
     }";
+
+    #[test]
+    fn decode_sth() {
+        let _sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+    }
 }

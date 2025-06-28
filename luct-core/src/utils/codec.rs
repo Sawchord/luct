@@ -15,9 +15,8 @@ pub enum CodecError {
 
     #[error("A field contained {received} bytes (maximum is {max} bytes)")]
     VectorTooLong { received: usize, max: usize },
-
-    #[error("A fiedl contained {received} bytes (expected {expected} bytes)")]
-    VectorTooShort { received: usize, expected: usize },
+    // #[error("A fiedl contained {received} bytes (expected {expected} bytes)")]
+    // VectorTooShort { received: usize, expected: usize },
 }
 
 impl From<std::io::Error> for CodecError {
@@ -38,7 +37,7 @@ where
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct Codec<T>(T);
+pub(crate) struct Codec<T>(pub T);
 
 impl<T> Deref for Codec<T> {
     type Target = T;

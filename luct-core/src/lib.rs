@@ -29,7 +29,7 @@ mdd = 86400
     }
 
     #[test]
-    fn ct_log_tom_parses() {
+    fn ct_log_toml_parse() {
         let _ = get_log();
     }
 }
