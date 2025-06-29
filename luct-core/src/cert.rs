@@ -54,6 +54,9 @@ impl Certificate {
 
         Ok(scts)
     }
+
+    // TODO: into_precert
+    // TODO: is_precert
 }
 
 // TODO: Implement Encode and Decode and use it instead

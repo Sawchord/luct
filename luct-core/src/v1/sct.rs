@@ -29,12 +29,18 @@ impl Encode for SctList {
         let mut bytes = 0;
         let mut encoded_scts = vec![];
         for sct in &self.0 {
-            let mut buf = Cursor::new(vec![]);
+            let mut buf = Cursor::new(vec![0, 0]);
+            buf.set_position(2);
+
             sct.encode(&mut buf)?;
-            let buf = buf.into_inner();
+            let mut buf = buf.into_inner();
 
-            // TODO: Include the length here
+            // Encode the length of the field
+            let len = ((buf.len() - 2) as u16).to_be_bytes();
+            buf[0] = len[0];
+            buf[1] = len[1];
 
+            // Add to byte counter for field size
             bytes += buf.len();
             encoded_scts.push(buf);
         }

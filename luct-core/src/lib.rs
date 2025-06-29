@@ -53,10 +53,10 @@ mod tests {
     use super::*;
 
     const ARGON2025H1: &str = "
-url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
-log_id = \"TnWjJ1yaEMM4W2zU3z9S6x3w4I4bjWnAsfpksWKaOd8=\"
-key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
-mdd = 86400
+        url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
+        log_id = \"TnWjJ1yaEMM4W2zU3z9S6x3w4I4bjWnAsfpksWKaOd8=\"
+        key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
+        mdd = 86400
     ";
 
     pub(crate) fn get_log() -> CtLog {
