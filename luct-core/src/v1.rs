@@ -9,8 +9,10 @@ mod merkle_tree;
 mod sct;
 mod sth;
 
-pub use sct::{SctList, SignedCertificateTimestamp};
+pub use sct::SignedCertificateTimestamp;
 pub use sth::SthResponse;
+
+pub(crate) use sct::SctList;
 
 /// See RFC 5246 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

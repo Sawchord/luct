@@ -12,9 +12,10 @@ use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct SctList(Vec<SignedCertificateTimestamp>);
+pub(crate) struct SctList(Vec<SignedCertificateTimestamp>);
 
 impl SctList {
+    #[allow(dead_code)]
     pub fn new(scts: Vec<SignedCertificateTimestamp>) -> Self {
         Self(scts)
     }
@@ -97,6 +98,12 @@ pub struct SignedCertificateTimestamp {
     timestamp: u64,
     extensions: CodecVec<u16>,
     signature: Signature<CertificateTimeStamp>,
+}
+
+impl SignedCertificateTimestamp {
+    pub fn log_id(&self) -> [u8; 32] {
+        self.id
+    }
 }
 
 impl Encode for SignedCertificateTimestamp {

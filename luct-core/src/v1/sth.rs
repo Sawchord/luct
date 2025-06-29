@@ -16,7 +16,8 @@ impl CtLog {
         let tree_head_tbs = TreeHeadSignature::try_from(sth)
             .map_err(|_| SignatureValidationError::MalformedSignature)?;
 
-        sth.tree_head_signature.validate(&tree_head_tbs, &self.key)
+        sth.tree_head_signature
+            .validate(&tree_head_tbs, &self.config.key)
     }
 }
 
@@ -94,7 +95,7 @@ impl TryFrom<&SthResponse> for TreeHeadSignature {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::tests::get_log;
+    use crate::tests::get_log_argon2025h1;
 
     const ARGON2025H1_STH2806: &str = "{
     \"tree_size\":1425614114,
@@ -120,7 +121,7 @@ mod test {
 
     #[test]
     fn validate_sth() {
-        let log = get_log();
+        let log = get_log_argon2025h1();
         let sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
         log.validate_sth_v1(&sth).unwrap();
     }
