@@ -2,6 +2,7 @@ use crate::{
     Version,
     utils::{
         codec::{CodecError, Decode, Encode},
+        metered::MeteredRead,
         signature::Signature,
         vec::CodecVec,
     },
@@ -49,6 +50,21 @@ impl Encode for SctList {
         }
 
         Ok(())
+    }
+}
+
+impl Decode for SctList {
+    fn decode(reader: impl Read) -> Result<Self, CodecError> {
+        let mut reader = MeteredRead::new(reader);
+        let length = u16::decode(&mut reader)?.into();
+        let mut scts = vec![];
+
+        while reader.get_meter() < length {
+            let sct = SignedCertificateTimestamp::decode(&mut reader)?;
+            scts.push(sct);
+        }
+
+        Ok(Self(scts))
     }
 }
 
