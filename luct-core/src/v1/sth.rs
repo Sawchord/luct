@@ -93,15 +93,21 @@ impl TryFrom<&SthResponse> for TreeHeadSignature {
 
 #[cfg(test)]
 mod test {
-    use crate::tests::get_log;
-
     use super::*;
+    use crate::tests::get_log;
 
     const ARGON2025H1_STH2806: &str = "{
     \"tree_size\":1425614114,
     \"timestamp\":1751114416696,
     \"sha256_root_hash\":\"LHtW79pwJohJF5Yn/tyozEroOnho4u3JAGn7WeHSR54=\",
     \"tree_head_signature\":\"BAMARzBFAiEAg4w8LlTFKd3KL6lo5Zde9OupHYNN0DDk8U54PenirI4CIHL8ucpkJw5zFLh8UvLA+Zf+f8Ms+tLsVtzHuqnO0qjm\"
+    }";
+
+    const ARGON2025H1_STH2906: &str = "{
+    \"tree_size\":1425633154,
+    \"timestamp\":1751189445313,
+    \"sha256_root_hash\":\"iH90iBSqmtLLTcCwu74RYyJ0rd3oXtLbXlBNqKcJUXA=\",
+    \"tree_head_signature\":\"BAMARjBEAiAA/UmelqZIfpd5vBs0CJZGx8kAqUhNppLX/rBVk15DWwIgbyecvj2CUl4YzAEWEoFmUwL9KkrZBZQcQgSNEFDqIgc=\"}
     }";
 
     #[test]
