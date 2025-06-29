@@ -111,8 +111,11 @@ mod test {
     }";
 
     #[test]
-    fn decode_sth() {
-        let _sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+    fn sth_codec_roundtrip() {
+        let sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+        let sth_bytes = serde_json::to_string(&sth).unwrap();
+        let sth2: SthResponse = serde_json::from_str(&sth_bytes).unwrap();
+        assert_eq!(sth, sth2);
     }
 
     #[test]

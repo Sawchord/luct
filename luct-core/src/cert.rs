@@ -1,12 +1,14 @@
-use std::io::Cursor;
-
 use crate::{
     utils::codec::{CodecError, Decode},
     v1::{SctList, SignedCertificateTimestamp},
 };
 use p256::pkcs8::ObjectIdentifier;
+use std::io::Cursor;
 use thiserror::Error;
-use x509_cert::{Certificate as Cert, der::DecodePem};
+use x509_cert::{
+    Certificate as Cert,
+    der::{Decode as CertDecode, DecodePem, asn1::OctetString},
+};
 
 const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
 
@@ -39,12 +41,18 @@ impl Certificate {
             .filter(|extension| extension.extn_id == SCT_V1)
             .map(|sct| &sct.extn_value)
             .map(|sct| {
+                let sct = OctetString::from_der(sct.as_bytes()).unwrap();
                 let mut reader = Cursor::new(sct.as_bytes());
                 SctList::decode(&mut reader)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
-        todo!()
+        let scts = sct_lists
+            .into_iter()
+            .flat_map(|list| list.into_inner())
+            .collect();
+
+        Ok(scts)
     }
 }
 
@@ -68,12 +76,32 @@ impl From<x509_cert::der::Error> for CertificateError {
 
 #[cfg(test)]
 mod tests {
+    use crate::utils::codec::Encode;
+
     use super::*;
 
     const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../testdata/google-chain.pem");
 
     #[test]
+    fn sct_list_codec_rountrip() {
+        let cert = Certificate::from_validated_pem_chain(CERT_CHAIN_GOOGLE_COM, &[]).unwrap();
+        let scts = cert.extract_scts_v1().unwrap();
+
+        let mut writer = Cursor::new(vec![]);
+        SctList::new(scts.clone()).encode(&mut writer).unwrap();
+        let scts2 = SctList::decode(Cursor::new(writer.into_inner()))
+            .unwrap()
+            .into_inner();
+
+        assert_eq!(scts, scts2)
+    }
+
+    #[test]
     fn validate_google_scts() {
         let cert = Certificate::from_validated_pem_chain(CERT_CHAIN_GOOGLE_COM, &[]).unwrap();
+        let _scts = cert.extract_scts_v1().unwrap();
+
+        // TODO: Check that log id matches the id of CTLog
+        // TODO: Validate sct against log
     }
 }

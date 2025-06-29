@@ -32,6 +32,9 @@ impl Encode for SctList {
             let mut buf = Cursor::new(vec![]);
             sct.encode(&mut buf)?;
             let buf = buf.into_inner();
+
+            // TODO: Include the length here
+
             bytes += buf.len();
             encoded_scts.push(buf);
         }
@@ -64,12 +67,14 @@ impl Encode for SctList {
 }
 
 impl Decode for SctList {
-    fn decode(reader: impl Read) -> Result<Self, CodecError> {
-        let mut reader = MeteredRead::new(reader);
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
         let length = u16::decode(&mut reader)?.into();
         let mut scts = vec![];
 
+        let mut reader = MeteredRead::new(reader);
+
         while reader.get_meter() < length {
+            let _len = u16::decode(&mut reader)?;
             let sct = SignedCertificateTimestamp::decode(&mut reader)?;
             scts.push(sct);
         }
@@ -83,6 +88,7 @@ impl Decode for SctList {
 pub struct SignedCertificateTimestamp {
     sct_version: Version,
     id: [u8; 32],
+    timestamp: u64,
     extensions: CodecVec<u16>,
     signature: Signature<CertificateTimeStamp>,
 }
@@ -91,6 +97,7 @@ impl Encode for SignedCertificateTimestamp {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         self.sct_version.encode(&mut writer)?;
         self.id.encode(&mut writer)?;
+        self.timestamp.encode(&mut writer)?;
         self.extensions.encode(&mut writer)?;
         self.signature.encode(&mut writer)?;
         Ok(())
@@ -102,6 +109,7 @@ impl Decode for SignedCertificateTimestamp {
         Ok(Self {
             sct_version: Version::decode(&mut reader)?,
             id: <[u8; 32]>::decode(&mut reader)?,
+            timestamp: u64::decode(&mut reader)?,
             extensions: CodecVec::decode(&mut reader)?,
             signature: Signature::decode(&mut reader)?,
         })
