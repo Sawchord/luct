@@ -21,6 +21,8 @@ url = { workspace = true }
 p256 = { workspace = true, features = ["pkcs8"] }
 digest = { workspace = true }
 sha2 = { workspace = true }
+x509-cert = { workspace = true }
+x509-verify = { workspace = true }
 
 thiserror = { workspace = true }
 

@@ -14,6 +14,16 @@ use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct SctList(Vec<SignedCertificateTimestamp>);
 
+impl SctList {
+    pub fn new(scts: Vec<SignedCertificateTimestamp>) -> Self {
+        Self(scts)
+    }
+
+    pub fn into_inner(self) -> Vec<SignedCertificateTimestamp> {
+        self.0
+    }
+}
+
 impl Encode for SctList {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         let mut bytes = 0;

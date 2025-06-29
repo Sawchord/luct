@@ -6,8 +6,12 @@ use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use url::Url;
 
+pub mod cert;
 pub(crate) mod utils;
 pub mod v1;
+
+// TODO: Introduce a Timestamp type and use it
+// TODO: Introduce a LogId type and use
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CtLog {
