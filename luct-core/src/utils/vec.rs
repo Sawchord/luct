@@ -32,6 +32,12 @@ impl<L> AsRef<[u8]> for CodecVec<L> {
     }
 }
 
+impl<L> From<Vec<u8>> for CodecVec<L> {
+    fn from(value: Vec<u8>) -> Self {
+        Self(value, PhantomData)
+    }
+}
+
 impl<L: CodecVecLen> Encode for CodecVec<L> {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         let len = self.0.len();

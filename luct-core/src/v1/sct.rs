@@ -7,7 +7,50 @@ use crate::{
     },
     v1::{LogEntry, SignatureType},
 };
-use std::io::{Read, Write};
+use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
+
+/// See RFC 6962 3.2
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub struct SctList(Vec<SignedCertificateTimestamp>);
+
+impl Encode for SctList {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let mut bytes = 0;
+        let mut encoded_scts = vec![];
+        for sct in &self.0 {
+            let mut buf = Cursor::new(vec![]);
+            sct.encode(&mut buf)?;
+            let buf = buf.into_inner();
+            bytes += buf.len();
+            encoded_scts.push(buf);
+        }
+        let mut slices = encoded_scts
+            .iter()
+            .map(|buf| IoSlice::new(buf))
+            .collect::<Vec<_>>();
+
+        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::VectorTooLong {
+            received: bytes,
+            max: u16::MAX as usize,
+        })?;
+
+        bytes.encode(&mut writer)?;
+
+        let mut slices: &mut [IoSlice] = &mut slices;
+        while !slices.is_empty() {
+            match writer.write_vectored(slices) {
+                Ok(0) => {
+                    return Err(CodecError::IoError(std::io::ErrorKind::WriteZero));
+                }
+                Ok(n) => IoSlice::advance_slices(&mut slices, n),
+                Err(e) if e.kind() == ErrorKind::Interrupted => {}
+                Err(e) => return Err(e.into()),
+            }
+        }
+
+        Ok(())
+    }
+}
 
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -16,6 +59,27 @@ pub struct SignedCertificateTimestamp {
     id: [u8; 32],
     extensions: CodecVec<u16>,
     signature: Signature<CertificateTimeStamp>,
+}
+
+impl Encode for SignedCertificateTimestamp {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        self.sct_version.encode(&mut writer)?;
+        self.id.encode(&mut writer)?;
+        self.extensions.encode(&mut writer)?;
+        self.signature.encode(&mut writer)?;
+        Ok(())
+    }
+}
+
+impl Decode for SignedCertificateTimestamp {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self {
+            sct_version: Version::decode(&mut reader)?,
+            id: <[u8; 32]>::decode(&mut reader)?,
+            extensions: CodecVec::decode(&mut reader)?,
+            signature: Signature::decode(&mut reader)?,
+        })
+    }
 }
 
 /// See RFC 6962 3.2

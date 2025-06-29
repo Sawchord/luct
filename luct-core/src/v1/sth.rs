@@ -12,7 +12,7 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 impl CtLog {
-    pub fn validate_sth(&self, sth: &SthResponse) -> Result<(), SignatureValidationError> {
+    pub fn validate_sth_v1(&self, sth: &SthResponse) -> Result<(), SignatureValidationError> {
         let tree_head_tbs = TreeHeadSignature::try_from(sth)
             .map_err(|_| SignatureValidationError::MalformedSignature)?;
 
@@ -119,6 +119,6 @@ mod test {
     fn validate_sth() {
         let log = get_log();
         let sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
-        log.validate_sth(&sth).unwrap();
+        log.validate_sth_v1(&sth).unwrap();
     }
 }
