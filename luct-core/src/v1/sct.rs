@@ -11,7 +11,7 @@ use crate::{
 use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
 /// See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct SctList(Vec<SignedCertificateTimestamp>);
 
 impl SctList {
@@ -91,7 +91,7 @@ impl Decode for SctList {
 }
 
 /// See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedCertificateTimestamp {
     sct_version: Version,
     id: [u8; 32],
@@ -130,7 +130,7 @@ impl Decode for SignedCertificateTimestamp {
 }
 
 /// See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct CertificateTimeStamp {
     sct_version: Version,
     // SignatureType signature_type = certificate_timestamp;

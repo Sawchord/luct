@@ -83,9 +83,6 @@ impl Certificate {
     }
 }
 
-// TODO: Implement Encode and Decode and use it instead
-// of the vectors in types
-
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CertificateError {
     #[error("A precert can't have SCTs or more than one poison value")]
@@ -106,11 +103,12 @@ impl From<x509_cert::der::Error> for CertificateError {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
     use crate::{tests::get_log_argon2025h2, utils::codec::Encode};
 
-    use super::*;
-
     const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../testdata/google-chain.pem");
+    const CERT_GOOGLE_COM: &str = include_str!("../testdata/google-cert.pem");
+    const PRE_CERT_GOOGLE_COM: &str = include_str!("../testdata/google-precert.pem");
 
     #[test]
     fn sct_list_codec_rountrip() {
@@ -135,5 +133,19 @@ mod tests {
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
         // TODO: Validate sct against log
+    }
+
+    #[test]
+    fn precert_transformation() {
+        let cert1 = Certificate::from_validated_pem_chain(CERT_CHAIN_GOOGLE_COM, &[]).unwrap();
+        let cert2 = Certificate::from_pem(CERT_GOOGLE_COM).unwrap();
+
+        assert_eq!(cert1, cert2);
+        assert!(!cert1.is_precert().unwrap());
+
+        let precert = Certificate::from_pem(PRE_CERT_GOOGLE_COM).unwrap();
+        assert!(precert.is_precert().unwrap());
+
+        // TODO: Get precert log entry of cert1 and precert and check that they are equal
     }
 }

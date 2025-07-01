@@ -3,7 +3,12 @@ use crate::utils::{
     u24::U24,
     vec::CodecVec,
 };
+pub(crate) use sct::SctList;
 use std::io::{Read, Write};
+use x509_cert::{
+    certificate::{CertificateInner, Rfc5280, TbsCertificateInner},
+    der::{Decode as DerDecode, Encode as DerEncode},
+};
 
 mod merkle_tree;
 mod sct;
@@ -11,8 +16,6 @@ mod sth;
 
 pub use sct::SignedCertificateTimestamp;
 pub use sth::SthResponse;
-
-pub(crate) use sct::SctList;
 
 /// See RFC 5246 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -45,9 +48,9 @@ impl Decode for SignatureType {
 }
 
 // See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum LogEntry {
-    X509(CodecVec<U24>),
+    X509(CertificateInner<Rfc5280>),
     PreCert(PreCert),
 }
 
@@ -56,7 +59,10 @@ impl Encode for LogEntry {
         match self {
             LogEntry::X509(cert) => {
                 writer.write_all(&[0])?;
-                cert.encode(&mut writer)?;
+
+                let mut cert_bytes = vec![];
+                let _len = cert.encode_to_vec(&mut cert_bytes)?;
+                CodecVec::<U24>::from(cert_bytes).encode(&mut writer)?;
             }
             LogEntry::PreCert(pre_cert) => {
                 writer.write_all(&[1])?;
@@ -74,7 +80,11 @@ impl Decode for LogEntry {
         reader.read_exact(&mut buf)?;
 
         match buf[0] {
-            0 => Ok(LogEntry::X509(CodecVec::decode(&mut reader)?)),
+            0 => {
+                let cert_bytes = CodecVec::<U24>::decode(&mut reader)?;
+                let cert = CertificateInner::<Rfc5280>::from_der(cert_bytes.as_ref())?;
+                Ok(LogEntry::X509(cert))
+            }
             1 => Ok(LogEntry::PreCert(PreCert::decode(&mut reader)?)),
             x => Err(CodecError::UnknownVariant("LogEntry", x as u64)),
         }
@@ -82,25 +92,33 @@ impl Decode for LogEntry {
 }
 
 // See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct PreCert {
     issuer_key_hash: [u8; 32],
-    tbs_certificate: CodecVec<U24>,
+    tbs_certificate: TbsCertificateInner<Rfc5280>,
 }
 
 impl Encode for PreCert {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        self.issuer_key_hash.encode(&mut writer)?;
-        self.tbs_certificate.encode(&mut writer)?;
+        x509_cert::der::Encode::encode(&self.issuer_key_hash, &mut writer)?;
+
+        let mut cert_bytes = vec![];
+        let _len = self.tbs_certificate.encode_to_vec(&mut cert_bytes)?;
+        CodecVec::<U24>::from(cert_bytes).encode(&mut writer)?;
+
         Ok(())
     }
 }
 
 impl Decode for PreCert {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let issuer_key_hash = <[u8; 32] as Decode>::decode(&mut reader)?;
+        let cert_bytes = CodecVec::<U24>::decode(&mut reader)?;
+        let tbs_certificate = TbsCertificateInner::<Rfc5280>::from_der(cert_bytes.as_ref())?;
+
         Ok(Self {
-            issuer_key_hash: <[u8; 32]>::decode(&mut reader)?,
-            tbs_certificate: CodecVec::decode(&mut reader)?,
+            issuer_key_hash,
+            tbs_certificate,
         })
     }
 }

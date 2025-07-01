@@ -5,10 +5,13 @@ use std::{
 };
 use thiserror::Error;
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CodecError {
     #[error("Error of underlying IO: {0}")]
     IoError(std::io::ErrorKind),
+
+    #[error("Error while decoding DER: {0}")]
+    DerError(#[from] x509_cert::der::Error),
 
     #[error("There is no variant with the discriminant {1} in {0}")]
     UnknownVariant(&'static str, u64),

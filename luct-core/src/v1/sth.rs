@@ -25,7 +25,6 @@ impl CtLog {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SthResponse {
     tree_size: u64,
-    // TODO: Use a dedicated timestamp type
     timestamp: u64,
     sha256_root_hash: Base64<Vec<u8>>,
     tree_head_signature: Base64<Codec<Signature<TreeHeadSignature>>>,
