@@ -1,5 +1,117 @@
+use crate::{
+    Version,
+    utils::{
+        base64::Base64,
+        codec::{Codec, CodecError, Decode, Encode},
+        vec::CodecVec,
+    },
+    v1::LogEntry,
+};
+use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetEntriesResponse {
+    entries: Vec<GetEntriesData>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetEntriesData {
+    leaf_input: Base64<Codec<MerkleTreeLeaf>>,
+    extra_data: Base64<Vec<u8>>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MerkleTreeLeaf {
+    version: Version,
+    leaf: Leaf,
+}
+
+impl Encode for MerkleTreeLeaf {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        self.version.encode(&mut writer)?;
+        self.leaf.encode(&mut writer)?;
+        Ok(())
+    }
+}
+
+impl Decode for MerkleTreeLeaf {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self {
+            version: Version::decode(&mut reader)?,
+            leaf: Leaf::decode(&mut reader)?,
+        })
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) enum Leaf {
+    TimestampedEntry(TimestampedEntry),
+}
+
+impl Encode for Leaf {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        match self {
+            Leaf::TimestampedEntry(entry) => {
+                writer.write_all(&[0])?;
+                entry.encode(&mut writer)?;
+            }
+        };
+        Ok(())
+    }
+}
+
+impl Decode for Leaf {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = vec![0u8];
+        reader.read_exact(&mut buf)?;
+
+        match buf[0] {
+            0 => Ok(Leaf::TimestampedEntry(TimestampedEntry::decode(
+                &mut reader,
+            )?)),
+            val => Err(CodecError::UnknownVariant("MerkleLeafType", val as u64)),
+        }
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct TimestampedEntry {
+    timestamp: u64,
+    log_entry: LogEntry,
+    extensions: CodecVec<u16>,
+}
+
+impl Encode for TimestampedEntry {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        self.timestamp.encode(&mut writer)?;
+        self.log_entry.encode(&mut writer)?;
+        self.extensions.encode(&mut writer)?;
+        Ok(())
+    }
+}
+
+impl Decode for TimestampedEntry {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self {
+            timestamp: u64::decode(&mut reader)?,
+            log_entry: LogEntry::decode(&mut reader)?,
+            extensions: CodecVec::decode(&mut reader)?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
+    use super::*;
+
+    const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
+
+    #[test]
+    fn parse_get_entry_response() {
+        let _response: GetEntriesResponse = serde_json::from_str(GOOGLE_GET_ENTRY).unwrap();
+    }
+
     // const ARGON2025H1_CONSISTENCY: &str = "{
     // \"consistency\":[
     //     \"/qxhAu1l2bHdO41AWkZ1+D2xn8eqDXFsEZU99tz0Zwg=\",
