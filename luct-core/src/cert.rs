@@ -12,6 +12,8 @@ use x509_cert::{
 
 const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
 
+const CT_POISON: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Certificate(Cert);
 
@@ -56,7 +58,29 @@ impl Certificate {
     }
 
     // TODO: into_precert
-    // TODO: is_precert
+
+    pub fn is_precert(&self) -> Result<bool, CertificateError> {
+        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+            return Ok(false);
+        };
+
+        let scts = extensions
+            .iter()
+            .filter(|extension| extension.extn_id == SCT_V1)
+            .count();
+
+        let poisons = extensions
+            .iter()
+            .filter(|extension| extension.extn_id == CT_POISON && extension.critical)
+            .filter(|extension| extension.extn_value.as_bytes() == [0x05, 0x00])
+            .count();
+
+        match (poisons, scts) {
+            (1, 0) => Ok(true),
+            (0, _) => Ok(false),
+            _ => Err(CertificateError::InvalidPreCert),
+        }
+    }
 }
 
 // TODO: Implement Encode and Decode and use it instead
@@ -64,6 +88,9 @@ impl Certificate {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CertificateError {
+    #[error("A precert can't have SCTs or more than one poison value")]
+    InvalidPreCert,
+
     #[error("Failed to parse a DER encoded certificate: {0}")]
     DerParseError(x509_cert::der::ErrorKind),
 
@@ -79,7 +106,7 @@ impl From<x509_cert::der::Error> for CertificateError {
 
 #[cfg(test)]
 mod tests {
-    use crate::utils::codec::Encode;
+    use crate::{tests::get_log_argon2025h2, utils::codec::Encode};
 
     use super::*;
 
@@ -102,9 +129,11 @@ mod tests {
     #[test]
     fn validate_google_scts() {
         let cert = Certificate::from_validated_pem_chain(CERT_CHAIN_GOOGLE_COM, &[]).unwrap();
-        let _scts = cert.extract_scts_v1().unwrap();
+        let scts = cert.extract_scts_v1().unwrap();
 
-        // TODO: Check that log id matches the id of CTLog
+        let log = get_log_argon2025h2();
+        assert_eq!(log.log_id_v1(), scts[0].log_id());
+
         // TODO: Validate sct against log
     }
 }

@@ -104,3 +104,5 @@ impl Decode for PreCert {
         })
     }
 }
+
+// TODO: LogEntryChain

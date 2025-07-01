@@ -80,8 +80,19 @@ mod tests {
         mdd = 86400
     ";
 
+    const ARGON2025H2: &str = "
+        url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
+        key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
+        mdd = 86400
+    ";
+
     pub(crate) fn get_log_argon2025h1() -> CtLog {
         let config = toml::from_str(ARGON2025H1).unwrap();
+        CtLog::new(config)
+    }
+
+    pub(crate) fn get_log_argon2025h2() -> CtLog {
+        let config = toml::from_str(ARGON2025H2).unwrap();
         CtLog::new(config)
     }
 
