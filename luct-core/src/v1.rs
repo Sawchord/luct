@@ -49,7 +49,7 @@ impl Decode for SignatureType {
 
 // See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) enum LogEntry {
+pub enum LogEntry {
     X509(CertificateInner<Rfc5280>),
     PreCert(PreCert),
 }
@@ -93,9 +93,9 @@ impl Decode for LogEntry {
 
 // See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct PreCert {
-    issuer_key_hash: [u8; 32],
-    tbs_certificate: TbsCertificateInner<Rfc5280>,
+pub struct PreCert {
+    pub(crate) issuer_key_hash: [u8; 32],
+    pub(crate) tbs_certificate: TbsCertificateInner<Rfc5280>,
 }
 
 impl Encode for PreCert {

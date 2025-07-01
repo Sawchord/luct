@@ -1,17 +1,18 @@
 use crate::{
     utils::codec::{CodecError, Decode},
-    v1::{SctList, SignedCertificateTimestamp},
+    v1::{LogEntry, PreCert, SctList, SignedCertificateTimestamp},
 };
 use p256::pkcs8::ObjectIdentifier;
+use sha2::{Digest, Sha256};
 use std::io::Cursor;
 use thiserror::Error;
 use x509_cert::{
     Certificate as Cert,
-    der::{Decode as CertDecode, DecodePem, asn1::OctetString},
+    der::{Decode as CertDecode, DecodePem, Encode, asn1::OctetString},
+    ext::Extension,
 };
 
 const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
-
 const CT_POISON: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -55,6 +56,44 @@ impl Certificate {
             .collect();
 
         Ok(scts)
+    }
+
+    pub fn into_log_entry_v1(self) -> Result<LogEntry, CertificateError> {
+        Ok(LogEntry::X509(self.0))
+    }
+
+    pub fn into_precert_entry_v1(self) -> Result<LogEntry, CertificateError> {
+        let mut subject_public_key_bytes = vec![];
+        let mut tbs_certificate = self.0.tbs_certificate;
+
+        tbs_certificate
+            .subject_public_key_info
+            .encode_to_vec(&mut subject_public_key_bytes)?;
+        let issuer_key_hash: [u8; 32] = Sha256::digest(&subject_public_key_bytes).into();
+
+        let poison = Extension {
+            extn_id: CT_POISON,
+            critical: true,
+            extn_value: OctetString::new(vec![0x05, 0x00]).unwrap(),
+        };
+
+        let extensions = if let Some(extensions) = tbs_certificate.extensions {
+            let mut extensions = extensions
+                .into_iter()
+                .filter(|extension| extension.extn_id != SCT_V1 && extension.extn_id != CT_POISON)
+                .collect::<Vec<_>>();
+            extensions.push(poison);
+            extensions
+        } else {
+            vec![poison]
+        };
+
+        tbs_certificate.extensions = Some(extensions);
+
+        Ok(LogEntry::PreCert(PreCert {
+            issuer_key_hash,
+            tbs_certificate,
+        }))
     }
 
     // TODO: into_precert
@@ -146,6 +185,9 @@ mod tests {
         let precert = Certificate::from_pem(PRE_CERT_GOOGLE_COM).unwrap();
         assert!(precert.is_precert().unwrap());
 
-        // TODO: Get precert log entry of cert1 and precert and check that they are equal
+        assert_eq!(
+            cert1.into_precert_entry_v1(),
+            precert.into_precert_entry_v1()
+        );
     }
 }
