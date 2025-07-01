@@ -1,14 +1,36 @@
 use crate::{
-    Version,
+    CtLog, Version,
+    cert::{Certificate, CertificateError},
     utils::{
         codec::{CodecError, Decode, Encode},
         metered::MeteredRead,
-        signature::Signature,
+        signature::{Signature, SignatureValidationError},
         vec::CodecVec,
     },
     v1::{LogEntry, SignatureType},
 };
 use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
+
+impl CtLog {
+    pub fn validate_sct_as_precert_v1(
+        &self,
+        cert: &Certificate,
+        sct: &SignedCertificateTimestamp,
+    ) -> Result<(), SignatureValidationError> {
+        let timestamp = CertificateTimeStamp {
+            sct_version: Version::V1,
+            timestamp: sct.timestamp,
+            entry: cert.as_precert_entry_v1().map_err(|err| match err {
+                CertificateError::DerParseError(err) => SignatureValidationError::DerError(err),
+                CertificateError::CodecError(err) => SignatureValidationError::CodecError(err),
+                _ => unreachable!(),
+            })?,
+            extensions: CodecVec::from(vec![]),
+        };
+
+        sct.signature.validate(&timestamp, &self.config.key)
+    }
+}
 
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]

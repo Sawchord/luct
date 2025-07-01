@@ -58,13 +58,13 @@ impl Certificate {
         Ok(scts)
     }
 
-    pub fn into_log_entry_v1(self) -> Result<LogEntry, CertificateError> {
-        Ok(LogEntry::X509(self.0))
+    pub fn as_log_entry_v1(&self) -> Result<LogEntry, CertificateError> {
+        Ok(LogEntry::X509(self.0.clone()))
     }
 
-    pub fn into_precert_entry_v1(self) -> Result<LogEntry, CertificateError> {
+    pub fn as_precert_entry_v1(&self) -> Result<LogEntry, CertificateError> {
         let mut subject_public_key_bytes = vec![];
-        let mut tbs_certificate = self.0.tbs_certificate;
+        let mut tbs_certificate = self.0.tbs_certificate.clone();
 
         tbs_certificate
             .subject_public_key_info
@@ -128,16 +128,10 @@ pub enum CertificateError {
     InvalidPreCert,
 
     #[error("Failed to parse a DER encoded certificate: {0}")]
-    DerParseError(x509_cert::der::ErrorKind),
+    DerParseError(#[from] x509_cert::der::Error),
 
     #[error("Failed to decode a value {0}")]
     CodecError(#[from] CodecError),
-}
-
-impl From<x509_cert::der::Error> for CertificateError {
-    fn from(value: x509_cert::der::Error) -> Self {
-        Self::DerParseError(value.kind())
-    }
 }
 
 #[cfg(test)]
@@ -164,14 +158,15 @@ mod tests {
     }
 
     #[test]
-    fn validate_google_scts() {
+    fn validate_scts() {
         let cert = Certificate::from_validated_pem_chain(CERT_CHAIN_GOOGLE_COM, &[]).unwrap();
         let scts = cert.extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
-        // TODO: Validate sct against log
+        // FIXME: Get this to validate
+        //log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
     }
 
     #[test]
@@ -185,9 +180,6 @@ mod tests {
         let precert = Certificate::from_pem(PRE_CERT_GOOGLE_COM).unwrap();
         assert!(precert.is_precert().unwrap());
 
-        assert_eq!(
-            cert1.into_precert_entry_v1(),
-            precert.into_precert_entry_v1()
-        );
+        assert_eq!(cert1.as_precert_entry_v1(), precert.as_precert_entry_v1());
     }
 }
