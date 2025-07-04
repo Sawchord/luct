@@ -104,10 +104,10 @@ impl Decode for TimestampedEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cert::Certificate;
+    use crate::cert::CertificateChain;
 
     const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
-    const CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-cert.pem");
+    const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");
 
     #[test]
     fn parse_get_entry_response() {
@@ -127,11 +127,8 @@ mod tests {
 
         let Leaf::TimestampedEntry(entry) = leaf.leaf;
         let log_entry1 = entry.log_entry;
-        // let LogEntry::PreCert(precert) = entry.log_entry else {
-        //     panic!()
-        // };
 
-        let cert2 = Certificate::from_pem(CERT_GOOGLE_COM).unwrap();
+        let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
         let log_entry2 = cert2.as_precert_entry_v1().unwrap();
 
         assert_eq!(log_entry1, log_entry2);
