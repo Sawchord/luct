@@ -104,8 +104,10 @@ impl Decode for TimestampedEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::cert::Certificate;
 
     const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
+    const CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-cert.pem");
 
     #[test]
     fn parse_get_entry_response() {
@@ -116,6 +118,23 @@ mod tests {
         let reencoded = serde_json::to_string(&response).unwrap();
         let response2: GetEntriesResponse = serde_json::from_str(&reencoded).unwrap();
         assert_eq!(response, response2);
+    }
+
+    #[test]
+    fn generate_precert_comparison() {
+        let response: GetEntriesResponse = serde_json::from_str(GOOGLE_GET_ENTRY).unwrap();
+        let leaf = response.entries[0].leaf_input.0.0.clone();
+
+        let Leaf::TimestampedEntry(entry) = leaf.leaf;
+        let log_entry1 = entry.log_entry;
+        // let LogEntry::PreCert(precert) = entry.log_entry else {
+        //     panic!()
+        // };
+
+        let cert2 = Certificate::from_pem(CERT_GOOGLE_COM).unwrap();
+        let log_entry2 = cert2.as_precert_entry_v1().unwrap();
+
+        assert_eq!(log_entry1, log_entry2);
     }
 
     // const ARGON2025H1_CONSISTENCY: &str = "{

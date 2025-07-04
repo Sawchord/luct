@@ -9,7 +9,6 @@ use thiserror::Error;
 use x509_cert::{
     Certificate as Cert,
     der::{Decode as CertDecode, DecodePem, Encode, asn1::OctetString},
-    ext::Extension,
 };
 
 const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
@@ -87,8 +86,6 @@ impl Certificate {
         }))
     }
 
-    // TODO: into_precert
-
     pub fn is_precert(&self) -> Result<bool, CertificateError> {
         let Some(extensions) = &self.0.tbs_certificate.extensions else {
             return Ok(false);
@@ -157,7 +154,7 @@ mod tests {
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
         // FIXME: Get this to validate
-        //log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
+        log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
     }
 
     #[test]
