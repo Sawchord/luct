@@ -109,7 +109,13 @@ mod tests {
 
     #[test]
     fn parse_get_entry_response() {
-        let _response: GetEntriesResponse = serde_json::from_str(GOOGLE_GET_ENTRY).unwrap();
+        let response: GetEntriesResponse = serde_json::from_str(GOOGLE_GET_ENTRY).unwrap();
+        assert_eq!(response.entries.len(), 1);
+
+        // Test round trip
+        let reencoded = serde_json::to_string(&response).unwrap();
+        let response2: GetEntriesResponse = serde_json::from_str(&reencoded).unwrap();
+        assert_eq!(response, response2);
     }
 
     // const ARGON2025H1_CONSISTENCY: &str = "{
