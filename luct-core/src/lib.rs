@@ -8,6 +8,8 @@ use std::io::{Read, Write};
 use url::Url;
 
 pub mod cert;
+pub mod store;
+pub(crate) mod tree;
 pub(crate) mod utils;
 pub mod v1;
 
