@@ -58,14 +58,14 @@ impl Encode for LogEntry {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         match self {
             LogEntry::X509(cert) => {
-                writer.write_all(&[0])?;
+                writer.write_all(&[0, 0])?;
 
                 let mut cert_bytes = vec![];
                 let _len = cert.encode_to_vec(&mut cert_bytes)?;
                 CodecVec::<U24>::from(cert_bytes).encode(&mut writer)?;
             }
             LogEntry::PreCert(pre_cert) => {
-                writer.write_all(&[1])?;
+                writer.write_all(&[0, 1])?;
                 pre_cert.encode(&mut writer)?;
             }
         };
@@ -76,10 +76,11 @@ impl Encode for LogEntry {
 
 impl Decode for LogEntry {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
-        let mut buf = [0u8; 1];
+        let mut buf = [0u8; 2];
         reader.read_exact(&mut buf)?;
+        let entry = u16::from_be_bytes(buf);
 
-        match buf[0] {
+        match entry {
             0 => {
                 let cert_bytes = CodecVec::<U24>::decode(&mut reader)?;
                 let cert = CertificateInner::<Rfc5280>::from_der(cert_bytes.as_ref())?;
@@ -100,7 +101,7 @@ pub struct PreCert {
 
 impl Encode for PreCert {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        x509_cert::der::Encode::encode(&self.issuer_key_hash, &mut writer)?;
+        crate::Encode::encode(&self.issuer_key_hash, &mut writer)?;
 
         let mut cert_bytes = vec![];
         let _len = self.tbs_certificate.encode_to_vec(&mut cert_bytes)?;
