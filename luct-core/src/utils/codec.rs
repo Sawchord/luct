@@ -21,7 +21,7 @@ pub enum CodecError {
 
     #[error("A field contained {received} bytes (maximum is {max} bytes)")]
     VectorTooLong { received: usize, max: usize },
-    // #[error("A fiedl contained {received} bytes (expected {expected} bytes)")]
+    // #[error("A field contained {received} bytes (expected {expected} bytes)")]
     // VectorTooShort { received: usize, expected: usize },
 }
 

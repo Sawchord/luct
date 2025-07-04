@@ -1,6 +1,7 @@
 use base64::{Engine, prelude::BASE64_STANDARD};
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 use std::{
+    fmt,
     io::{Cursor, Write},
     ops::{Deref, DerefMut},
 };
@@ -40,16 +41,36 @@ impl Serialize for Base64<Vec<u8>> {
     }
 }
 
+struct Base64VecVisitor;
+
+impl<'de> de::Visitor<'de> for Base64VecVisitor {
+    type Value = Vec<u8>;
+
+    fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+        write!(formatter, "A string containing a base64 encoded value")
+    }
+
+    fn visit_str<E>(self, v: &str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        self.visit_borrowed_str(v)
+    }
+
+    fn visit_borrowed_str<E>(self, v: &'de str) -> Result<Self::Value, E>
+    where
+        E: de::Error,
+    {
+        BASE64_STANDARD.decode(v).map_err(de::Error::custom)
+    }
+}
+
 impl<'de> Deserialize<'de> for Base64<Vec<u8>> {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let encoded = <String>::deserialize(deserializer)?;
-        BASE64_STANDARD
-            .decode(encoded)
-            .map_err(serde::de::Error::custom)
-            .map(Base64)
+        Ok(Base64(deserializer.deserialize_str(Base64VecVisitor)?))
     }
 }
 
@@ -59,8 +80,8 @@ impl<T: Encode> Serialize for Base64<Codec<T>> {
         S: Serializer,
     {
         let mut data = Cursor::new(vec![]);
-        self.encode(&mut data).map_err(serde::ser::Error::custom)?;
-        data.flush().map_err(serde::ser::Error::custom)?;
+        self.encode(&mut data).map_err(ser::Error::custom)?;
+        data.flush().map_err(ser::Error::custom)?;
 
         let encoded = BASE64_STANDARD.encode(data.into_inner());
         serializer.serialize_str(&encoded)
@@ -73,13 +94,12 @@ impl<'de, T: Decode> Deserialize<'de> for Base64<Codec<T>> {
         D: Deserializer<'de>,
     {
         let encoded = <String>::deserialize(deserializer)?;
-        let decoded = BASE64_STANDARD
-            .decode(encoded)
-            .map_err(serde::de::Error::custom)?;
+        let decoded = BASE64_STANDARD.decode(encoded).map_err(de::Error::custom)?;
+        //dbg!(&decoded[0..100]);
 
         let data = Cursor::new(decoded);
         T::decode(data)
-            .map_err(serde::de::Error::custom)
+            .map_err(de::Error::custom)
             .map(|v| Self(Codec(v)))
     }
 }
