@@ -71,24 +71,15 @@ impl Certificate {
             .encode_to_vec(&mut subject_public_key_bytes)?;
         let issuer_key_hash: [u8; 32] = Sha256::digest(&subject_public_key_bytes).into();
 
-        let poison = Extension {
-            extn_id: CT_POISON,
-            critical: true,
-            extn_value: OctetString::new(vec![0x05, 0x00]).unwrap(),
-        };
+        // TODO: Change the issuer, if a special precert signing certificate is being used
 
-        let extensions = if let Some(extensions) = tbs_certificate.extensions {
-            let mut extensions = extensions
-                .into_iter()
-                .filter(|extension| extension.extn_id != SCT_V1 && extension.extn_id != CT_POISON)
-                .collect::<Vec<_>>();
-            extensions.push(poison);
+        tbs_certificate.extensions = tbs_certificate.extensions.map(|extensions| {
             extensions
-        } else {
-            vec![poison]
-        };
-
-        tbs_certificate.extensions = Some(extensions);
+                .into_iter()
+                // NOTE: We need to remove all SCT and POISON extensions
+                .filter(|extension| extension.extn_id != SCT_V1 && extension.extn_id != CT_POISON)
+                .collect::<Vec<_>>()
+        });
 
         Ok(LogEntry::PreCert(PreCert {
             issuer_key_hash,

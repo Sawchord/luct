@@ -95,7 +95,6 @@ impl<'de, T: Decode> Deserialize<'de> for Base64<Codec<T>> {
     {
         let encoded = <String>::deserialize(deserializer)?;
         let decoded = BASE64_STANDARD.decode(encoded).map_err(de::Error::custom)?;
-        //dbg!(&decoded[0..100]);
 
         let data = Cursor::new(decoded);
         T::decode(data)
