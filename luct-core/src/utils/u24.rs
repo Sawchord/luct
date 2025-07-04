@@ -30,7 +30,7 @@ impl Encode for U24 {
 impl Decode for U24 {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
         let mut buf = [0u8; 4];
-        reader.read_exact(&mut buf[1..3])?;
+        reader.read_exact(&mut buf[1..4])?;
         let val = u32::from_be_bytes(buf);
         Ok(Self(val))
     }
