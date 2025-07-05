@@ -1,5 +1,6 @@
 use crate::{
     Version,
+    tree::Hashable,
     utils::{
         base64::Base64,
         codec::{Codec, CodecError, Decode, Encode},
@@ -7,7 +8,6 @@ use crate::{
     },
     v1::LogEntry,
 };
-use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read, Write};
@@ -24,32 +24,18 @@ pub struct GetEntriesData {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct LeafHash([u8; 32]);
-
-impl LeafHash {
-    pub fn base64(&self) -> String {
-        BASE64_STANDARD.encode(self.0)
-    }
-
-    pub fn hex(&self) -> String {
-        hex::encode(self.0)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleTreeLeaf {
     pub(crate) version: Version,
     pub(crate) leaf: Leaf,
 }
 
-impl MerkleTreeLeaf {
-    pub fn hash(&self) -> Result<LeafHash, CodecError> {
+impl Hashable for MerkleTreeLeaf {
+    fn hash(&self) -> [u8; 32] {
         let mut bytes = Cursor::new(vec![]);
-        bytes.write_all(&[0])?;
-        self.encode(&mut bytes)?;
+        bytes.write_all(&[0]).unwrap();
+        self.encode(&mut bytes).unwrap();
 
-        let hash: [u8; 32] = Sha256::digest(bytes.into_inner()).into();
-        Ok(LeafHash(hash))
+        Sha256::digest(bytes.into_inner()).into()
     }
 }
 

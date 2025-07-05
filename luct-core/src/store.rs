@@ -4,7 +4,7 @@ use std::{
 };
 
 pub trait Store<K: Ord, V> {
-    fn insert(&self, key: K, value: V);
+    fn insert(&self, key: K, value: V) -> Option<V>;
     fn get(&self, key: &K) -> Option<V>;
     fn len(&self) -> usize;
     fn last(&self) -> Option<V>;
@@ -18,8 +18,8 @@ pub trait Store<K: Ord, V> {
 pub struct MemoryStore<K, V>(Arc<RwLock<BTreeMap<K, V>>>);
 
 impl<K: Ord, V: Clone> Store<K, V> for MemoryStore<K, V> {
-    fn insert(&self, key: K, value: V) {
-        self.0.write().unwrap().insert(key, value);
+    fn insert(&self, key: K, value: V) -> Option<V> {
+        self.0.write().unwrap().insert(key, value).clone()
     }
 
     fn get(&self, key: &K) -> Option<V> {
