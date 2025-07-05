@@ -175,7 +175,6 @@ mod tests {
         let log = get_log_argon2025h2();
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
-        // FIXME: Get this to validate
         log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
     }
 

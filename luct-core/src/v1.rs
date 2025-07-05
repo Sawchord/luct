@@ -14,6 +14,7 @@ mod merkle_tree;
 mod sct;
 mod sth;
 
+pub use merkle_tree::{GetEntriesResponse, LeafHash, MerkleTreeLeaf};
 pub use sct::SignedCertificateTimestamp;
 pub use sth::SthResponse;
 

@@ -134,11 +134,11 @@ impl Decode for SctList {
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedCertificateTimestamp {
-    sct_version: Version,
-    id: [u8; 32],
-    timestamp: u64,
-    extensions: CodecVec<u16>,
-    signature: Signature<CertificateTimeStamp>,
+    pub(crate) sct_version: Version,
+    pub(crate) id: [u8; 32],
+    pub(crate) timestamp: u64,
+    pub(crate) extensions: CodecVec<u16>,
+    pub(crate) signature: Signature<CertificateTimeStamp>,
 }
 
 impl SignedCertificateTimestamp {

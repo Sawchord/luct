@@ -1,14 +1,37 @@
 use crate::{
-    Version,
+    CtLog, Version,
+    cert::{CertificateChain, CertificateError},
     utils::{
         base64::Base64,
         codec::{Codec, CodecError, Decode, Encode},
         vec::CodecVec,
     },
-    v1::LogEntry,
+    v1::{LogEntry, SignedCertificateTimestamp},
 };
+use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
+use sha2::{Digest, Sha256};
+use std::io::{Cursor, Read, Write};
+
+impl CtLog {
+    pub fn as_precert_leaf(
+        cert: &CertificateChain,
+        sct: &SignedCertificateTimestamp,
+    ) -> Result<MerkleTreeLeaf, CodecError> {
+        Ok(MerkleTreeLeaf {
+            version: sct.sct_version.clone(),
+            leaf: Leaf::TimestampedEntry(TimestampedEntry {
+                timestamp: sct.timestamp,
+                log_entry: cert.as_precert_entry_v1().map_err(|err| match err {
+                    CertificateError::DerParseError(err) => CodecError::DerError(err),
+                    CertificateError::CodecError(err) => err,
+                    _ => unreachable!(),
+                })?,
+                extensions: sct.extensions.clone(),
+            }),
+        })
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetEntriesResponse {
@@ -22,9 +45,28 @@ pub struct GetEntriesData {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LeafHash([u8; 32]);
+
+impl LeafHash {
+    pub fn base64(&self) -> String {
+        BASE64_STANDARD.encode(self.0)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleTreeLeaf {
     version: Version,
     leaf: Leaf,
+}
+
+impl MerkleTreeLeaf {
+    pub fn hash(&self) -> Result<LeafHash, CodecError> {
+        let mut bytes = Cursor::new(vec![]);
+        self.encode(&mut bytes)?;
+
+        let hash: [u8; 32] = Sha256::digest(bytes.into_inner()).into();
+        Ok(LeafHash(hash))
+    }
 }
 
 impl Encode for MerkleTreeLeaf {
@@ -104,10 +146,17 @@ impl Decode for TimestampedEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::cert::CertificateChain;
+    use crate::{cert::CertificateChain, tests::get_log_argon2025h2};
 
     const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
     const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");
+
+    const ARGON2025H2_STH_0506: &str = "{
+        \"tree_size\":1329315675,
+        \"timestamp\":1751738269891,
+        \"sha256_root_hash\":\"NEFqldTJt2+wE/aaaQuXeADdWVV8IGbwhLublI7QaMY=\",
+        \"tree_head_signature\":\"BAMARjBEAiA9rna9/avaKTald7hHrldq8FfB4FDAaNyB44pplv71agIgeD0jj2AhLnvlaWavfFZ3BdUglauz36rFpGLYuLBs/O8=\"
+    }";
 
     #[test]
     fn parse_get_entry_response() {
@@ -134,31 +183,14 @@ mod tests {
         assert_eq!(log_entry1, log_entry2);
     }
 
-    // const ARGON2025H1_CONSISTENCY: &str = "{
-    // \"consistency\":[
-    //     \"/qxhAu1l2bHdO41AWkZ1+D2xn8eqDXFsEZU99tz0Zwg=\",
-    //     \"96OsxcsJgncKCPuBr9b4it0tXeZM/yEiiKUx84xgmqI=\",
-    //     \"KPO2TCYRlSLiKhw3FKG/QGM3/XOcqV0Yo5cX/i6Te2s=\",
-    //     \"JYxzHyaYvCJulAD30dtHlG882yOBxMhnsFEOqkxx8n8=\",
-    //     \"MTJ/W3MuAX7J6FCKOWzP7qSq/mXmqI+qPKN4b8SgBIY=\",
-    //     \"aW9uOA5He4q7gbrTugpuZbwXhqJ9W9mpw/RRB6REcwU=\",
-    //     \"pAbSFTjehDkKMjqlbqe/Ywvf4FirNcxKJGQbKh0CbPc=\",
-    //     \"9ZWAvFdlYx0PvcgR83frVhiQ51VoICKcR1uRrv5AHaA=\",
-    //     \"wo+auyrwkSf6uVuIzs5MsNHlCGQNlufvVDvdo4xg/mQ=\",
-    //     \"/COh2xbeLPPY5IlqyQHcFeqU2j9cxQl/F1g20wb4Mn8=\",
-    //     \"6scEK427tO6n3vzUvBrQmK18nGrBpt48HvXgHjpqyEI=\",
-    //     \"m/kWyQAkeEt9W76mRtAFB6jNqgEhIa8Xq9h9E3pEp30=\",
-    //     \"SVjnMqYjTAeiC+1K7a2k4qNHlDaupGUnF0F7G7uC9B8=\",
-    //     \"JkiceIKDdHgsV9ig+x9X8Fj4q1r2MoXZvYxcgERyuEo=\",
-    //     \"s3aSjL7PvFiMGhstflI/w6vxDLv/PjlrJlIa5rRpem4=\",
-    //     \"HDTpANRrM9TjrRbTNbPvxTvwPacBYHtoV7eV4Fa9hKc=\",
-    //     \"CxFTU+6XplS4HH5NrENZ6cPnd8rUBs4Kt1jVpBBY+Ck=\",
-    //     \"vOEAxv7qaKOV5Jaxg/6VMQC2LWnaLxZtsjPpypyyTHM=\",
-    //     \"AeW0LJfjoHjbeiUPVsM7QncUrPY46MLNPcy/uycRATo=\",
-    //     \"+ezaOjeUzMr7biFsbJxlFVDD7KGkgS+huicyz3y3BVs=\",
-    //     \"99jnACdSzOOoKrRf6DTSiR58OuO/HD3Me7uaXTjtScQ=\",
-    //     \"mMadhMt51T9DaCw9gliGKkXQQ+zTZCUKKQuYaOt893I=\",
-    //     \"PJBkY/VH7A5ZhIfqCtUcuc/xxoK9dgnsIrpoF16pzNU=\",
-    //     \"FO1qamBJREqIDiaC0nJUvhtYgwhTbv4mKlfKWSzerFs=\"
-    // ]}";
+    #[test]
+    fn audit_sct() {
+        let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
+        let scts = cert.cert().extract_scts_v1().unwrap();
+
+        let log = get_log_argon2025h2();
+        assert_eq!(log.log_id_v1(), scts[0].log_id());
+
+        log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
+    }
 }
