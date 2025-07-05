@@ -1,37 +1,16 @@
 use crate::{
-    CtLog, Version,
-    cert::{CertificateChain, CertificateError},
+    Version,
     utils::{
         base64::Base64,
         codec::{Codec, CodecError, Decode, Encode},
         vec::CodecVec,
     },
-    v1::{LogEntry, SignedCertificateTimestamp},
+    v1::LogEntry,
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read, Write};
-
-impl CtLog {
-    pub fn as_precert_leaf(
-        cert: &CertificateChain,
-        sct: &SignedCertificateTimestamp,
-    ) -> Result<MerkleTreeLeaf, CodecError> {
-        Ok(MerkleTreeLeaf {
-            version: sct.sct_version.clone(),
-            leaf: Leaf::TimestampedEntry(TimestampedEntry {
-                timestamp: sct.timestamp,
-                log_entry: cert.as_precert_entry_v1().map_err(|err| match err {
-                    CertificateError::DerParseError(err) => CodecError::DerError(err),
-                    CertificateError::CodecError(err) => err,
-                    _ => unreachable!(),
-                })?,
-                extensions: sct.extensions.clone(),
-            }),
-        })
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetEntriesResponse {
@@ -51,17 +30,22 @@ impl LeafHash {
     pub fn base64(&self) -> String {
         BASE64_STANDARD.encode(self.0)
     }
+
+    pub fn hex(&self) -> String {
+        hex::encode(self.0)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleTreeLeaf {
-    version: Version,
-    leaf: Leaf,
+    pub(crate) version: Version,
+    pub(crate) leaf: Leaf,
 }
 
 impl MerkleTreeLeaf {
     pub fn hash(&self) -> Result<LeafHash, CodecError> {
         let mut bytes = Cursor::new(vec![]);
+        bytes.write_all(&[0])?;
         self.encode(&mut bytes)?;
 
         let hash: [u8; 32] = Sha256::digest(bytes.into_inner()).into();
@@ -119,9 +103,9 @@ impl Decode for Leaf {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct TimestampedEntry {
-    timestamp: u64,
-    log_entry: LogEntry,
-    extensions: CodecVec<u16>,
+    pub(crate) timestamp: u64,
+    pub(crate) log_entry: LogEntry,
+    pub(crate) extensions: CodecVec<u16>,
 }
 
 impl Encode for TimestampedEntry {
@@ -151,12 +135,12 @@ mod tests {
     const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
     const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");
 
-    const ARGON2025H2_STH_0506: &str = "{
-        \"tree_size\":1329315675,
-        \"timestamp\":1751738269891,
-        \"sha256_root_hash\":\"NEFqldTJt2+wE/aaaQuXeADdWVV8IGbwhLublI7QaMY=\",
-        \"tree_head_signature\":\"BAMARjBEAiA9rna9/avaKTald7hHrldq8FfB4FDAaNyB44pplv71agIgeD0jj2AhLnvlaWavfFZ3BdUglauz36rFpGLYuLBs/O8=\"
-    }";
+    // const ARGON2025H2_STH_0506: &str = "{
+    //     \"tree_size\":1329315675,
+    //     \"timestamp\":1751738269891,
+    //     \"sha256_root_hash\":\"NEFqldTJt2+wE/aaaQuXeADdWVV8IGbwhLublI7QaMY=\",
+    //     \"tree_head_signature\":\"BAMARjBEAiA9rna9/avaKTald7hHrldq8FfB4FDAaNyB44pplv71agIgeD0jj2AhLnvlaWavfFZ3BdUglauz36rFpGLYuLBs/O8=\"
+    // }";
 
     #[test]
     fn parse_get_entry_response() {
@@ -178,9 +162,21 @@ mod tests {
         let log_entry1 = entry.log_entry;
 
         let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        let log_entry2 = cert2.as_precert_entry_v1().unwrap();
+        let log_entry2 = cert2.as_log_entry_v1(true).unwrap();
 
         assert_eq!(log_entry1, log_entry2);
+    }
+
+    #[test]
+    fn test_leaf_creation() {
+        let response: GetEntriesResponse = serde_json::from_str(GOOGLE_GET_ENTRY).unwrap();
+        let leaf1 = response.entries[0].leaf_input.0.0.clone();
+
+        let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
+        let sct2 = cert2.cert().extract_scts_v1().unwrap();
+        let leaf2 = cert2.as_leaf_v1(&sct2[0], true).unwrap();
+
+        assert_eq!(leaf1, leaf2)
     }
 
     #[test]
@@ -191,6 +187,9 @@ mod tests {
         let log = get_log_argon2025h2();
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
-        log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
+        //let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
+        //let hash = leaf.hash().unwrap();
+
+        // TODO: Validate the audit proof against the STH
     }
 }

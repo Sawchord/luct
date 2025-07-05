@@ -1,6 +1,9 @@
 use crate::{
     utils::codec::{CodecError, Decode},
-    v1::{LogEntry, PreCert, SctList, SignedCertificateTimestamp},
+    v1::{
+        LogEntry, MerkleTreeLeaf, PreCert, SctList, SignedCertificateTimestamp,
+        merkle_tree::{Leaf, TimestampedEntry},
+    },
 };
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
@@ -40,11 +43,11 @@ impl CertificateChain {
         self.0.last().unwrap()
     }
 
-    pub(crate) fn as_log_entry_v1(&self) -> Result<LogEntry, CertificateError> {
-        Ok(LogEntry::X509(self.cert().0.clone()))
-    }
+    pub(crate) fn as_log_entry_v1(&self, as_precert: bool) -> Result<LogEntry, CertificateError> {
+        if !as_precert {
+            return Ok(LogEntry::X509(self.cert().0.clone()));
+        }
 
-    pub(crate) fn as_precert_entry_v1(&self) -> Result<LogEntry, CertificateError> {
         let mut subject_public_key_bytes = vec![];
         let mut tbs_certificate = self.cert().0.tbs_certificate.clone();
 
@@ -70,6 +73,27 @@ impl CertificateChain {
             issuer_key_hash,
             tbs_certificate,
         }))
+    }
+
+    // TODO: Move to CertificateChain
+
+    pub fn as_leaf_v1(
+        self,
+        sct: &SignedCertificateTimestamp,
+        as_precert: bool,
+    ) -> Result<MerkleTreeLeaf, CodecError> {
+        Ok(MerkleTreeLeaf {
+            version: sct.sct_version.clone(),
+            leaf: Leaf::TimestampedEntry(TimestampedEntry {
+                timestamp: sct.timestamp,
+                log_entry: self.as_log_entry_v1(as_precert).map_err(|err| match err {
+                    CertificateError::DerParseError(err) => CodecError::DerError(err),
+                    CertificateError::CodecError(err) => err,
+                    _ => unreachable!(),
+                })?,
+                extensions: sct.extensions.clone(),
+            }),
+        })
     }
 }
 
@@ -175,7 +199,7 @@ mod tests {
         let log = get_log_argon2025h2();
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
-        log.validate_sct_as_precert_v1(&cert, &scts[0]).unwrap();
+        log.validate_sct_v1(&cert, &scts[0], true).unwrap();
     }
 
     #[test]

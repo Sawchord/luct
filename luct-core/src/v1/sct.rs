@@ -12,34 +12,16 @@ use crate::{
 use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
 impl CtLog {
-    pub fn validate_sct_as_precert_v1(
+    pub fn validate_sct_v1(
         &self,
         cert: &CertificateChain,
         sct: &SignedCertificateTimestamp,
+        as_precert: bool,
     ) -> Result<(), SignatureValidationError> {
         let timestamp = CertificateTimeStamp {
             sct_version: Version::V1,
             timestamp: sct.timestamp,
-            entry: cert.as_precert_entry_v1().map_err(|err| match err {
-                CertificateError::DerParseError(err) => SignatureValidationError::DerError(err),
-                CertificateError::CodecError(err) => SignatureValidationError::CodecError(err),
-                _ => unreachable!(),
-            })?,
-            extensions: sct.extensions.clone(),
-        };
-
-        sct.signature.validate(&timestamp, &self.config.key)
-    }
-
-    pub fn validate_sct_as_cert_v1(
-        &self,
-        cert: &CertificateChain,
-        sct: &SignedCertificateTimestamp,
-    ) -> Result<(), SignatureValidationError> {
-        let timestamp = CertificateTimeStamp {
-            sct_version: Version::V1,
-            timestamp: sct.timestamp,
-            entry: cert.as_log_entry_v1().map_err(|err| match err {
+            entry: cert.as_log_entry_v1(as_precert).map_err(|err| match err {
                 CertificateError::DerParseError(err) => SignatureValidationError::DerError(err),
                 CertificateError::CodecError(err) => SignatureValidationError::CodecError(err),
                 _ => unreachable!(),

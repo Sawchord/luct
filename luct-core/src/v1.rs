@@ -10,9 +10,9 @@ use x509_cert::{
     der::{Decode as DerDecode, Encode as DerEncode},
 };
 
-mod merkle_tree;
-mod sct;
-mod sth;
+pub(crate) mod merkle_tree;
+pub(crate) mod sct;
+pub(crate) mod sth;
 
 pub use merkle_tree::{GetEntriesResponse, LeafHash, MerkleTreeLeaf};
 pub use sct::SignedCertificateTimestamp;

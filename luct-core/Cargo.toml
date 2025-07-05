@@ -16,6 +16,7 @@ serde = { workspace = true }
 serde_json = { workspace = true }
 
 base64 = { workspace = true }
+hex = { workspace = true }
 url = { workspace = true }
 
 p256 = { workspace = true, features = ["pkcs8"] }
