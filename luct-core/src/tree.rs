@@ -28,7 +28,8 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
 
     pub fn insert_entry(&self, entry: V) {
         let idx = self.leafs.len() as u64;
-        let old_hash = self.nodes.insert(NodeKey::leaf(idx), entry.hash());
+        let entry_key = NodeKey::leaf(idx);
+        let old_hash = self.nodes.insert(entry_key, entry.hash());
         let old_leaf = self.leafs.insert(idx, entry);
 
         // FIXME: We should handle this gracefully somehow
@@ -38,19 +39,23 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
         };
 
         // Already update intermediate nodes, if they are power of twos
-        let mut idx_mod = 2;
-        while (idx + 1) % idx_mod == 0 {
-            let start = idx % idx_mod;
+        let end = idx + 1;
+        let mut diff = 2;
 
-            let key = NodeKey { start, end: idx };
+        while end % diff == 0 {
+            let start = end - diff;
+
+            let key = NodeKey { start, end };
             let (left, right) = key.split();
+
             let node = Node {
                 left: self.nodes.get(&left).unwrap(),
                 right: self.nodes.get(&right).unwrap(),
             };
 
             self.nodes.insert(key, node.hash());
-            idx_mod <<= 1;
+
+            diff <<= 1;
         }
     }
 
@@ -228,6 +233,17 @@ mod tests {
         tree.insert_entry("B".to_string());
         tree.insert_entry("C".to_string());
 
+        // Generate tree head
+        let tree_head1 = tree.recompute_tree_head();
+
+        tree.insert_entry("D".to_string());
+        tree.insert_entry("E".to_string());
+        tree.insert_entry("F".to_string());
+        tree.insert_entry("G".to_string());
+
+        let tree_head2 = tree.recompute_tree_head();
+
+        tree.insert_entry("H".to_string());
         todo!()
     }
 
