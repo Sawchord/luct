@@ -10,13 +10,13 @@ use x509_cert::{
     der::{Decode as DerDecode, Encode as DerEncode},
 };
 
-pub(crate) mod merkle_tree;
 pub(crate) mod sct;
 pub(crate) mod sth;
+pub(crate) mod tree;
 
-pub use merkle_tree::{GetEntriesResponse, LeafHash, MerkleTreeLeaf};
 pub use sct::SignedCertificateTimestamp;
 pub use sth::SthResponse;
+pub use tree::{GetEntriesResponse, MerkleTreeLeaf};
 
 /// See RFC 5246 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]

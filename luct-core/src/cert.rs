@@ -2,7 +2,7 @@ use crate::{
     utils::codec::{CodecError, Decode},
     v1::{
         LogEntry, MerkleTreeLeaf, PreCert, SctList, SignedCertificateTimestamp,
-        merkle_tree::{Leaf, TimestampedEntry},
+        tree::{Leaf, TimestampedEntry},
     },
 };
 use p256::pkcs8::ObjectIdentifier;
