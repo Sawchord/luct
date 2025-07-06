@@ -1,6 +1,9 @@
 use crate::{
-    tree::{ConsistencyProof, TreeHead},
-    v1::{responses::GetSthConsistencyResponse, sth::TreeHeadSignature},
+    tree::{AuditProof, ConsistencyProof, TreeHead},
+    v1::{
+        responses::{GetProofByHashResponse, GetSthConsistencyResponse},
+        sth::TreeHeadSignature,
+    },
 };
 
 impl TryFrom<GetSthConsistencyResponse> for ConsistencyProof {
@@ -26,6 +29,21 @@ impl From<TreeHeadSignature> for TreeHead {
     }
 }
 
+impl TryFrom<GetProofByHashResponse> for AuditProof {
+    type Error = ();
+
+    fn try_from(value: GetProofByHashResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
+            index: value.leaf_index,
+            path: value
+                .audit_path
+                .into_iter()
+                .map(|elem| elem.0.try_into().map_err(|_| ()))
+                .collect::<Result<Vec<[u8; 32]>, ()>>()?,
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
 
@@ -33,10 +51,11 @@ mod tests {
     use crate::{
         CertificateChain,
         tests::{
-            ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM,
+            ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, GOOGLE_AUDIT_PROOF,
             GOOGLE_STH_CONSISTENCY_PROOF, get_log_argon2025h2,
         },
-        v1::SthResponse,
+        tree::Hashable,
+        v1::{SthResponse, responses::GetProofByHashResponse},
     };
 
     #[test]
@@ -63,8 +82,11 @@ mod tests {
         let log = get_log_argon2025h2();
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
-        //let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
-        //let hash = leaf.hash().unwrap();
+        let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
+        let _hash = leaf.hash();
+
+        let audit_proof: GetProofByHashResponse = serde_json::from_str(GOOGLE_AUDIT_PROOF).unwrap();
+        let proof = AuditProof::try_from(audit_proof).unwrap();
 
         // TODO: Validate the audit proof against the STH
     }

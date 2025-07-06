@@ -19,6 +19,13 @@ pub struct GetSthConsistencyResponse {
     pub(crate) consistency: Vec<Base64<Vec<u8>>>,
 }
 
+/// See RFC 6962 4.5
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct GetProofByHashResponse {
+    pub(crate) leaf_index: u64,
+    pub(crate) audit_path: Vec<Base64<Vec<u8>>>,
+}
+
 /// See RFC 6962 4.6
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetEntriesResponse {

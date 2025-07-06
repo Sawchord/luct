@@ -111,6 +111,8 @@ mod tests {
     pub(crate) const GOOGLE_GET_ENTRY: &str = include_str!("../testdata/google-entry.json");
     pub(crate) const GOOGLE_STH_CONSISTENCY_PROOF: &str =
         include_str!("../testdata/sth-consistency-proof.json");
+    pub(crate) const GOOGLE_AUDIT_PROOF: &str =
+        include_str!("../testdata/google-precert-audit-proof.json");
 
     pub(crate) fn get_log_argon2025h1() -> CtLog {
         let config = toml::from_str(ARGON2025H1).unwrap();

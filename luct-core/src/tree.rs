@@ -149,8 +149,8 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct AuditProof {
-    index: u64,
-    path: Vec<HashOutput>,
+    pub(crate) index: u64,
+    pub(crate) path: Vec<HashOutput>,
 }
 
 impl AuditProof {
@@ -198,28 +198,28 @@ impl ConsistencyProof {
             }
 
             if f_n & 1 == 1 || f_n == s_n {
-                let mut hash = Sha256::new();
-                hash.update([1]);
-                hash.update(c);
-                hash.update(f_r);
-                f_r = hash.finalize().into();
+                f_r = Node {
+                    left: *c,
+                    right: f_r,
+                }
+                .hash();
 
-                let mut hash = Sha256::new();
-                hash.update([1]);
-                hash.update(c);
-                hash.update(s_r);
-                s_r = hash.finalize().into();
+                s_r = Node {
+                    left: *c,
+                    right: s_r,
+                }
+                .hash();
 
                 while f_n & 1 == 0 && f_n != 0 {
                     f_n >>= 1;
                     s_n >>= 1;
                 }
             } else {
-                let mut hash = Sha256::new();
-                hash.update([1]);
-                hash.update(s_r);
-                hash.update(c);
-                s_r = hash.finalize().into();
+                s_r = Node {
+                    left: s_r,
+                    right: *c,
+                }
+                .hash();
             }
 
             f_n >>= 1;
