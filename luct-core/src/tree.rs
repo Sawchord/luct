@@ -1,24 +1,34 @@
 use crate::store::Store;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::marker::PhantomData;
 
+// TODO: Implement a custom digest trait and make all types in this module generic on it
 type HashOutput = [u8; 32];
 
-pub(crate) trait Hashable {
+pub trait Hashable {
     fn hash(&self) -> HashOutput;
 }
 
 #[derive(Debug, Clone)]
-pub(crate) struct Tree<N, L, V> {
+pub struct Tree<N, L, V> {
     nodes: N,
     leafs: L,
     values: PhantomData<V>,
 }
 
 impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V> {
+    pub fn new(node_store: N, leaf_store: L) -> Self {
+        Self {
+            nodes: node_store,
+            leafs: leaf_store,
+            values: PhantomData,
+        }
+    }
+
     pub fn insert_entry(&self, entry: V) {
         let idx = self.leafs.len() as u64;
-        let old_hash = self.nodes.insert(NodeKey::full(idx + 1), entry.hash());
+        let old_hash = self.nodes.insert(NodeKey::leaf(idx), entry.hash());
         let old_leaf = self.leafs.insert(idx, entry);
 
         // FIXME: We should handle this gracefully somehow
@@ -29,7 +39,7 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
 
         // Already update intermediate nodes, if they are power of twos
         let mut idx_mod = 2;
-        while idx % idx_mod == 0 {
+        while (idx + 1) % idx_mod == 0 {
             let start = idx % idx_mod;
 
             let key = NodeKey { start, end: idx };
@@ -45,13 +55,39 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
     }
 
     pub fn recompute_tree_head(&self) -> TreeHead {
-        todo!()
+        let tree_size = self.leafs.len() as u64;
+        let mut current_key = NodeKey::full_range(tree_size);
+        let mut balanced_nodes = vec![];
+
+        while !current_key.is_balanced() {
+            let (left, right) = current_key.split();
+            assert!(left.is_balanced());
+            balanced_nodes.push(left);
+            current_key = right;
+        }
+
+        let mut current_node_hash = self.nodes.get(&current_key).unwrap();
+        while let Some(left_key) = balanced_nodes.pop() {
+            let current_node = Node {
+                left: self.nodes.get(&left_key).unwrap(),
+                right: self.nodes.get(&current_key).unwrap(),
+            };
+
+            current_key = left_key.merge(&current_key).unwrap();
+            current_node_hash = current_node.hash();
+            self.nodes.insert(current_key.clone(), current_node_hash);
+        }
+
+        TreeHead {
+            tree_size,
+            head: current_node_hash,
+        }
     }
 
-    pub fn get_tree_head(&self) -> Option<TreeHead> {
+    pub fn get_latest_tree_head(&self) -> Option<TreeHead> {
         let idx = self.leafs.len() as u64;
         self.nodes
-            .get(&NodeKey { start: 0, end: idx })
+            .get(&NodeKey::full_range(idx))
             .map(|head| TreeHead {
                 tree_size: idx,
                 head,
@@ -72,7 +108,7 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct AuditProof(Vec<HashOutput>);
+pub struct AuditProof(u64, Vec<HashOutput>);
 
 impl AuditProof {
     pub fn validate(head: &TreeHead) -> bool {
@@ -81,7 +117,7 @@ impl AuditProof {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct ConsistencyProof(Vec<HashOutput>);
+pub struct ConsistencyProof(Vec<HashOutput>);
 
 impl ConsistencyProof {
     pub fn validate(old_head: &TreeHead, new_head: &TreeHead) -> bool {
@@ -90,20 +126,27 @@ impl ConsistencyProof {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct TreeHead {
+pub struct TreeHead {
     tree_size: u64,
     head: HashOutput,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 
-struct NodeKey {
+pub struct NodeKey {
     start: u64,
     end: u64,
 }
 
 impl NodeKey {
-    fn full(end: u64) -> Self {
+    fn leaf(idx: u64) -> Self {
+        Self {
+            start: idx,
+            end: idx + 1,
+        }
+    }
+
+    fn full_range(end: u64) -> Self {
         Self { start: 0, end }
     }
 
@@ -121,6 +164,22 @@ impl NodeKey {
                 end: self.end,
             },
         )
+    }
+
+    fn merge(&self, other: &Self) -> Option<Self> {
+        if self.end == other.start {
+            Some(Self {
+                start: self.start,
+                end: other.end,
+            })
+        } else {
+            None
+        }
+    }
+
+    fn is_balanced(&self) -> bool {
+        let diff = self.end - self.start;
+        diff.is_power_of_two()
     }
 }
 
@@ -149,9 +208,32 @@ struct Node {
 impl Hashable for Node {
     fn hash(&self) -> HashOutput {
         let mut hash = Sha256::new();
-        hash.update(&[1]);
-        hash.update(&self.left);
-        hash.update(&self.right);
+        hash.update([1]);
+        hash.update(self.left);
+        hash.update(self.right);
         hash.finalize().into()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::store::MemoryStore;
+
+    #[test]
+    fn compute_tree_heads() {
+        let tree = Tree::<_, _, String>::new(MemoryStore::default(), MemoryStore::default());
+
+        tree.insert_entry("A".to_string());
+        tree.insert_entry("B".to_string());
+        tree.insert_entry("C".to_string());
+
+        todo!()
+    }
+
+    impl Hashable for String {
+        fn hash(&self) -> HashOutput {
+            Sha256::digest(self.as_bytes()).into()
+        }
     }
 }

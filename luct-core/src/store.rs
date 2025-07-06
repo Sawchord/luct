@@ -17,6 +17,12 @@ pub trait Store<K: Ord, V> {
 #[derive(Debug, Clone)]
 pub struct MemoryStore<K, V>(Arc<RwLock<BTreeMap<K, V>>>);
 
+impl<K: Ord, V> Default for MemoryStore<K, V> {
+    fn default() -> Self {
+        Self(Arc::new(RwLock::new(BTreeMap::new())))
+    }
+}
+
 impl<K: Ord, V: Clone> Store<K, V> for MemoryStore<K, V> {
     fn insert(&self, key: K, value: V) -> Option<V> {
         self.0.write().unwrap().insert(key, value).clone()
