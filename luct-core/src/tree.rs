@@ -1,7 +1,7 @@
 use crate::store::Store;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::marker::PhantomData;
+use std::{cmp::Ordering, marker::PhantomData};
 
 // TODO: Implement a custom digest trait and make all types in this module generic on it
 type HashOutput = [u8; 32];
@@ -106,22 +106,22 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
     /// This fioolows RFC 9162 2.1.4.1.
     pub fn get_consistency_proof(
         &self,
-        old_head: &TreeHead,
-        new_head: &TreeHead,
+        first: &TreeHead,
+        second: &TreeHead,
     ) -> Option<ConsistencyProof> {
-        if old_head.tree_size > new_head.tree_size {
+        if first.tree_size > second.tree_size {
             return None;
         }
 
-        let tree_size = new_head.tree_size;
+        let tree_size = second.tree_size;
 
         let mut n = NodeKey::full_range(tree_size);
-        let mut m = old_head.tree_size;
+        let mut m = first.tree_size;
         let mut known = true;
 
         let mut path = vec![];
 
-        while !n.is_leaf() {
+        while m + n.start != n.end {
             let (left, right) = n.split();
             if m <= right.start {
                 let elem = self.nodes.get(&right)?;
@@ -154,7 +154,7 @@ pub struct AuditProof {
 }
 
 impl AuditProof {
-    pub fn validate(head: &TreeHead) -> bool {
+    pub fn validate(&self, head: &TreeHead) -> bool {
         todo!()
     }
 }
@@ -165,8 +165,68 @@ pub struct ConsistencyProof {
 }
 
 impl ConsistencyProof {
-    pub fn validate(old_head: &TreeHead, new_head: &TreeHead) -> bool {
-        todo!()
+    pub fn validate(&self, first: &TreeHead, second: &TreeHead) -> bool {
+        if first.tree_size > second.tree_size {
+            return false;
+        };
+        if first == second && self.path.is_empty() {
+            return true;
+        }
+
+        let path: Vec<&HashOutput> = if first.tree_size.is_power_of_two() {
+            std::iter::once(&first.head)
+                .chain(self.path.iter())
+                .collect()
+        } else {
+            self.path.iter().collect()
+        };
+
+        let mut f_n = first.tree_size - 1;
+        let mut s_n = second.tree_size - 1;
+
+        while f_n & 1 == 1 {
+            f_n >>= 1;
+            s_n >>= 1;
+        }
+
+        let mut f_r = *path[0];
+        let mut s_r = *path[0];
+
+        for &c in &path[1..] {
+            if s_n == 0 {
+                return false;
+            }
+
+            if f_n & 1 == 1 || f_n == s_n {
+                let mut hash = Sha256::new();
+                hash.update([1]);
+                hash.update(c);
+                hash.update(f_r);
+                f_r = hash.finalize().into();
+
+                let mut hash = Sha256::new();
+                hash.update([1]);
+                hash.update(c);
+                hash.update(s_r);
+                s_r = hash.finalize().into();
+
+                while f_n & 1 == 0 {
+                    f_n >>= 1;
+                    s_n >>= 1;
+                }
+            } else {
+                let mut hash = Sha256::new();
+                hash.update([1]);
+                hash.update(s_r);
+                hash.update(c);
+                s_r = hash.finalize().into();
+            }
+        }
+
+        f_n >>= 1;
+        s_n >>= 1;
+
+        f_r == first.head && s_r == second.head && s_n == 0
     }
 }
 
@@ -189,10 +249,6 @@ impl NodeKey {
             start: idx,
             end: idx + 1,
         }
-    }
-
-    fn is_leaf(&self) -> bool {
-        self.end - self.start == 1
     }
 
     fn full_range(end: u64) -> Self {
@@ -237,15 +293,15 @@ impl NodeKey {
 }
 
 impl PartialOrd for NodeKey {
-    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
 impl Ord for NodeKey {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+    fn cmp(&self, other: &Self) -> Ordering {
         match self.end.cmp(&other.end) {
-            core::cmp::Ordering::Equal => {}
+            Ordering::Equal => {}
             ord => return ord,
         }
         self.start.cmp(&other.start)
@@ -300,13 +356,26 @@ mod tests {
             .get_consistency_proof(&tree_head1, &tree_head4)
             .unwrap();
         assert_eq!(proof1.path.len(), 4);
-        // TODO: Validate proof1
+        assert!(proof1.validate(&tree_head1, &tree_head4));
 
         let proof2 = tree
             .get_consistency_proof(&tree_head2, &tree_head4)
             .unwrap();
         assert_eq!(proof2.path.len(), 1);
+        assert_eq!(proof1.path[3], proof2.path[0]);
         // TODO: Validate proof2
+
+        let proof3 = tree
+            .get_consistency_proof(&tree_head3, &tree_head4)
+            .unwrap();
+        assert_eq!(proof3.path.len(), 3);
+        // TODO: validate proof3
+
+        let proof4 = tree
+            .get_consistency_proof(&tree_head4, &tree_head4)
+            .unwrap();
+        assert!(proof4.path.is_empty());
+        // TODO: validate proof4
 
         todo!()
     }
