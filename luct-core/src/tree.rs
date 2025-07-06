@@ -103,17 +103,55 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
         todo!()
     }
 
+    /// This fioolows RFC 9162 2.1.4.1.
     pub fn get_consistency_proof(
         &self,
         old_head: &TreeHead,
         new_head: &TreeHead,
     ) -> Option<ConsistencyProof> {
-        todo!()
+        if old_head.tree_size > new_head.tree_size {
+            return None;
+        }
+
+        let tree_size = new_head.tree_size;
+
+        let mut n = NodeKey::full_range(tree_size);
+        let mut m = old_head.tree_size;
+        let mut known = true;
+
+        let mut path = vec![];
+
+        while !n.is_leaf() {
+            let (left, right) = n.split();
+            if m <= right.start {
+                let elem = self.nodes.get(&right)?;
+                path.push(elem);
+                n = left;
+            } else {
+                let elem = self.nodes.get(&left)?;
+                path.push(elem);
+
+                known = false;
+                m -= right.start;
+                n = right;
+            }
+        }
+
+        if !known {
+            let elem = self.nodes.get(&n)?;
+            path.push(elem);
+        }
+
+        path.reverse();
+        Some(ConsistencyProof { path })
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct AuditProof(u64, Vec<HashOutput>);
+pub struct AuditProof {
+    index: u64,
+    path: Vec<HashOutput>,
+}
 
 impl AuditProof {
     pub fn validate(head: &TreeHead) -> bool {
@@ -122,7 +160,9 @@ impl AuditProof {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct ConsistencyProof(Vec<HashOutput>);
+pub struct ConsistencyProof {
+    path: Vec<HashOutput>,
+}
 
 impl ConsistencyProof {
     pub fn validate(old_head: &TreeHead, new_head: &TreeHead) -> bool {
@@ -151,13 +191,21 @@ impl NodeKey {
         }
     }
 
+    fn is_leaf(&self) -> bool {
+        self.end - self.start == 1
+    }
+
     fn full_range(end: u64) -> Self {
         Self { start: 0, end }
     }
 
-    fn split(&self) -> (Self, Self) {
+    fn split_idx(&self) -> u64 {
         let diff = self.end - self.start;
-        let split = diff.next_power_of_two() >> 1;
+        diff.next_power_of_two() >> 1
+    }
+
+    fn split(&self) -> (Self, Self) {
+        let split = self.split_idx();
         let split = self.start + split;
         (
             Self {
@@ -237,13 +285,29 @@ mod tests {
         let tree_head1 = tree.recompute_tree_head();
 
         tree.insert_entry("D".to_string());
-        tree.insert_entry("E".to_string());
-        tree.insert_entry("F".to_string());
-        tree.insert_entry("G".to_string());
-
         let tree_head2 = tree.recompute_tree_head();
 
+        tree.insert_entry("E".to_string());
+        tree.insert_entry("F".to_string());
+        let tree_head3 = tree.recompute_tree_head();
+
+        tree.insert_entry("G".to_string());
+        let tree_head4 = tree.recompute_tree_head();
+
         tree.insert_entry("H".to_string());
+
+        let proof1 = tree
+            .get_consistency_proof(&tree_head1, &tree_head4)
+            .unwrap();
+        assert_eq!(proof1.path.len(), 4);
+        // TODO: Validate proof1
+
+        let proof2 = tree
+            .get_consistency_proof(&tree_head2, &tree_head4)
+            .unwrap();
+        assert_eq!(proof2.path.len(), 1);
+        // TODO: Validate proof2
+
         todo!()
     }
 
