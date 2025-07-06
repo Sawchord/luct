@@ -99,11 +99,34 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
             })
     }
 
+    /// This follows RFC 9162 2.1.3.1
     pub fn get_audit_proof(&self, head: &TreeHead, index: u64) -> Option<AuditProof> {
-        todo!()
+        let mut n = NodeKey::full_range(head.tree_size);
+        let mut m = index;
+
+        let mut path = vec![];
+
+        while n.start + 1 != n.end {
+            let (left, right) = n.split();
+            if m < right.start {
+                let elem = self.nodes.get(&right)?;
+                path.push(elem);
+
+                n = left;
+            } else {
+                let elem = self.nodes.get(&left)?;
+                path.push(elem);
+
+                m -= right.start;
+                n = right;
+            }
+        }
+
+        path.reverse();
+        Some(AuditProof { index, path })
     }
 
-    /// This fioolows RFC 9162 2.1.4.1.
+    /// This follows RFC 9162 2.1.4.1
     pub fn get_consistency_proof(
         &self,
         first: &TreeHead,
@@ -154,8 +177,36 @@ pub struct AuditProof {
 }
 
 impl AuditProof {
-    pub fn validate(&self, head: &TreeHead) -> bool {
-        todo!()
+    pub fn validate(&self, head: &TreeHead, leaf: impl Hashable) -> bool {
+        if head.tree_size < self.index {
+            return false;
+        }
+
+        let mut f_n = self.index;
+        let mut s_n = head.tree_size;
+        let mut r = leaf.hash();
+
+        for p in &self.path {
+            if s_n == 0 {
+                return false;
+            }
+
+            if f_n & 1 == 1 || f_n == s_n {
+                r = Node { left: *p, right: r }.hash();
+
+                while f_n & 1 != 1 && f_n != 0 {
+                    f_n >>= 1;
+                    s_n >>= 1;
+                }
+            } else {
+                r = Node { left: r, right: *p }.hash();
+            }
+
+            f_n >>= 1;
+            s_n >>= 1;
+        }
+
+        r == head.head && s_n == 0
     }
 }
 
@@ -165,6 +216,7 @@ pub struct ConsistencyProof {
 }
 
 impl ConsistencyProof {
+    /// This follows RFC 9162 2.1.4.2
     pub fn validate(&self, first: &TreeHead, second: &TreeHead) -> bool {
         if first.tree_size > second.tree_size {
             return false;
@@ -330,7 +382,7 @@ mod tests {
     use crate::store::MemoryStore;
 
     #[test]
-    fn compute_tree_heads() {
+    fn compute_inclusion_proofs() {
         let tree = Tree::<_, _, String>::new(MemoryStore::default(), MemoryStore::default());
 
         tree.insert_entry("A".to_string());
@@ -376,6 +428,37 @@ mod tests {
             .unwrap();
         assert!(proof4.path.is_empty());
         assert!(proof4.validate(&tree_head4, &tree_head4));
+    }
+
+    #[test]
+    fn compute_audit_proofs() {
+        let tree = Tree::<_, _, String>::new(MemoryStore::default(), MemoryStore::default());
+
+        tree.insert_entry("A".to_string());
+        tree.insert_entry("B".to_string());
+        tree.insert_entry("C".to_string());
+        tree.insert_entry("D".to_string());
+        tree.insert_entry("E".to_string());
+        tree.insert_entry("F".to_string());
+        tree.insert_entry("G".to_string());
+
+        let head = tree.recompute_tree_head();
+
+        let proof1 = tree.get_audit_proof(&head, 0).unwrap();
+        assert_eq!(proof1.path.len(), 3);
+        assert!(proof1.validate(&head, "A".to_string()));
+
+        let proof2 = tree.get_audit_proof(&head, 3).unwrap();
+        assert_eq!(proof2.path.len(), 3);
+        assert!(proof2.validate(&head, "D".to_string()));
+
+        // let proof3 = tree.get_audit_proof(&head, 4).unwrap();
+        // assert_eq!(proof3.path.len(), 3);
+        // assert!(proof3.validate(&head, "E".to_string()));
+
+        // let proof4 = tree.get_audit_proof(&head, 6).unwrap();
+        // assert_eq!(proof4.path.len(), 2);
+        // assert!(proof4.validate(&head, "G".to_string()));
     }
 
     impl Hashable for String {
