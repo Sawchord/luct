@@ -2,26 +2,13 @@ use crate::{
     Version,
     tree::Hashable,
     utils::{
-        base64::Base64,
-        codec::{Codec, CodecError, Decode, Encode},
+        codec::{CodecError, Decode, Encode},
         vec::CodecVec,
     },
     v1::LogEntry,
 };
-use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read, Write};
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GetEntriesResponse {
-    entries: Vec<GetEntriesData>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct GetEntriesData {
-    leaf_input: Base64<Codec<MerkleTreeLeaf>>,
-    extra_data: Base64<Vec<u8>>,
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleTreeLeaf {
@@ -116,7 +103,7 @@ impl Decode for TimestampedEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{cert::CertificateChain, tests::get_log_argon2025h2};
+    use crate::{CertificateChain, tests::get_log_argon2025h2, v1::GetEntriesResponse};
 
     const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
     const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");

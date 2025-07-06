@@ -7,11 +7,13 @@ use sha2::{Digest, Sha256};
 use std::io::{Read, Write};
 use url::Url;
 
-pub mod cert;
+pub(crate) mod cert;
 pub mod store;
-pub(crate) mod tree;
+pub mod tree;
 pub(crate) mod utils;
 pub mod v1;
+
+pub use cert::{Certificate, CertificateChain, CertificateError};
 
 // TODO: Introduce a Timestamp type and use it
 // TODO: Introduce a LogId type and use it

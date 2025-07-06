@@ -1,15 +1,12 @@
-use std::io::{Read, Write};
-
 use crate::{
     CtLog, Version,
     utils::{
-        base64::Base64,
-        codec::{Codec, CodecError, Decode, Encode},
-        signature::{Signature, SignatureValidationError},
+        codec::{CodecError, Decode, Encode},
+        signature::SignatureValidationError,
     },
-    v1::SignatureType,
+    v1::{SignatureType, SthResponse},
 };
-use serde::{Deserialize, Serialize};
+use std::io::{Read, Write};
 
 impl CtLog {
     pub fn validate_sth_v1(&self, sth: &SthResponse) -> Result<(), SignatureValidationError> {
@@ -19,15 +16,6 @@ impl CtLog {
         sth.tree_head_signature
             .validate(&tree_head_tbs, &self.config.key)
     }
-}
-
-/// See RFC 6962 4.3
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
-pub struct SthResponse {
-    tree_size: u64,
-    timestamp: u64,
-    sha256_root_hash: Base64<Vec<u8>>,
-    tree_head_signature: Base64<Codec<Signature<TreeHeadSignature>>>,
 }
 
 /// See RFC 6962 3.5
