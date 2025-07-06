@@ -161,7 +161,7 @@ impl AuditProof {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct ConsistencyProof {
-    path: Vec<HashOutput>,
+    pub(crate) path: Vec<HashOutput>,
 }
 
 impl ConsistencyProof {
@@ -210,7 +210,7 @@ impl ConsistencyProof {
                 hash.update(s_r);
                 s_r = hash.finalize().into();
 
-                while f_n & 1 == 0 {
+                while f_n & 1 == 0 && f_n != 0 {
                     f_n >>= 1;
                     s_n >>= 1;
                 }
@@ -221,10 +221,10 @@ impl ConsistencyProof {
                 hash.update(c);
                 s_r = hash.finalize().into();
             }
-        }
 
-        f_n >>= 1;
-        s_n >>= 1;
+            f_n >>= 1;
+            s_n >>= 1;
+        }
 
         f_r == first.head && s_r == second.head && s_n == 0
     }
@@ -232,8 +232,8 @@ impl ConsistencyProof {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub struct TreeHead {
-    tree_size: u64,
-    head: HashOutput,
+    pub(crate) tree_size: u64,
+    pub(crate) head: HashOutput,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -363,21 +363,19 @@ mod tests {
             .unwrap();
         assert_eq!(proof2.path.len(), 1);
         assert_eq!(proof1.path[3], proof2.path[0]);
-        // TODO: Validate proof2
+        assert!(proof2.validate(&tree_head2, &tree_head4));
 
         let proof3 = tree
             .get_consistency_proof(&tree_head3, &tree_head4)
             .unwrap();
         assert_eq!(proof3.path.len(), 3);
-        // TODO: validate proof3
+        assert!(proof3.validate(&tree_head3, &tree_head4));
 
         let proof4 = tree
             .get_consistency_proof(&tree_head4, &tree_head4)
             .unwrap();
         assert!(proof4.path.is_empty());
-        // TODO: validate proof4
-
-        todo!()
+        assert!(proof4.validate(&tree_head4, &tree_head4));
     }
 
     impl Hashable for String {

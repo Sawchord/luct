@@ -103,10 +103,11 @@ impl Decode for TimestampedEntry {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{CertificateChain, tests::get_log_argon2025h2, v1::GetEntriesResponse};
-
-    const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
-    const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");
+    use crate::{
+        CertificateChain,
+        tests::{CERT_CHAIN_GOOGLE_COM, GOOGLE_GET_ENTRY},
+        v1::GetEntriesResponse,
+    };
 
     // const ARGON2025H2_STH_0506: &str = "{
     //     \"tree_size\":1329315675,
@@ -150,19 +151,5 @@ mod tests {
         let leaf2 = cert2.as_leaf_v1(&sct2[0], true).unwrap();
 
         assert_eq!(leaf1, leaf2)
-    }
-
-    #[test]
-    fn audit_sct() {
-        let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        let scts = cert.cert().extract_scts_v1().unwrap();
-
-        let log = get_log_argon2025h2();
-        assert_eq!(log.log_id_v1(), scts[0].log_id());
-
-        //let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
-        //let hash = leaf.hash().unwrap();
-
-        // TODO: Validate the audit proof against the STH
     }
 }

@@ -31,6 +31,12 @@ impl<T> From<T> for Base64<T> {
     }
 }
 
+impl AsRef<[u8]> for Base64<Vec<u8>> {
+    fn as_ref(&self) -> &[u8] {
+        &self.0
+    }
+}
+
 impl Serialize for Base64<Vec<u8>> {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

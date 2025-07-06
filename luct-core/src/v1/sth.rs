@@ -21,11 +21,11 @@ impl CtLog {
 /// See RFC 6962 3.5
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct TreeHeadSignature {
-    version: Version,
+    pub(crate) version: Version,
     // SignatureType signature_type = tree_hash;
-    timestamp: u64,
-    tree_size: u64,
-    sha256_root_hash: [u8; 32],
+    pub(crate) timestamp: u64,
+    pub(crate) tree_size: u64,
+    pub(crate) sha256_root_hash: [u8; 32],
 }
 
 impl Encode for TreeHeadSignature {
@@ -64,11 +64,8 @@ impl TryFrom<&SthResponse> for TreeHeadSignature {
     type Error = ();
 
     fn try_from(value: &SthResponse) -> Result<Self, Self::Error> {
-        if value.sha256_root_hash.len() != 32 {
-            return Err(());
-        }
-        let mut sha256_root_hash = [0u8; 32];
-        sha256_root_hash.copy_from_slice(&value.sha256_root_hash);
+        let sha256_root_hash: [u8; 32] =
+            value.sha256_root_hash.as_ref().try_into().map_err(|_| ())?;
 
         Ok(Self {
             version: Version::V1,
@@ -82,21 +79,7 @@ impl TryFrom<&SthResponse> for TreeHeadSignature {
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::tests::get_log_argon2025h1;
-
-    const ARGON2025H1_STH2806: &str = "{
-    \"tree_size\":1425614114,
-    \"timestamp\":1751114416696,
-    \"sha256_root_hash\":\"LHtW79pwJohJF5Yn/tyozEroOnho4u3JAGn7WeHSR54=\",
-    \"tree_head_signature\":\"BAMARzBFAiEAg4w8LlTFKd3KL6lo5Zde9OupHYNN0DDk8U54PenirI4CIHL8ucpkJw5zFLh8UvLA+Zf+f8Ms+tLsVtzHuqnO0qjm\"
-    }";
-
-    // const ARGON2025H1_STH2906: &str = "{
-    // \"tree_size\":1425633154,
-    // \"timestamp\":1751189445313,
-    // \"sha256_root_hash\":\"iH90iBSqmtLLTcCwu74RYyJ0rd3oXtLbXlBNqKcJUXA=\",
-    // \"tree_head_signature\":\"BAMARjBEAiAA/UmelqZIfpd5vBs0CJZGx8kAqUhNppLX/rBVk15DWwIgbyecvj2CUl4YzAEWEoFmUwL9KkrZBZQcQgSNEFDqIgc=\"}
-    // }";
+    use crate::tests::{ARGON2025H1_STH2806, get_log_argon2025h1};
 
     #[test]
     fn sth_codec_roundtrip() {

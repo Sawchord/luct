@@ -171,11 +171,10 @@ pub enum CertificateError {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{tests::get_log_argon2025h2, utils::codec::Encode};
-
-    const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../testdata/google-chain.pem");
-    const CERT_GOOGLE_COM: &str = include_str!("../testdata/google-cert.pem");
-    const PRE_CERT_GOOGLE_COM: &str = include_str!("../testdata/google-precert.pem");
+    use crate::{
+        tests::{get_log_argon2025h2, CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM},
+        utils::codec::Encode,
+    };
 
     #[test]
     fn sct_list_codec_rountrip() {

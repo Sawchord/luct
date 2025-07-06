@@ -13,6 +13,12 @@ pub struct SthResponse {
     pub(crate) tree_head_signature: Base64<Codec<Signature<TreeHeadSignature>>>,
 }
 
+/// See RFC 6962 4.4
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct GetSthConsistencyResponse {
+    pub(crate) consistency: Vec<Base64<Vec<u8>>>,
+}
+
 /// See RFC 6962 4.6
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GetEntriesResponse {

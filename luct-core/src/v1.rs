@@ -10,6 +10,7 @@ use x509_cert::{
     der::{Decode as DerDecode, Encode as DerEncode},
 };
 
+pub(crate) mod proof;
 pub(crate) mod responses;
 pub(crate) mod sct;
 pub(crate) mod sth;
