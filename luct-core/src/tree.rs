@@ -180,7 +180,7 @@ pub struct AuditProof {
 }
 
 impl AuditProof {
-    pub fn validate(&self, head: &TreeHead, leaf: impl Hashable) -> bool {
+    pub fn validate(&self, head: &TreeHead, leaf: &impl Hashable) -> bool {
         if head.tree_size < self.index {
             return false;
         }
@@ -449,19 +449,19 @@ mod tests {
 
         let proof1 = tree.get_audit_proof(&head, 0).unwrap();
         assert_eq!(proof1.path.len(), 3);
-        assert!(proof1.validate(&head, "A".to_string()));
+        assert!(proof1.validate(&head, &"A".to_string()));
 
         let proof2 = tree.get_audit_proof(&head, 3).unwrap();
         assert_eq!(proof2.path.len(), 3);
-        assert!(proof2.validate(&head, "D".to_string()));
+        assert!(proof2.validate(&head, &"D".to_string()));
 
         let proof3 = tree.get_audit_proof(&head, 4).unwrap();
         assert_eq!(proof3.path.len(), 3);
-        assert!(proof3.validate(&head, "E".to_string()));
+        assert!(proof3.validate(&head, &"E".to_string()));
 
         let proof4 = tree.get_audit_proof(&head, 6).unwrap();
         assert_eq!(proof4.path.len(), 2);
-        assert!(proof4.validate(&head, "G".to_string()));
+        assert!(proof4.validate(&head, &"G".to_string()));
     }
 
     impl Hashable for String {

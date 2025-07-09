@@ -11,13 +11,13 @@ use x509_cert::{
 };
 
 pub(crate) mod proof;
-pub(crate) mod responses;
+pub mod responses;
 pub(crate) mod sct;
 pub(crate) mod sth;
 pub(crate) mod tree;
 
-pub use responses::{GetEntriesResponse, SthResponse};
 pub use sct::SignedCertificateTimestamp;
+pub use sth::TreeHeadSignature;
 pub use tree::MerkleTreeLeaf;
 
 /// See RFC 5246 3.2

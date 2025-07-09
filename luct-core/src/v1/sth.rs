@@ -4,7 +4,7 @@ use crate::{
         codec::{CodecError, Decode, Encode},
         signature::SignatureValidationError,
     },
-    v1::{SignatureType, SthResponse},
+    v1::{SignatureType, responses::SthResponse},
 };
 use std::io::{Read, Write};
 
@@ -20,7 +20,7 @@ impl CtLog {
 
 /// See RFC 6962 3.5
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct TreeHeadSignature {
+pub struct TreeHeadSignature {
     pub(crate) version: Version,
     // SignatureType signature_type = tree_hash;
     pub(crate) timestamp: u64,

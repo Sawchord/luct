@@ -54,9 +54,15 @@ mod tests {
             ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, GOOGLE_AUDIT_PROOF,
             GOOGLE_STH_CONSISTENCY_PROOF, get_log_argon2025h2,
         },
-        tree::Hashable,
-        v1::{SthResponse, responses::GetProofByHashResponse},
+        v1::responses::{GetProofByHashResponse, SthResponse},
     };
+
+    const ARGON2025H2_STH_0506: &str = "{
+        \"tree_size\":1329315675,
+        \"timestamp\":1751738269891,
+        \"sha256_root_hash\":\"NEFqldTJt2+wE/aaaQuXeADdWVV8IGbwhLublI7QaMY=\",
+        \"tree_head_signature\":\"BAMARjBEAiA9rna9/avaKTald7hHrldq8FfB4FDAaNyB44pplv71agIgeD0jj2AhLnvlaWavfFZ3BdUglauz36rFpGLYuLBs/O8=\"
+    }";
 
     #[test]
     fn validate_sth_consistency() {
@@ -83,11 +89,13 @@ mod tests {
         assert_eq!(log.log_id_v1(), scts[0].log_id());
 
         let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
-        let _hash = leaf.hash();
+
+        let new_sth: SthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
+        let new_sth = TreeHeadSignature::try_from(&new_sth).unwrap();
+        let new_tree_head = TreeHead::from(new_sth);
 
         let audit_proof: GetProofByHashResponse = serde_json::from_str(GOOGLE_AUDIT_PROOF).unwrap();
         let proof = AuditProof::try_from(audit_proof).unwrap();
-
-        // TODO: Validate the audit proof against the STH
+        assert!(proof.validate(&new_tree_head, &leaf))
     }
 }

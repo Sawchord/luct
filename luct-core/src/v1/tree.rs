@@ -106,15 +106,8 @@ mod tests {
     use crate::{
         CertificateChain,
         tests::{CERT_CHAIN_GOOGLE_COM, GOOGLE_GET_ENTRY},
-        v1::GetEntriesResponse,
+        v1::responses::GetEntriesResponse,
     };
-
-    // const ARGON2025H2_STH_0506: &str = "{
-    //     \"tree_size\":1329315675,
-    //     \"timestamp\":1751738269891,
-    //     \"sha256_root_hash\":\"NEFqldTJt2+wE/aaaQuXeADdWVV8IGbwhLublI7QaMY=\",
-    //     \"tree_head_signature\":\"BAMARjBEAiA9rna9/avaKTald7hHrldq8FfB4FDAaNyB44pplv71agIgeD0jj2AhLnvlaWavfFZ3BdUglauz36rFpGLYuLBs/O8=\"
-    // }";
 
     #[test]
     fn parse_get_entry_response() {
