@@ -113,6 +113,8 @@ impl Decode for SctList {
     }
 }
 
+/// A signed certificate timestamp of version 1.
+///
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedCertificateTimestamp {

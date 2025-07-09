@@ -1,14 +1,10 @@
-use crate::store::Store;
+use crate::store::{Hashable, Store};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{cmp::Ordering, marker::PhantomData};
 
 // TODO: Implement a custom digest trait and make all types in this module generic on it
-type HashOutput = [u8; 32];
-
-pub trait Hashable {
-    fn hash(&self) -> HashOutput;
-}
+pub(crate) type HashOutput = [u8; 32];
 
 #[derive(Debug, Clone)]
 pub struct Tree<N, L, V> {

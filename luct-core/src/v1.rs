@@ -16,6 +16,7 @@ pub(crate) mod sct;
 pub(crate) mod sth;
 pub(crate) mod tree;
 
+pub use crate::tree::TreeHead;
 pub use sct::SignedCertificateTimestamp;
 pub use tree::MerkleTreeLeaf;
 

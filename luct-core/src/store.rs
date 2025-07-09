@@ -1,7 +1,12 @@
+use crate::tree::HashOutput;
 use std::{
     collections::BTreeMap,
     sync::{Arc, RwLock},
 };
+
+pub trait Hashable {
+    fn hash(&self) -> HashOutput;
+}
 
 pub trait Store<K: Ord, V> {
     fn insert(&self, key: K, value: V) -> Option<V>;
