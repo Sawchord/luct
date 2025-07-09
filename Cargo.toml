@@ -19,7 +19,7 @@ license = "MIT OR Apache-2.0"
 
 serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1" }
-toml = { version = "0.8" }
+toml = { version = "0.9" }
 base64 = { version = "0.22" }
 hex = { version = "0.4" }
 
@@ -30,5 +30,6 @@ x509-cert = { version = "0.2" }
 x509-verify = { version = "0.4" }
 
 url = { version = "2", features = ["serde"] }
+reqwest = { version = "0.12" }
 
 thiserror = { version = "2" }

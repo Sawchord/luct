@@ -9,3 +9,19 @@ publish = { workspace = true }
 categories = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
+
+
+[dependencies]
+luct-core = { path = "../luct-core" }
+
+reqwest = { workspace = true, optional = true }
+url = { workspace = true }
+
+serde = { workspace = true }
+
+thiserror = { workspace = true }
+
+
+[features]
+default = ["reqwest"]
+reqwest = ["dep:reqwest"]
