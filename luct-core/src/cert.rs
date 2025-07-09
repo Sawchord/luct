@@ -1,9 +1,6 @@
 use crate::{
     utils::codec::{CodecError, Decode},
-    v1::{
-        LogEntry, MerkleTreeLeaf, PreCert, SctList, SignedCertificateTimestamp,
-        tree::{Leaf, TimestampedEntry},
-    },
+    v1,
 };
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
@@ -43,9 +40,12 @@ impl CertificateChain {
         self.0.last().unwrap()
     }
 
-    pub(crate) fn as_log_entry_v1(&self, as_precert: bool) -> Result<LogEntry, CertificateError> {
+    pub(crate) fn as_log_entry_v1(
+        &self,
+        as_precert: bool,
+    ) -> Result<v1::LogEntry, CertificateError> {
         if !as_precert {
-            return Ok(LogEntry::X509(self.cert().0.clone()));
+            return Ok(v1::LogEntry::X509(self.cert().0.clone()));
         }
 
         let mut subject_public_key_bytes = vec![];
@@ -69,22 +69,30 @@ impl CertificateChain {
                 .collect::<Vec<_>>()
         });
 
-        Ok(LogEntry::PreCert(PreCert {
+        Ok(v1::LogEntry::PreCert(v1::PreCert {
             issuer_key_hash,
             tbs_certificate,
         }))
     }
 
-    // TODO: Move to CertificateChain
-
+    /// Return the [leaf](v1::MerkleTreeLeaf) of the [SCT](v1::SignedCertificateTimestamp)
+    ///
+    /// # Arguments
+    /// -`sct`: The [`v1::SignedCertificateTimestamp`] for which the [leaf](v1::MerkleTreeLeaf) should be generated
+    /// -`as_precert`: Whether the [leaf](v1::MerkleTreeLeaf) should contain a precert entry or the certificate itself
+    ///
+    /// # Note:
+    /// If the [SCT](v1::SignedCertificateTimestamp) was obtained by extracting it out of the [`Certificate`] itself
+    /// via [`Certificate::extract_scts_v1`], then the corresponding leaf must be a precertificate and `is_precert` should
+    /// be set to true.
     pub fn as_leaf_v1(
         self,
-        sct: &SignedCertificateTimestamp,
+        sct: &v1::SignedCertificateTimestamp,
         as_precert: bool,
-    ) -> Result<MerkleTreeLeaf, CodecError> {
-        Ok(MerkleTreeLeaf {
+    ) -> Result<v1::MerkleTreeLeaf, CodecError> {
+        Ok(v1::MerkleTreeLeaf {
             version: sct.sct_version.clone(),
-            leaf: Leaf::TimestampedEntry(TimestampedEntry {
+            leaf: v1::tree::Leaf::TimestampedEntry(v1::tree::TimestampedEntry {
                 timestamp: sct.timestamp,
                 log_entry: self.as_log_entry_v1(as_precert).map_err(|err| match err {
                     CertificateError::DerParseError(err) => CodecError::DerError(err),
@@ -97,15 +105,18 @@ impl CertificateChain {
     }
 }
 
+/// A X.509 certificate
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Certificate(Cert);
 
 impl Certificate {
+    /// Parse a PEM decoded string into a [`Certificate`]
     pub fn from_pem(input: &str) -> Result<Self, CertificateError> {
         Ok(Self(Cert::from_pem(input.as_bytes())?))
     }
 
-    pub fn extract_scts_v1(&self) -> Result<Vec<SignedCertificateTimestamp>, CertificateError> {
+    /// Extract the [SCTs](v1::SignedCertificateTimestamp) embedded into this [`Certificate`]
+    pub fn extract_scts_v1(&self) -> Result<Vec<v1::SignedCertificateTimestamp>, CertificateError> {
         let Some(extensions) = &self.0.tbs_certificate.extensions else {
             return Ok(vec![]);
         };
@@ -117,7 +128,7 @@ impl Certificate {
             .map(|sct| {
                 let sct = OctetString::from_der(sct.as_bytes()).unwrap();
                 let mut reader = Cursor::new(sct.as_bytes());
-                SctList::decode(&mut reader)
+                v1::SctList::decode(&mut reader)
             })
             .collect::<Result<Vec<_>, _>>()?;
 
@@ -153,6 +164,7 @@ impl Certificate {
     }
 }
 
+/// Error returned when parsing a [`Certificate`] or [`CertificateChain`]
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CertificateError {
     #[error("A precert can't have SCTs or more than one poison value")]
@@ -172,7 +184,7 @@ pub enum CertificateError {
 mod tests {
     use super::*;
     use crate::{
-        tests::{get_log_argon2025h2, CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM},
+        tests::{CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
     };
 
@@ -182,8 +194,8 @@ mod tests {
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let mut writer = Cursor::new(vec![]);
-        SctList::new(scts.clone()).encode(&mut writer).unwrap();
-        let scts2 = SctList::decode(Cursor::new(writer.into_inner()))
+        v1::SctList::new(scts.clone()).encode(&mut writer).unwrap();
+        let scts2 = v1::SctList::decode(Cursor::new(writer.into_inner()))
             .unwrap()
             .into_inner();
 

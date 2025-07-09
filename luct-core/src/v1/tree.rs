@@ -10,6 +10,7 @@ use crate::{
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read, Write};
 
+/// See RFC 6962 3.4
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MerkleTreeLeaf {
     pub(crate) version: Version,

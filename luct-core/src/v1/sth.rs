@@ -4,12 +4,12 @@ use crate::{
         codec::{CodecError, Decode, Encode},
         signature::SignatureValidationError,
     },
-    v1::{SignatureType, responses::SthResponse},
+    v1::{SignatureType, responses::GetSthResponse},
 };
 use std::io::{Read, Write};
 
 impl CtLog {
-    pub fn validate_sth_v1(&self, sth: &SthResponse) -> Result<(), SignatureValidationError> {
+    pub fn validate_sth_v1(&self, sth: &GetSthResponse) -> Result<(), SignatureValidationError> {
         let tree_head_tbs = TreeHeadSignature::try_from(sth)
             .map_err(|_| SignatureValidationError::MalformedSignature)?;
 
@@ -20,7 +20,7 @@ impl CtLog {
 
 /// See RFC 6962 3.5
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct TreeHeadSignature {
+pub(crate) struct TreeHeadSignature {
     pub(crate) version: Version,
     // SignatureType signature_type = tree_hash;
     pub(crate) timestamp: u64,
@@ -60,10 +60,10 @@ impl Decode for TreeHeadSignature {
     }
 }
 
-impl TryFrom<&SthResponse> for TreeHeadSignature {
+impl TryFrom<&GetSthResponse> for TreeHeadSignature {
     type Error = ();
 
-    fn try_from(value: &SthResponse) -> Result<Self, Self::Error> {
+    fn try_from(value: &GetSthResponse) -> Result<Self, Self::Error> {
         let sha256_root_hash: [u8; 32] =
             value.sha256_root_hash.as_ref().try_into().map_err(|_| ())?;
 
@@ -83,16 +83,16 @@ mod test {
 
     #[test]
     fn sth_codec_roundtrip() {
-        let sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+        let sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
         let sth_bytes = serde_json::to_string(&sth).unwrap();
-        let sth2: SthResponse = serde_json::from_str(&sth_bytes).unwrap();
+        let sth2: GetSthResponse = serde_json::from_str(&sth_bytes).unwrap();
         assert_eq!(sth, sth2);
     }
 
     #[test]
     fn validate_sth() {
         let log = get_log_argon2025h1();
-        let sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+        let sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
         log.validate_sth_v1(&sth).unwrap();
     }
 }

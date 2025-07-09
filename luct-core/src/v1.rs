@@ -17,7 +17,6 @@ pub(crate) mod sth;
 pub(crate) mod tree;
 
 pub use sct::SignedCertificateTimestamp;
-pub use sth::TreeHeadSignature;
 pub use tree::MerkleTreeLeaf;
 
 /// See RFC 5246 3.2
@@ -52,7 +51,7 @@ impl Decode for SignatureType {
 
 // See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum LogEntry {
+pub(crate) enum LogEntry {
     X509(CertificateInner<Rfc5280>),
     PreCert(PreCert),
 }
@@ -95,9 +94,11 @@ impl Decode for LogEntry {
     }
 }
 
-// See RFC 6962 3.2
+/// A [`PreCert`] contains a X.509 `TbsCertificate` as well as a hash of the issuer key.
+///
+/// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PreCert {
+pub(crate) struct PreCert {
     pub(crate) issuer_key_hash: [u8; 32],
     pub(crate) tbs_certificate: TbsCertificateInner<Rfc5280>,
 }

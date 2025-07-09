@@ -1,7 +1,7 @@
 use crate::{
     tree::{AuditProof, ConsistencyProof, TreeHead},
     v1::{
-        responses::{GetProofByHashResponse, GetSthConsistencyResponse},
+        responses::{GetProofByHashResponse, GetSthConsistencyResponse, GetSthResponse},
         sth::TreeHeadSignature,
     },
 };
@@ -26,6 +26,15 @@ impl From<TreeHeadSignature> for TreeHead {
             tree_size: value.tree_size,
             head: value.sha256_root_hash,
         }
+    }
+}
+
+impl TryFrom<&GetSthResponse> for TreeHead {
+    type Error = ();
+
+    fn try_from(value: &GetSthResponse) -> Result<Self, Self::Error> {
+        let sth = TreeHeadSignature::try_from(value)?;
+        Ok(sth.into())
     }
 }
 
@@ -54,7 +63,7 @@ mod tests {
             ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, GOOGLE_AUDIT_PROOF,
             GOOGLE_STH_CONSISTENCY_PROOF, get_log_argon2025h2,
         },
-        v1::responses::{GetProofByHashResponse, SthResponse},
+        v1::responses::{GetProofByHashResponse, GetSthResponse},
     };
 
     const ARGON2025H2_STH_0506: &str = "{
@@ -66,13 +75,11 @@ mod tests {
 
     #[test]
     fn validate_sth_consistency() {
-        let old_sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
-        let old_sth = TreeHeadSignature::try_from(&old_sth).unwrap();
-        let old_tree_head = TreeHead::from(old_sth);
+        let old_sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+        let old_tree_head = TreeHead::try_from(&old_sth).unwrap();
 
-        let new_sth: SthResponse = serde_json::from_str(ARGON2025H1_STH2906).unwrap();
-        let new_sth = TreeHeadSignature::try_from(&new_sth).unwrap();
-        let new_tree_head = TreeHead::from(new_sth);
+        let new_sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2906).unwrap();
+        let new_tree_head = TreeHead::try_from(&new_sth).unwrap();
 
         let proof: GetSthConsistencyResponse =
             serde_json::from_str(GOOGLE_STH_CONSISTENCY_PROOF).unwrap();
@@ -90,9 +97,8 @@ mod tests {
 
         let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
 
-        let new_sth: SthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
-        let new_sth = TreeHeadSignature::try_from(&new_sth).unwrap();
-        let new_tree_head = TreeHead::from(new_sth);
+        let new_sth: GetSthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
+        let new_tree_head = TreeHead::try_from(&new_sth).unwrap();
 
         let audit_proof: GetProofByHashResponse = serde_json::from_str(GOOGLE_AUDIT_PROOF).unwrap();
         let proof = AuditProof::try_from(audit_proof).unwrap();

@@ -285,7 +285,7 @@ impl ConsistencyProof {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct TreeHead {
     pub(crate) tree_size: u64,
     pub(crate) head: HashOutput,
