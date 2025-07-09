@@ -101,8 +101,12 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
 
     /// This follows RFC 9162 2.1.3.1
     pub fn get_audit_proof(&self, head: &TreeHead, index: u64) -> Option<AuditProof> {
+        if index >= head.tree_size {
+            return None;
+        }
+
         let mut n = NodeKey::full_range(head.tree_size);
-        let mut m = index;
+        let m = index;
 
         let mut path = vec![];
 
@@ -117,7 +121,6 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
                 let elem = self.nodes.get(&left)?;
                 path.push(elem);
 
-                m -= right.start;
                 n = right;
             }
         }
@@ -183,7 +186,7 @@ impl AuditProof {
         }
 
         let mut f_n = self.index;
-        let mut s_n = head.tree_size;
+        let mut s_n = head.tree_size - 1;
         let mut r = leaf.hash();
 
         for p in &self.path {
@@ -452,13 +455,13 @@ mod tests {
         assert_eq!(proof2.path.len(), 3);
         assert!(proof2.validate(&head, "D".to_string()));
 
-        // let proof3 = tree.get_audit_proof(&head, 4).unwrap();
-        // assert_eq!(proof3.path.len(), 3);
-        // assert!(proof3.validate(&head, "E".to_string()));
+        let proof3 = tree.get_audit_proof(&head, 4).unwrap();
+        assert_eq!(proof3.path.len(), 3);
+        assert!(proof3.validate(&head, "E".to_string()));
 
-        // let proof4 = tree.get_audit_proof(&head, 6).unwrap();
-        // assert_eq!(proof4.path.len(), 2);
-        // assert!(proof4.validate(&head, "G".to_string()));
+        let proof4 = tree.get_audit_proof(&head, 6).unwrap();
+        assert_eq!(proof4.path.len(), 2);
+        assert!(proof4.validate(&head, "G".to_string()));
     }
 
     impl Hashable for String {
