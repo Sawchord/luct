@@ -20,4 +20,15 @@ impl<C> CtClient<C> {
             _ => Err(ClientError::UnsupportedVersion),
         }
     }
+
+    pub(crate) fn check_status(&self, status: u16, response: &str) -> Result<(), ClientError> {
+        if status != 200 {
+            return Err(ClientError::ResponseError {
+                code: status,
+                msg: response.to_string(),
+            });
+        }
+
+        Ok(())
+    }
 }

@@ -23,7 +23,7 @@ pub trait Client {
         &self,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> impl Future<Output = Result<String, ClientError>>;
+    ) -> impl Future<Output = Result<(u16, String), ClientError>>;
 
     // TODO: Post calls for submission support
 }
@@ -60,6 +60,9 @@ pub enum ClientError {
 
     #[error("Failed to connect to host: {0}")]
     ConnectionError(String),
+
+    #[error("The server returned error: {code}: {msg}")]
+    ResponseError { code: u16, msg: String },
 }
 
 impl From<serde_json::Error> for ClientError {

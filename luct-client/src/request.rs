@@ -16,7 +16,6 @@ use luct_core::{
 };
 use std::cmp::Ordering;
 
-// TODO: Check that the error code is 200
 // TODO: Introduce logging / tracing
 
 impl<C: Client> CtClient<C> {
@@ -24,7 +23,8 @@ impl<C: Client> CtClient<C> {
         self.assert_v1()?;
         let url = self.get_full_v1_url();
 
-        let response = self.client.get(&url.join("get-sth").unwrap(), &[]).await?;
+        let (status, response) = self.client.get(&url.join("get-sth").unwrap(), &[]).await?;
+        self.check_status(status, &response)?;
         let response: GetSthResponse = serde_json::from_str(&response)?;
         let response = SignedTreeHead::from(response);
 
@@ -52,13 +52,14 @@ impl<C: Client> CtClient<C> {
         let second_idx = second.tree_size().to_string();
 
         let url = self.get_full_v1_url();
-        let response = self
+        let (status, response) = self
             .client
             .get(
                 &url.join("get-sth-consistency").unwrap(),
                 &[("first", &first_idx), ("second", &second_idx)],
             )
             .await?;
+        self.check_status(status, &response)?;
 
         let response: GetSthConsistencyResponse = serde_json::from_str(&response)?;
         let proof =
@@ -91,13 +92,15 @@ impl<C: Client> CtClient<C> {
         let tree_size = sth.tree_size().to_string();
 
         let url = self.get_full_v1_url();
-        let response = self
+        let (status, response) = self
             .client
             .get(
                 &url.join("get-proof-by-hash").unwrap(),
                 &[("hash", &leaf_hash), ("tree_size", &tree_size)],
             )
             .await?;
+        self.check_status(status, &response)?;
+
         let response: GetProofByHashResponse =
             serde_json::from_str(&response).map_err(|_| ClientError::AuditProofError)?;
         let proof = AuditProof::try_from(response).map_err(|_| ClientError::AuditProofError)?;

@@ -17,15 +17,21 @@ impl ReqwestClient {
 }
 
 impl Client for ReqwestClient {
-    async fn get(&self, url: &Url, params: &[(&str, &str)]) -> Result<String, ClientError> {
-        self.client
+    async fn get(&self, url: &Url, params: &[(&str, &str)]) -> Result<(u16, String), ClientError> {
+        let response = self
+            .client
             .get(url.clone())
             .query(params)
             .send()
             .await
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))?
+            .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
+
+        let status = response.status().as_u16();
+        let data = response
             .text()
             .await
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))
+            .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
+
+        Ok((status, data))
     }
 }
