@@ -18,10 +18,9 @@ impl ReqwestClient {
 
 impl Client for ReqwestClient {
     async fn get(&self, url: &Url, params: &[(&str, &str)]) -> Result<String, ClientError> {
-        dbg!(&url);
         self.client
             .get(url.clone())
-            .form(params)
+            .query(params)
             .send()
             .await
             .map_err(|err| ClientError::ConnectionError(err.to_string()))?

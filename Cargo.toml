@@ -34,5 +34,7 @@ url = { version = "2", features = ["serde"] }
 reqwest = { version = "0.12" }
 
 thiserror = { version = "2" }
+log = { version = "0.4" }
+env_logger = { version = "0.11" }
 
 tokio = { version = "1" }
