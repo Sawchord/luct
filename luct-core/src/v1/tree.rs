@@ -1,12 +1,11 @@
 use crate::{
     Version,
     store::Hashable,
-    tree::AuditProof,
     utils::{
         codec::{CodecError, Decode, Encode},
         vec::CodecVec,
     },
-    v1::{LogEntry, TreeHead, responses::GetProofByHashResponse},
+    v1::LogEntry,
 };
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read, Write};
@@ -16,16 +15,6 @@ use std::io::{Cursor, Read, Write};
 pub struct MerkleTreeLeaf {
     pub(crate) version: Version,
     pub(crate) leaf: Leaf,
-}
-
-impl MerkleTreeLeaf {
-    pub fn validate_inclusion(&self, tree_head: &TreeHead, proof: GetProofByHashResponse) -> bool {
-        let Ok(proof) = AuditProof::try_from(proof) else {
-            return false;
-        };
-
-        proof.validate(tree_head, self)
-    }
 }
 
 impl Hashable for MerkleTreeLeaf {
