@@ -41,19 +41,19 @@ impl<T> Decode for Signature<T> {
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum SignatureValidationError {
-    #[error("The hash algorithm {0} is not supported by the implementation")]
+    #[error("Hash algorithm {0} is not supported by the implementation")]
     UnsupportedHashAlgorithm(HashAlgorithm),
 
-    #[error("The signature algorithm {0} is not supported by the implementation")]
+    #[error("Signature algorithm {0} is not supported by the implementation")]
     UnsupportedSignatureAlgorithm(SignatureAlgorithm),
 
-    #[error("The key could not be parsed for the specified signature algorithm")]
+    #[error("Key could not be parsed for the specified signature algorithm")]
     MalformedKey,
 
-    #[error("The signature could not be parsed for the specified signautre algorithm")]
+    #[error("Signature could not be parsed for the specified signature algorithm")]
     MalformedSignature,
 
-    #[error("The signature verification failed")]
+    #[error("Signature verification failed")]
     InvalidSignature,
 
     #[error("Error decoding a DER value: {0}")]

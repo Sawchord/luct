@@ -4,7 +4,10 @@ use crate::utils::{
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::io::{Read, Write};
+use std::{
+    fmt::Display,
+    io::{Read, Write},
+};
 use url::Url;
 
 pub(crate) mod cert;
@@ -40,15 +43,60 @@ impl CtLog {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CtLogConfig {
+    version: Version,
     url: Url,
     key: Base64<Vec<u8>>,
     mdd: u64,
 }
 
+impl CtLogConfig {
+    /// Return the [`Url`] of this log
+    pub fn url(&self) -> &Url {
+        &self.url
+    }
+
+    /// Return the [`Version`] of this log
+    pub fn version(&self) -> &Version {
+        &self.version
+    }
+}
+
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) enum Version {
+pub enum Version {
     V1,
+}
+
+impl Serialize for Version {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            Version::V1 => serializer.serialize_u8(1),
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Version {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: serde::Deserializer<'de>,
+    {
+        let version: u8 = <u8>::deserialize(deserializer)?;
+        match version {
+            1 => Ok(Version::V1),
+            x => Err(serde::de::Error::custom(format!("Unsupported version {x}"))),
+        }
+    }
+}
+
+impl Display for Version {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Version::V1 => write!(f, "V1"),
+        }
+    }
 }
 
 impl Encode for Version {
@@ -79,12 +127,14 @@ mod tests {
     use base64::{Engine, prelude::BASE64_STANDARD};
 
     const ARGON2025H1: &str = "
+        version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
         mdd = 86400
     ";
 
     const ARGON2025H2: &str = "
+        version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
         mdd = 86400
