@@ -1,20 +1,30 @@
-use std::cmp::Ordering;
+//! This module contains the low-level call API
+//!
+//! Each function does exactly one call, parses and validates the
+//! returned data.
 
 use crate::{Client, ClientError, CtClient};
+use base64::{Engine, prelude::BASE64_STANDARD};
 use luct_core::{
-    tree::ConsistencyProof,
+    CertificateChain, CertificateError,
+    store::Hashable,
+    tree::{AuditProof, ConsistencyProof},
     v1::{
-        SignedTreeHead, TreeHead,
-        responses::{GetSthConsistencyResponse, GetSthResponse},
+        SignedCertificateTimestamp, SignedTreeHead, TreeHead,
+        responses::{GetProofByHashResponse, GetSthConsistencyResponse, GetSthResponse},
     },
 };
+use std::cmp::Ordering;
+
+// TODO: Check that the error code is 200
 
 impl<C: Client> CtClient<C> {
     pub async fn get_sth_v1(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
         let url = self.get_full_v1_url();
 
-        let response = self.client.get(&url, &[]).await?;
+        let response = self.client.get(&url.join("get-sth/").unwrap(), &[]).await?;
+        dbg!(&response);
         let response: GetSthResponse = serde_json::from_str(&response)?;
         let response = SignedTreeHead::from(response);
 
@@ -30,6 +40,8 @@ impl<C: Client> CtClient<C> {
         first: &SignedTreeHead,
         second: &SignedTreeHead,
     ) -> Result<(), ClientError> {
+        self.assert_v1()?;
+
         let (first, second) = match first.tree_size().cmp(&second.tree_size()) {
             Ordering::Less => (first, second),
             Ordering::Equal => return Ok(()),
@@ -42,7 +54,10 @@ impl<C: Client> CtClient<C> {
         let url = self.get_full_v1_url();
         let response = self
             .client
-            .get(&url, &[("first", &first_idx), ("second", &second_idx)])
+            .get(
+                &url.join("get-sth-consistency").unwrap(),
+                &[("first", &first_idx), ("second", &second_idx)],
+            )
             .await?;
 
         let response: GetSthConsistencyResponse = serde_json::from_str(&response)?;
@@ -57,5 +72,97 @@ impl<C: Client> CtClient<C> {
         }
 
         Ok(())
+    }
+
+    pub async fn check_embedded_sct_inclusion_v1(
+        &self,
+        sct: &SignedCertificateTimestamp,
+        sth: &SignedTreeHead,
+        certificate_chain: &CertificateChain,
+    ) -> Result<(), ClientError> {
+        self.assert_v1()?;
+
+        let leaf = certificate_chain
+            .as_leaf_v1(sct, true)
+            .map_err(CertificateError::from)?;
+        let leaf_hash = leaf.hash();
+        let leaf_hash: String = BASE64_STANDARD.encode(leaf_hash);
+
+        let tree_size = sth.tree_size().to_string();
+
+        let url = self.get_full_v1_url();
+        let response = self
+            .client
+            .get(
+                &url.join("get-proof-by-hash/").unwrap(),
+                &[("hash", &leaf_hash), ("tree_size", &tree_size)],
+            )
+            .await?;
+        let response: GetProofByHashResponse =
+            serde_json::from_str(&response).map_err(|_| ClientError::AuditProofError)?;
+        let proof = AuditProof::try_from(response).map_err(|_| ClientError::AuditProofError)?;
+        let tree_head = TreeHead::try_from(sth).map_err(|_| ClientError::AuditProofError)?;
+
+        if !proof.validate(&tree_head, &leaf) {
+            return Err(ClientError::AuditProofError);
+        }
+
+        Ok(())
+    }
+}
+
+// TODO: Low level get entries call
+// TODO: Low level get roots call
+
+#[cfg(all(test, feature = "reqwest"))]
+mod tests {
+    use luct_core::{CtLog, CtLogConfig};
+
+    use crate::{CtClientConfig, reqwest::ReqwestClient};
+
+    use super::*;
+
+    const ARGON2025H2: &str = "
+        version = 1
+        url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
+        key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
+        mdd = 86400
+    ";
+
+    const ARGON2025H2_STH_0506: &str = "{
+        \"tree_size\":1329315675,
+        \"timestamp\":1751738269891,
+        \"sha256_root_hash\":\"NEFqldTJt2+wE/aaaQuXeADdWVV8IGbwhLublI7QaMY=\",
+        \"tree_head_signature\":\"BAMARjBEAiA9rna9/avaKTald7hHrldq8FfB4FDAaNyB44pplv71agIgeD0jj2AhLnvlaWavfFZ3BdUglauz36rFpGLYuLBs/O8=\"
+    }";
+    //const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");
+
+    #[tokio::test]
+    #[ignore = "Makes an HTTP call, for manual testing only"]
+    async fn sth_consistency() {
+        let config: CtLogConfig = toml::from_str(ARGON2025H2).unwrap();
+        let client = ReqwestClient::new();
+
+        let log = CtClient::new(
+            CtClientConfig {
+                log: config,
+                fetch_url: None,
+            },
+            client,
+        );
+
+        let old_sth: GetSthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
+        let old_sth = SignedTreeHead::from(old_sth);
+
+        let new_sth = log.get_sth_v1().await.unwrap();
+        //log.check_consistency_v1(first, second)
+
+        todo!()
+    }
+
+    #[test]
+    #[ignore = "Makes an HTTP call, for manual testing only"]
+    fn sct_inclusion() {
+        todo!()
     }
 }

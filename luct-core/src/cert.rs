@@ -86,7 +86,7 @@ impl CertificateChain {
     /// via [`Certificate::extract_scts_v1`], then the corresponding leaf must be a precertificate and `is_precert` should
     /// be set to true.
     pub fn as_leaf_v1(
-        self,
+        &self,
         sct: &v1::SignedCertificateTimestamp,
         as_precert: bool,
     ) -> Result<v1::MerkleTreeLeaf, CodecError> {

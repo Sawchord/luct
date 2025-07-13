@@ -42,15 +42,29 @@ impl CtLog {
     }
 }
 
+/// Configuration of a [`CtLog`]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CtLogConfig {
     version: Version,
+
+    /// The [`Url`] at which the log operates
     url: Url,
+
     key: Base64<Vec<u8>>,
     mdd: u64,
 }
 
 impl CtLogConfig {
+    /// Create a new [`CtLogConfig`]
+    pub fn new(version: Version, url: Url, key: Vec<u8>, mdd: u64) -> Self {
+        Self {
+            version,
+            url,
+            key: Base64(key),
+            mdd,
+        }
+    }
+
     /// Return the [`Url`] of this log
     pub fn url(&self) -> &Url {
         &self.url
@@ -61,7 +75,13 @@ impl CtLogConfig {
         &self.version
     }
 }
-
+/// The version of the protocol, that the [`CtLog`] supports
+///
+/// - `V1` corresponds to RFC 6962
+/// - `V2` corresponds to RFC 9162
+///
+/// Currently, only [`Version::V1`] is supported
+///
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum Version {
@@ -155,15 +175,15 @@ mod tests {
     \"tree_head_signature\":\"BAMARjBEAiAA/UmelqZIfpd5vBs0CJZGx8kAqUhNppLX/rBVk15DWwIgbyecvj2CUl4YzAEWEoFmUwL9KkrZBZQcQgSNEFDqIgc=\"
     }";
 
-    pub(crate) const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../testdata/google-chain.pem");
-    pub(crate) const CERT_GOOGLE_COM: &str = include_str!("../testdata/google-cert.pem");
-    pub(crate) const PRE_CERT_GOOGLE_COM: &str = include_str!("../testdata/google-precert.pem");
+    pub(crate) const CERT_CHAIN_GOOGLE_COM: &str = include_str!("../../testdata/google-chain.pem");
+    pub(crate) const CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-cert.pem");
+    pub(crate) const PRE_CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-precert.pem");
 
-    pub(crate) const GOOGLE_GET_ENTRY: &str = include_str!("../testdata/google-entry.json");
+    pub(crate) const GOOGLE_GET_ENTRY: &str = include_str!("../../testdata/google-entry.json");
     pub(crate) const GOOGLE_STH_CONSISTENCY_PROOF: &str =
-        include_str!("../testdata/sth-consistency-proof.json");
+        include_str!("../../testdata/sth-consistency-proof.json");
     pub(crate) const GOOGLE_AUDIT_PROOF: &str =
-        include_str!("../testdata/google-precert-audit-proof.json");
+        include_str!("../../testdata/google-precert-audit-proof.json");
 
     pub(crate) fn get_log_argon2025h1() -> CtLog {
         let config = toml::from_str(ARGON2025H1).unwrap();

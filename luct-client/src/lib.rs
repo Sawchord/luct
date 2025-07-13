@@ -1,10 +1,16 @@
-use luct_core::{CtLog, CtLogConfig, signature::SignatureValidationError};
+use luct_core::{CertificateError, CtLog, CtLogConfig, signature::SignatureValidationError};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 
 mod request;
+#[cfg(feature = "reqwest")]
+pub mod reqwest;
 mod util;
+
+// TODO: Fetch entries API
+// TODO: Update STH API
+// TODO: Tests with a mock client
 
 pub struct CtClient<C> {
     config: CtClientConfig,
@@ -19,16 +25,8 @@ pub trait Client {
         params: &[(&str, &str)],
     ) -> impl Future<Output = Result<String, ClientError>>;
 
-    // TODO: Post
+    // TODO: Post calls for submission support
 }
-
-// pub struct DynClient(Arc<dyn Client>);
-
-// impl Client for DynClient {
-//     async fn get(&self, url: &Url, params: &(&str, &str)) -> Result<String, ClientError> {
-//         self.0.get(url, params)
-//     }
-// }
 
 impl<C> CtClient<C> {
     pub fn new(config: CtClientConfig, client: C) -> Self {
@@ -48,11 +46,20 @@ pub enum ClientError {
     #[error("Failed to parse JSON: line: {line}, column: {column}")]
     JsonError { line: usize, column: usize },
 
+    #[error("Invalid certificate: {0}")]
+    CertificateError(#[from] CertificateError),
+
     #[error("Signature validation of {0} against the logs key failed: {1}")]
     SignatureValidationFailed(&'static str, SignatureValidationError),
 
     #[error("Failed to validate a consistency path")]
     ConsistencyProofError,
+
+    #[error("Failed to validate an audit path")]
+    AuditProofError,
+
+    #[error("Failed to connect to host: {0}")]
+    ConnectionError(String),
 }
 
 impl From<serde_json::Error> for ClientError {

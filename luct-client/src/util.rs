@@ -16,6 +16,7 @@ impl<C> CtClient<C> {
     pub(crate) fn assert_v1(&self) -> Result<(), ClientError> {
         match self.config.log.version() {
             Version::V1 => Ok(()),
+            #[allow(unreachable_patterns)]
             _ => Err(ClientError::UnsupportedVersion),
         }
     }
