@@ -22,20 +22,20 @@ pub use version::Version;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CtLog {
     config: CtLogConfig,
-    log_id_v1: [u8; 32],
+    log_id: LogId,
 }
 
 impl CtLog {
     pub fn new(config: CtLogConfig) -> Self {
-        let log_id = Sha256::digest(&config.key.0).into();
-        Self {
-            config,
-            log_id_v1: log_id,
-        }
+        let log_id = match config.version() {
+            Version::V1 => LogId::V1(v1::LogId(Sha256::digest(&config.key.0).into())),
+        };
+
+        Self { config, log_id }
     }
 
-    pub fn log_id_v1(&self) -> [u8; 32] {
-        self.log_id_v1
+    pub fn log_id(&self) -> &LogId {
+        &self.log_id
     }
 }
 
@@ -71,6 +71,11 @@ impl CtLogConfig {
     pub fn version(&self) -> &Version {
         &self.version
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub enum LogId {
+    V1(v1::LogId),
 }
 
 #[cfg(test)]
@@ -134,6 +139,8 @@ mod tests {
         let test_log_id = BASE64_STANDARD
             .decode("TnWjJ1yaEMM4W2zU3z9S6x3w4I4bjWnAsfpksWKaOd8=")
             .unwrap();
-        assert_eq!(log.log_id_v1().to_vec(), test_log_id)
+
+        let LogId::V1(log_id) = log.log_id();
+        assert_eq!(log_id.0.to_vec(), test_log_id)
     }
 }

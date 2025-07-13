@@ -6,13 +6,9 @@
 use crate::{Client, ClientError, CtClient};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use luct_core::{
-    CertificateChain, CertificateError,
-    store::Hashable,
-    tree::{AuditProof, ConsistencyProof},
-    v1::{
-        SignedCertificateTimestamp, SignedTreeHead, TreeHead,
-        responses::{GetProofByHashResponse, GetSthConsistencyResponse, GetSthResponse},
-    },
+    store::Hashable, tree::{AuditProof, ConsistencyProof, TreeHead}, v1::{
+        responses::{GetProofByHashResponse, GetSthConsistencyResponse, GetSthResponse}, SignedCertificateTimestamp, SignedTreeHead
+    }, CertificateChain, CertificateError
 };
 use std::cmp::Ordering;
 

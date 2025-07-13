@@ -7,7 +7,7 @@ use crate::{
         metered::MeteredRead,
         vec::CodecVec,
     },
-    v1::{LogEntry, SignatureType},
+    v1::{LogEntry, LogId, SignatureType},
 };
 use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
@@ -119,15 +119,15 @@ impl Decode for SctList {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SignedCertificateTimestamp {
     pub(crate) sct_version: Version,
-    pub(crate) id: [u8; 32],
+    pub(crate) id: LogId,
     pub(crate) timestamp: u64,
     pub(crate) extensions: CodecVec<u16>,
     pub(crate) signature: Signature<CertificateTimeStamp>,
 }
 
 impl SignedCertificateTimestamp {
-    pub fn log_id(&self) -> [u8; 32] {
-        self.id
+    pub fn log_id(&self) -> &LogId {
+        &self.id
     }
 }
 
@@ -146,7 +146,7 @@ impl Decode for SignedCertificateTimestamp {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
         Ok(Self {
             sct_version: Version::decode(&mut reader)?,
-            id: <[u8; 32]>::decode(&mut reader)?,
+            id: LogId::decode(&mut reader)?,
             timestamp: u64::decode(&mut reader)?,
             extensions: CodecVec::decode(&mut reader)?,
             signature: Signature::decode(&mut reader)?,

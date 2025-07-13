@@ -188,6 +188,7 @@ pub enum CertificateError {
 mod tests {
     use super::*;
     use crate::{
+        LogId,
         tests::{CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
     };
@@ -212,7 +213,7 @@ mod tests {
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();
-        assert_eq!(log.log_id_v1(), scts[0].log_id());
+        assert_eq!(log.log_id(), &LogId::V1(scts[0].log_id().clone()));
 
         log.validate_sct_v1(&cert, &scts[0], true).unwrap();
     }

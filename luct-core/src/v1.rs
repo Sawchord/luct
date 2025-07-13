@@ -4,6 +4,7 @@ use crate::utils::{
     vec::CodecVec,
 };
 pub(crate) use sct::SctList;
+use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 use x509_cert::{
     certificate::{CertificateInner, Rfc5280, TbsCertificateInner},
@@ -16,13 +17,31 @@ pub(crate) mod sct;
 pub(crate) mod sth;
 pub(crate) mod tree;
 
-pub use crate::tree::TreeHead;
 pub use sct::SignedCertificateTimestamp;
 pub use sth::SignedTreeHead;
 pub use tree::MerkleTreeLeaf;
 
-// TODO: LogEntryChain type
 // TODO(Submission support): Requests and responses for submission
+
+// TODO: LogEntryChain type
+
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+pub struct LogId(pub(crate) [u8; 32]);
+
+impl Encode for LogId {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        Ok(writer.write_all(&self.0)?)
+    }
+}
+
+impl Decode for LogId {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let mut buf = [0u8; 32];
+        reader.read_exact(&mut buf)?;
+
+        Ok(Self(buf))
+    }
+}
 
 /// See RFC 5246 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
