@@ -21,6 +21,7 @@ pub use cert::{Certificate, CertificateChain, CertificateError};
 
 // TODO: Introduce a Timestamp type and use it
 // TODO: Introduce a LogId type and use it
+// TODO: Introduce toplevel types that wrap the inner v1 types to make version agnostic API
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CtLog {
@@ -75,6 +76,9 @@ impl CtLogConfig {
         &self.version
     }
 }
+
+// TODO: Move version into its own file
+
 /// The version of the protocol, that the [`CtLog`] supports
 ///
 /// - `V1` corresponds to RFC 6962

@@ -9,3 +9,22 @@ publish = { workspace = true }
 categories = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
+
+[dependencies]
+luct-core = { path = "../luct-core" }
+luct-client = { path = "../luct-client" }
+
+
+serde = { workspace = true }
+
+clap = { workspace = true, optional = true }
+thiserror = { workspace = true }
+
+[features]
+default = []
+cli = ["dep:clap"]
+
+[[bin]]
+name = "luct-scanner-cli"
+path = "src/cli.rs"
+required-features = ["cli"]

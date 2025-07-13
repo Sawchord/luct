@@ -17,6 +17,8 @@ const CT_POISON: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CertificateChain(Vec<Certificate>);
 
+// TODO: Iterator over CertChain
+
 impl CertificateChain {
     pub fn from_pem_chain(input: &str) -> Result<Self, CertificateError> {
         let chain = Cert::load_pem_chain(input.as_bytes())?;
@@ -104,6 +106,8 @@ impl CertificateChain {
         })
     }
 }
+
+// TODO: Get Fingerprint (which is Ord, Debug, for keying in a store)
 
 /// A X.509 certificate
 #[derive(Debug, Clone, PartialEq, Eq)]

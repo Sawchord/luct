@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{cmp::Ordering, marker::PhantomData};
 
-// TODO: Implement a custom digest trait and make all types in this module generic on it
+// TODO(V2 Support): Implement a custom digest trait and make all types in this module generic on it
 pub(crate) type HashOutput = [u8; 32];
 
 #[derive(Debug, Clone)]

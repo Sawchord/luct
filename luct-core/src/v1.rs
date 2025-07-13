@@ -21,6 +21,9 @@ pub use sct::SignedCertificateTimestamp;
 pub use sth::SignedTreeHead;
 pub use tree::MerkleTreeLeaf;
 
+// TODO: LogEntryChain type
+// TODO(Submission support): Requests and responses for submission
+
 /// See RFC 5246 3.2
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) enum SignatureType {
@@ -129,5 +132,3 @@ impl Decode for PreCert {
         })
     }
 }
-
-// TODO: LogEntryChain

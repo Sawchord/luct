@@ -1,4 +1,6 @@
-use luct_core::{CertificateError, CtLog, CtLogConfig, signature::SignatureValidationError};
+use luct_core::{
+    CertificateError, CtLog, CtLogConfig, signature::SignatureValidationError, v1::SignedTreeHead,
+};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
@@ -9,9 +11,9 @@ pub mod reqwest;
 mod util;
 
 // TODO: Fetch entries API
-// TODO: Update STH API
 // TODO: Tests with a mock client
 
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CtClient<C> {
     config: CtClientConfig,
     log: CtLog,
@@ -35,7 +37,7 @@ pub trait Client {
         params: &[(&str, &str)],
     ) -> impl Future<Output = Result<(u16, String), ClientError>>;
 
-    // TODO: Post calls for submission support
+    // TODO(Submission support): Post calls for submission support
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
@@ -83,6 +85,27 @@ pub struct CtClientConfig {
     fetch_url: Option<Url>,
 }
 
+impl<C: Client> CtClient<C> {
+    pub async fn update_sth_v1(
+        &self,
+        old_sth: Option<&SignedTreeHead>,
+    ) -> Result<SignedTreeHead, ClientError> {
+        let new_sth = self.get_sth_v1().await?;
+
+        // If we have no old seth, simply return the new one
+        let Some(old_sth) = old_sth else {
+            return Ok(new_sth);
+        };
+
+        if old_sth == &new_sth {
+            return Ok(new_sth);
+        }
+
+        self.check_consistency_v1(old_sth, &new_sth).await?;
+        Ok(new_sth)
+    }
+}
+
 #[cfg(all(test, feature = "reqwest"))]
 mod tests {
     use super::*;
@@ -115,11 +138,7 @@ mod tests {
         let old_sth: GetSthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
         let old_sth = SignedTreeHead::from(old_sth);
 
-        let new_sth = client.get_sth_v1().await.unwrap();
-        client
-            .check_consistency_v1(&old_sth, &new_sth)
-            .await
-            .unwrap();
+        client.update_sth_v1(Some(&old_sth)).await.unwrap();
     }
 
     #[tokio::test]

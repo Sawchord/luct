@@ -51,3 +51,5 @@ pub(crate) struct GetEntriesData {
     pub(crate) leaf_input: Base64<Codec<MerkleTreeLeaf>>,
     pub(crate) extra_data: Base64<Vec<u8>>,
 }
+
+// TODO: GetRoots support
