@@ -6,6 +6,7 @@ use p256::{
     ecdsa::{Signature as EcdsaSignature, VerifyingKey, signature::Verifier},
     pkcs8::DecodePublicKey,
 };
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     io::{Cursor, Read, Write},
@@ -14,7 +15,7 @@ use std::{
 use thiserror::Error;
 
 /// See RFC 5246 4.7
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) struct Signature<T> {
     algorithm: SignatureAndHashAlgorithm,
     signature: CodecVec<u16>,
@@ -111,7 +112,7 @@ impl<T: Encode> Signature<T> {
 }
 
 /// See RFC 5246 7.4.1.4.1
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) struct SignatureAndHashAlgorithm {
     pub hash: HashAlgorithm,
     pub signature: SignatureAlgorithm,
@@ -135,7 +136,7 @@ impl Decode for SignatureAndHashAlgorithm {
 }
 
 /// See RFC 5246 7.4.1.4.1
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum HashAlgorithm {
     None,
     Md5,
@@ -194,7 +195,7 @@ impl Display for HashAlgorithm {
 }
 
 /// See RFC 5246 7.4.1.4.1
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum SignatureAlgorithm {
     Anonymous,
     Rsa,

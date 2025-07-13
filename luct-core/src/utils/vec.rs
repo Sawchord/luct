@@ -1,4 +1,6 @@
 use crate::utils::codec::{CodecError, Decode, Encode};
+use serde::{Deserialize, Serialize};
+use serde_with::serde_as;
 use std::{
     io::{Read, Write},
     marker::PhantomData,
@@ -23,8 +25,9 @@ impl CodecVecLen for u64 {
     const MAX: usize = 8;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub(crate) struct CodecVec<L>(Vec<u8>, PhantomData<L>);
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde_as]
+pub(crate) struct CodecVec<L>(#[serde_as(as = "Bytes")] Vec<u8>, PhantomData<L>);
 
 impl<L> AsRef<[u8]> for CodecVec<L> {
     fn as_ref(&self) -> &[u8] {

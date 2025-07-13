@@ -1,8 +1,8 @@
 use crate::{
     tree::{AuditProof, ConsistencyProof, TreeHead},
     v1::{
-        responses::{GetProofByHashResponse, GetSthConsistencyResponse, GetSthResponse},
-        sth::TreeHeadSignature,
+        responses::{GetProofByHashResponse, GetSthConsistencyResponse},
+        sth::{SignedTreeHead, TreeHeadSignature},
     },
 };
 
@@ -12,7 +12,7 @@ impl TreeHead {
     /// If this call returns true, `new_sth` is valid and can be used as the new [`TreeHead`]
     pub fn validate_consistency(
         &self,
-        new_sth: &GetSthResponse,
+        new_sth: &SignedTreeHead,
         proof: GetSthConsistencyResponse,
     ) -> bool {
         let Ok(new_tree_head) = TreeHead::try_from(new_sth) else {
@@ -50,10 +50,10 @@ impl From<TreeHeadSignature> for TreeHead {
     }
 }
 
-impl TryFrom<&GetSthResponse> for TreeHead {
+impl TryFrom<&SignedTreeHead> for TreeHead {
     type Error = ();
 
-    fn try_from(value: &GetSthResponse) -> Result<Self, Self::Error> {
+    fn try_from(value: &SignedTreeHead) -> Result<Self, Self::Error> {
         let sth = TreeHeadSignature::try_from(value)?;
         Ok(sth.into())
     }
@@ -97,13 +97,13 @@ mod tests {
     #[test]
     fn validate_sth_consistency() {
         let old_sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
-        let old_tree_head = TreeHead::try_from(&old_sth).unwrap();
+        let old_tree_head = TreeHead::try_from(&old_sth.into()).unwrap();
 
         let new_sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2906).unwrap();
         let proof: GetSthConsistencyResponse =
             serde_json::from_str(GOOGLE_STH_CONSISTENCY_PROOF).unwrap();
 
-        assert!(old_tree_head.validate_consistency(&new_sth, proof))
+        assert!(old_tree_head.validate_consistency(&new_sth.into(), proof))
     }
 
     #[test]
@@ -117,7 +117,7 @@ mod tests {
         let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
 
         let sth: GetSthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
-        let tree_head = TreeHead::try_from(&sth).unwrap();
+        let tree_head = TreeHead::try_from(&sth.into()).unwrap();
 
         let audit_proof: GetProofByHashResponse = serde_json::from_str(GOOGLE_AUDIT_PROOF).unwrap();
 

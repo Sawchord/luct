@@ -18,6 +18,7 @@ pub(crate) mod tree;
 
 pub use crate::tree::TreeHead;
 pub use sct::SignedCertificateTimestamp;
+pub use sth::SignedTreeHead;
 pub use tree::MerkleTreeLeaf;
 
 /// See RFC 5246 3.2
