@@ -110,7 +110,7 @@ pub(crate) struct PreCert {
 
 impl Encode for PreCert {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        crate::Encode::encode(&self.issuer_key_hash, &mut writer)?;
+        Encode::encode(&self.issuer_key_hash, &mut writer)?;
 
         let mut cert_bytes = vec![];
         let _len = self.tbs_certificate.encode_to_vec(&mut cert_bytes)?;

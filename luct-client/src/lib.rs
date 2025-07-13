@@ -1,5 +1,5 @@
 use luct_core::{
-    CertificateError, CtLog, CtLogConfig, signature::SignatureValidationError, v1::SignedTreeHead,
+    CertificateError, CtLog, CtLogConfig, SignatureValidationError, v1::SignedTreeHead,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
