@@ -4,7 +4,8 @@
 //! They can be parsed using `serde_json`, and then be transformed into other structures to be validated.
 
 use crate::{
-    utils::{base64::Base64, codec::Codec, signature::Signature},
+    signature::Signature,
+    utils::{base64::Base64, codec::Codec},
     v1::{MerkleTreeLeaf, sth::TreeHeadSignature},
 };
 use serde::{Deserialize, Serialize};

@@ -1,10 +1,10 @@
 use crate::{
     CtLog, Version,
     cert::{CertificateChain, CertificateError},
+    signature::{Signature, SignatureValidationError},
     utils::{
         codec::{CodecError, Decode, Encode},
         metered::MeteredRead,
-        signature::{Signature, SignatureValidationError},
         vec::CodecVec,
     },
     v1::{LogEntry, SignatureType},

@@ -1,9 +1,7 @@
 use crate::{
     CtLog, Version,
-    utils::{
-        codec::{CodecError, Decode, Encode},
-        signature::SignatureValidationError,
-    },
+    signature::SignatureValidationError,
+    utils::codec::{CodecError, Decode, Encode},
     v1::{SignatureType, responses::GetSthResponse},
 };
 use std::io::{Read, Write};

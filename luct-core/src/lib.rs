@@ -11,6 +11,7 @@ use std::{
 use url::Url;
 
 pub(crate) mod cert;
+pub mod signature;
 pub mod store;
 pub mod tree;
 pub(crate) mod utils;
