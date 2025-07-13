@@ -1,4 +1,4 @@
-use crate::store::{Hashable, Store};
+use crate::store::{Hashable, IndexedStore, Store};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::{cmp::Ordering, marker::PhantomData};
@@ -13,7 +13,7 @@ pub struct Tree<N, L, V> {
     values: PhantomData<V>,
 }
 
-impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V> {
+impl<N: Store<NodeKey, HashOutput>, L: IndexedStore<V>, V: Hashable> Tree<N, L, V> {
     pub fn new(node_store: N, leaf_store: L) -> Self {
         Self {
             nodes: node_store,
@@ -23,16 +23,10 @@ impl<N: Store<NodeKey, HashOutput>, L: Store<u64, V>, V: Hashable> Tree<N, L, V>
     }
 
     pub fn insert_entry(&self, entry: V) {
-        let idx = self.leafs.len() as u64;
+        let entry_hash = entry.hash();
+        let idx = self.leafs.insert_indexed(entry);
         let entry_key = NodeKey::leaf(idx);
-        let old_hash = self.nodes.insert(entry_key, entry.hash());
-        let old_leaf = self.leafs.insert(idx, entry);
-
-        // FIXME: We should handle this gracefully somehow
-        // Is this possible without introducing a transactional store trait?
-        if old_hash.is_some() || old_leaf.is_some() {
-            panic!("Inserting can only be done by one thread");
-        };
+        self.nodes.insert(entry_key, entry_hash);
 
         // Already update intermediate nodes, if they are power of twos
         let end = idx + 1;

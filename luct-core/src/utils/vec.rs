@@ -44,7 +44,6 @@ impl<L> From<Vec<u8>> for CodecVec<L> {
 impl<L: CodecVecLen> Encode for CodecVec<L> {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         let len = self.0.len();
-        // TODO: Fix the error reporting
         let len: L = self
             .0
             .len()
