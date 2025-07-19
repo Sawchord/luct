@@ -2,9 +2,13 @@ use crate::{
     utils::codec::{CodecError, Decode},
     v1,
 };
+use itertools::Itertools;
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
-use std::io::Cursor;
+use std::{
+    fmt::{self, Display},
+    io::Cursor,
+};
 use thiserror::Error;
 use x509_cert::{
     Certificate as Cert,
@@ -14,6 +18,11 @@ use x509_cert::{
 const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
 const CT_POISON: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
 
+/// A [`CertificateChain`] chain of trust
+///
+/// These chains are what gets presented by TLS.
+/// They consist of a number of X.509 [`Certificates`](Certificate),
+/// from the source to a root of trust.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CertificateChain(Vec<Certificate>);
 
@@ -107,8 +116,6 @@ impl CertificateChain {
     }
 }
 
-// TODO: Get Fingerprint (which is Ord, Debug, for keying in a store)
-
 /// A X.509 certificate
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Certificate(Cert);
@@ -166,6 +173,32 @@ impl Certificate {
             _ => Err(CertificateError::InvalidPreCert),
         }
     }
+
+    pub fn fingerprint_sha256(&self) -> Fingerprint {
+        let mut cert_bytes = vec![];
+        self.0.encode_to_vec(&mut cert_bytes).unwrap();
+
+        let hash: [u8; 32] = Sha256::digest(&cert_bytes).into();
+        Fingerprint(hash)
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Fingerprint([u8; 32]);
+
+impl Display for Fingerprint {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "{}",
+            hex::encode_upper(self.0)
+                .chars()
+                .chunks(2)
+                .into_iter()
+                .map(|mut chunk| format!("{}{}", chunk.next().unwrap(), chunk.next().unwrap()))
+                .join(":")
+        )
+    }
 }
 
 /// Error returned when parsing a [`Certificate`] or [`CertificateChain`]
@@ -192,6 +225,8 @@ mod tests {
         tests::{CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
     };
+
+    const GOOGLE_COM_FINGERPRINT: &str = "4B:4F:46:F8:E1:78:B4:08:F9:A7:AF:2B:CE:31:0A:6A:9F:BD:59:37:BD:F8:5B:C5:9B:45:D6:3C:81:61:73:67";
 
     #[test]
     fn sct_list_codec_rountrip() {
@@ -233,5 +268,12 @@ mod tests {
         //     cert1.cert().as_precert_entry_v1(),
         //     precert.as_precert_entry_v1()
         // );
+    }
+
+    #[test]
+    fn fingerprint() {
+        let cert = Certificate::from_pem(CERT_GOOGLE_COM).unwrap();
+        let fp = cert.fingerprint_sha256();
+        assert_eq!(format!("{fp}"), GOOGLE_COM_FINGERPRINT);
     }
 }
