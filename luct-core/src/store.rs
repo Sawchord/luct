@@ -72,4 +72,3 @@ impl<V: Clone> IndexedStore<V> for MemoryStore<u64, V> {
 }
 
 // TODO: CertificateChainStore that uses a CertificateStore (Fingerprint -> Certificate) underneath
-// TODO: luct-store crate -> Filestore, RedbStore, BrowserLocalStore etc

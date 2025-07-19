@@ -1,6 +1,13 @@
 [workspace]
 
-members = ["luct", "luct-client", "luct-core", "luct-server", "luct-scanner"]
+members = [
+    "luct",
+    "luct-client",
+    "luct-core",
+    "luct-server",
+    "luct-scanner",
+    "luct-store",
+]
 
 resolver = "2"
 
