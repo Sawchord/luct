@@ -9,3 +9,16 @@ publish = { workspace = true }
 categories = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
+
+
+[dependencies]
+luct-core = { path = "../luct-core" }
+
+
+serde = { workspace = true, optional = true }
+serde_json = { workspace = true, optional = true }
+
+
+[features]
+default = ["filesystem"]
+filesystem = ["dep:serde", "dep:serde_json"]
