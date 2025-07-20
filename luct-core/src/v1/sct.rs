@@ -1,6 +1,5 @@
 use crate::{
-    CtLog, Version,
-    cert::{CertificateChain, CertificateError},
+    CertificateChain, CertificateError, CtLog, Version,
     signature::{Signature, SignatureValidationError},
     utils::{
         codec::{CodecError, Decode, Encode},

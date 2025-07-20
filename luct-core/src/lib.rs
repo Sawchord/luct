@@ -4,6 +4,7 @@ use sha2::{Digest, Sha256};
 use url::Url;
 
 mod cert;
+mod cert_chain;
 pub(crate) mod signature;
 pub mod store;
 pub mod tree;
@@ -11,7 +12,8 @@ pub(crate) mod utils;
 pub mod v1;
 mod version;
 
-pub use cert::{Certificate, CertificateChain, CertificateError};
+pub use cert::{Certificate, CertificateError};
+pub use cert_chain::CertificateChain;
 pub use signature::{HashAlgorithm, SignatureAlgorithm, SignatureValidationError};
 pub use version::Version;
 

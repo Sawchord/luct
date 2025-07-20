@@ -15,110 +15,13 @@ use x509_cert::{
     der::{Decode as CertDecode, DecodePem, Encode, asn1::OctetString},
 };
 
-const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
-const CT_POISON: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
-
-/// A [`CertificateChain`] chain of trust
-///
-/// These chains are what gets presented by TLS.
-/// They consist of a number of X.509 [`Certificates`](Certificate),
-/// from the source to a root of trust.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CertificateChain(Vec<Certificate>);
-
-// TODO: Iterator over CertChain
-
-impl CertificateChain {
-    pub fn from_pem_chain(input: &str) -> Result<Self, CertificateError> {
-        let chain = Cert::load_pem_chain(input.as_bytes())?;
-
-        // We need at least a chain of depth 2 (root + leaf), since root certs themselves
-        // can not be logged in this way
-        if chain.len() < 2 {
-            return Err(CertificateError::InvalidChain);
-        }
-
-        // TODO: Validate the cert against the actual certificates
-
-        Ok(Self(chain.into_iter().map(Certificate).collect()))
-    }
-
-    pub fn cert(&self) -> &Certificate {
-        &self.0[0]
-    }
-
-    pub fn root(&self) -> &Certificate {
-        self.0.last().unwrap()
-    }
-
-    pub(crate) fn as_log_entry_v1(
-        &self,
-        as_precert: bool,
-    ) -> Result<v1::LogEntry, CertificateError> {
-        if !as_precert {
-            return Ok(v1::LogEntry::X509(self.cert().0.clone()));
-        }
-
-        let mut subject_public_key_bytes = vec![];
-        let mut tbs_certificate = self.cert().0.tbs_certificate.clone();
-
-        // Get the hash of the issuers subject public key info
-        self.0[1]
-            .0
-            .tbs_certificate
-            .subject_public_key_info
-            .encode_to_vec(&mut subject_public_key_bytes)?;
-        let issuer_key_hash: [u8; 32] = Sha256::digest(&subject_public_key_bytes).into();
-
-        // TODO: Change the issuer, if a special precert signing certificate is being used
-
-        tbs_certificate.extensions = tbs_certificate.extensions.map(|extensions| {
-            extensions
-                .into_iter()
-                // NOTE: We need to remove all SCT and POISON extensions
-                .filter(|extension| extension.extn_id != SCT_V1 && extension.extn_id != CT_POISON)
-                .collect::<Vec<_>>()
-        });
-
-        Ok(v1::LogEntry::PreCert(v1::PreCert {
-            issuer_key_hash,
-            tbs_certificate,
-        }))
-    }
-
-    /// Return the [leaf](v1::MerkleTreeLeaf) of the [SCT](v1::SignedCertificateTimestamp)
-    ///
-    /// # Arguments
-    /// -`sct`: The [`v1::SignedCertificateTimestamp`] for which the [leaf](v1::MerkleTreeLeaf) should be generated
-    /// -`as_precert`: Whether the [leaf](v1::MerkleTreeLeaf) should contain a precert entry or the certificate itself
-    ///
-    /// # Note:
-    /// If the [SCT](v1::SignedCertificateTimestamp) was obtained by extracting it out of the [`Certificate`] itself
-    /// via [`Certificate::extract_scts_v1`], then the corresponding leaf must be a precertificate and `is_precert` should
-    /// be set to true.
-    pub fn as_leaf_v1(
-        &self,
-        sct: &v1::SignedCertificateTimestamp,
-        as_precert: bool,
-    ) -> Result<v1::MerkleTreeLeaf, CodecError> {
-        Ok(v1::MerkleTreeLeaf {
-            version: sct.sct_version.clone(),
-            leaf: v1::tree::Leaf::TimestampedEntry(v1::tree::TimestampedEntry {
-                timestamp: sct.timestamp,
-                log_entry: self.as_log_entry_v1(as_precert).map_err(|err| match err {
-                    CertificateError::DerParseError(err) => CodecError::DerError(err),
-                    CertificateError::CodecError(err) => err,
-                    _ => unreachable!(),
-                })?,
-                extensions: sct.extensions.clone(),
-            }),
-        })
-    }
-}
+pub(crate) const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
+pub(crate) const CT_POISON: ObjectIdentifier =
+    ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
 
 /// A X.509 certificate
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Certificate(Cert);
+pub struct Certificate(pub(crate) Cert);
 
 impl Certificate {
     /// Parse a PEM decoded string into a [`Certificate`]
@@ -221,7 +124,7 @@ pub enum CertificateError {
 mod tests {
     use super::*;
     use crate::{
-        LogId,
+        CertificateChain, LogId,
         tests::{CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
     };
@@ -263,11 +166,6 @@ mod tests {
 
         let precert = Certificate::from_pem(PRE_CERT_GOOGLE_COM).unwrap();
         assert!(precert.is_precert().unwrap());
-
-        // assert_eq!(
-        //     cert1.cert().as_precert_entry_v1(),
-        //     precert.as_precert_entry_v1()
-        // );
     }
 
     #[test]
