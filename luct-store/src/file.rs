@@ -1,4 +1,7 @@
-use luct_core::store::{OrderedStore, Store};
+use luct_core::{
+    store::{OrderedStore, Store},
+    v1::SignedTreeHead,
+};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -187,6 +190,26 @@ impl<V> Answer<V> {
     fn answer(self, value: V) {
         *self.response.lock().unwrap() = Some(value);
         self.done.notify_all();
+    }
+}
+
+impl FilesystemStoreKey for u64 {
+    fn serialize_key(&self) -> String {
+        self.to_string()
+    }
+
+    fn deserialize_key(key: &str) -> Option<Self> {
+        key.parse().ok()
+    }
+}
+
+impl FilesystemStoreValue for SignedTreeHead {
+    fn serialize_value(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+
+    fn deserialize_value(value: &str) -> Option<Self> {
+        serde_json::from_str(value).ok()
     }
 }
 

@@ -36,7 +36,7 @@ pub(crate) fn get_workdir(args: &Args) -> PathBuf {
 }
 
 pub(crate) fn get_confpath(args: &Args, workdir: &Path) -> PathBuf {
-    args.workdir
+    args.confdir
         .clone()
         .unwrap_or_else(|| workdir.join("logs.toml"))
 }

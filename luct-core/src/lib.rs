@@ -52,17 +52,17 @@ pub struct CtLogConfig {
     url: Url,
 
     key: Base64<Vec<u8>>,
-    mdd: u64,
+    mmd: u64,
 }
 
 impl CtLogConfig {
     /// Create a new [`CtLogConfig`]
-    pub fn new(version: Version, url: Url, key: Vec<u8>, mdd: u64) -> Self {
+    pub fn new(version: Version, url: Url, key: Vec<u8>, mmd: u64) -> Self {
         Self {
             version,
             url,
             key: Base64(key),
-            mdd,
+            mmd,
         }
     }
 
@@ -106,14 +106,14 @@ mod tests {
         version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
-        mdd = 86400
+        mmd = 86400
     ";
 
     const ARGON2025H2: &str = "
         version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
-        mdd = 86400
+        mmd = 86400
     ";
 
     pub(crate) const ARGON2025H1_STH2806: &str = "{

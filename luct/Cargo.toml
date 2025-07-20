@@ -13,13 +13,21 @@ license = { workspace = true }
 
 [dependencies]
 luct-core = { path = "../luct-core" }
+luct-client = { path = "../luct-client" }
+luct-scanner = { path = "../luct-scanner" }
+luct-store = { path = "../luct-store" }
+
+toml = { workspace = true }
 
 rustls = { workspace = true }
 rustls-platform-verifier = { workspace = true }
 rustls-rustcrypto = { workspace = true }
 
-tokio = { workspace = true, features = ["rt", "macros"] }
+url = { workspace = true }
 
 clap = { workspace = true, features = ["derive"] }
 eyre = { workspace = true }
 tracing = { workspace = true }
+
+tokio = { workspace = true, features = ["rt", "macros"] }
+futures = { workspace = true }

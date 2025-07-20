@@ -2,11 +2,18 @@
 // TODO: Scan for leads
 // TODO: Investigate the leads and print the results
 
+use std::{collections::BTreeMap, sync::Arc};
+
 use crate::{
     args::{Args, get_confpath, get_workdir},
     fetch::fetch_cert_chain,
 };
 use clap::Parser;
+use eyre::Context;
+use futures::future;
+use luct_core::{CtLogConfig, v1::SignedTreeHead};
+use luct_scanner::Scanner;
+use luct_store::FilesystemStore;
 
 mod args;
 mod fetch;
@@ -17,10 +24,53 @@ async fn main() -> eyre::Result<()> {
     let workdir = get_workdir(&args);
     let confpath = get_confpath(&args, &workdir);
 
-    let chain = fetch_cert_chain(&args.source)?;
+    let config = std::fs::read_to_string(&confpath).with_context(|| {
+        format!(
+            "could not read config path \"{}\"",
+            confpath.to_str().unwrap()
+        )
+    })?;
+    let log_configs: BTreeMap<String, CtLogConfig> = toml::from_str(&config)?;
 
-    println!("{confpath:?}");
-    println!("Hello world");
+    let log_configs = log_configs
+        .into_iter()
+        .map(|(name, config)| {
+            (
+                name.clone(),
+                (
+                    config,
+                    Box::new(FilesystemStore::<u64, SignedTreeHead>::new(
+                        workdir.join(name),
+                    )) as _,
+                ),
+            )
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    let client = luct_client::reqwest::ReqwestClient::new();
+    let scanner = Scanner::new_with_client(log_configs, client).await;
+
+    let chain = fetch_cert_chain(&args.source)?;
+    println!("Fingerprint: {}", chain.cert().fingerprint_sha256());
+
+    let leads = scanner
+        .collect_leads(Arc::new(chain))
+        .with_context(|| format!("failed to collext leads for {}", args.source))?;
+
+    for lead in &leads {
+        println!("Found a lead: {lead}")
+    }
+
+    let investigations = leads
+        .iter()
+        .map(|lead| scanner.investigate_lead(lead))
+        .collect::<Vec<_>>();
+
+    let conclusions = future::join_all(investigations).await;
+    for conclusion in conclusions {
+        let conclusion = conclusion?;
+        println!("{conclusion}");
+    }
 
     Ok(())
 }

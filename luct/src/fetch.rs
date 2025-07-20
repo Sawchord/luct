@@ -1,18 +1,24 @@
 use eyre::{Context, Report};
 use luct_core::{Certificate, CertificateChain};
-use rustls::pki_types::{CertificateDer, ServerName, UnixTime};
+use rustls::{
+    SignatureScheme,
+    pki_types::{CertificateDer, ServerName, UnixTime},
+};
 use rustls_platform_verifier::BuilderVerifierExt as _;
 use std::{
     io::{Read, Write},
     net::TcpStream,
     sync::Arc,
 };
+use url::Url;
 
 // NOTE: This code is largely copied from https://github.com/robjtede/inspect-cert-chain/blob/main/src/fetch.rs
 
-pub(crate) fn fetch_cert_chain(host: &str) -> eyre::Result<CertificateChain> {
-    let server_name = ServerName::try_from(host)
-        .with_context(|| format!("failed to convert given host (\"{host}\") to server name"))?
+pub(crate) fn fetch_cert_chain(url: &str) -> eyre::Result<CertificateChain> {
+    let url = Url::parse(url).with_context(|| format!("failed to parse url: \"{url}\""))?;
+
+    let server_name = ServerName::try_from(url.domain().unwrap())
+        .with_context(|| format!("failed to convert given host (\"{url}\") to server name"))?
         .to_owned();
 
     let mut config =
@@ -26,13 +32,15 @@ pub(crate) fn fetch_cert_chain(host: &str) -> eyre::Result<CertificateChain> {
         .set_certificate_verifier(Arc::new(NoopServerCertVerifier));
 
     let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name)?;
-    let mut sock = TcpStream::connect(host.to_string())
-        .wrap_err_with(|| format!("failed to connect to host: {host}"))?;
+
+    let sock_addr = url.socket_addrs(|| None)?;
+    let mut sock = TcpStream::connect(sock_addr[0])
+        .wrap_err_with(|| format!("failed to connect to url: {url}"))?;
     let mut tls = rustls::Stream::new(&mut conn, &mut sock);
 
     let req = format!(
         r#"GET / HTTP/1.1
-Host: {host}
+Host: {url}
 Connection: close
 User-Agent: inspect-cert-chain/{}
 Accept-Encoding: identity
@@ -52,7 +60,7 @@ Accept-Encoding: identity
     match tls.read_to_end(&mut plaintext) {
         Ok(_) => {}
         Err(err) => {
-            tracing::warn!("failed to read from {host}: {}", Report::new(err));
+            tracing::warn!("failed to read from {url}: {}", Report::new(err));
         }
     }
 
@@ -107,8 +115,20 @@ impl rustls::client::danger::ServerCertVerifier for NoopServerCertVerifier {
     }
 
     fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        rustls::crypto::aws_lc_rs::default_provider()
-            .signature_verification_algorithms
-            .supported_schemes()
+        vec![
+            SignatureScheme::RSA_PKCS1_SHA1,
+            SignatureScheme::ECDSA_SHA1_Legacy,
+            SignatureScheme::RSA_PKCS1_SHA256,
+            SignatureScheme::ECDSA_NISTP256_SHA256,
+            SignatureScheme::RSA_PKCS1_SHA384,
+            SignatureScheme::ECDSA_NISTP384_SHA384,
+            SignatureScheme::RSA_PKCS1_SHA512,
+            SignatureScheme::ECDSA_NISTP521_SHA512,
+            SignatureScheme::RSA_PSS_SHA256,
+            SignatureScheme::RSA_PSS_SHA384,
+            SignatureScheme::RSA_PSS_SHA512,
+            SignatureScheme::ED25519,
+            SignatureScheme::ED448,
+        ]
     }
 }
