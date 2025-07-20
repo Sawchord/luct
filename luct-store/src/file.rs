@@ -2,6 +2,8 @@
 
 use luct_core::store::{OrderedStore, Store};
 use std::{
+    fs::OpenOptions,
+    io::Write,
     marker::PhantomData,
     path::PathBuf,
     sync::{
@@ -83,12 +85,61 @@ fn start_storage_loop<K: FilesystemStoreKey, V: FilesystemStoreValue>(
     rx: Receiver<StoreRequest<K, V>>,
     path: PathBuf,
 ) {
+    let path = &path;
     loop {
         match rx.recv() {
-            Ok(StoreRequest::Get { key, answer }) => todo!(),
-            Ok(StoreRequest::Insert { key, value, answer }) => todo!(),
-            Ok(StoreRequest::Last(answer)) => todo!(),
-            Ok(StoreRequest::Len(answer)) => todo!(),
+            Ok(StoreRequest::Get { key, answer }) => {
+                match std::fs::read_to_string(path.join(key.serialize_key())) {
+                    Ok(data) => answer.answer(V::deserialize_value(&data)),
+                    Err(_) => answer.answer(None),
+                }
+            }
+            Ok(StoreRequest::Insert { key, value, answer }) => {
+                if let Ok(mut file) = OpenOptions::new()
+                    .create_new(true)
+                    .write(true)
+                    .open(path.join(key.serialize_key()))
+                {
+                    file.write_all(value.serialize_value().as_bytes()).unwrap()
+                }
+
+                answer.answer(());
+            }
+            Ok(StoreRequest::Last(answer)) => match std::fs::read_dir(path) {
+                Ok(paths) => {
+                    // Read the directory to file keys
+                    let mut keys = paths
+                        .filter_map(|path| match path {
+                            Ok(dir_entry) => Some(K::deserialize_key(
+                                &dir_entry.file_name().into_string().unwrap(),
+                            ))
+                            .flatten(),
+                            Err(_) => None,
+                        })
+                        .collect::<Vec<_>>();
+
+                    // Sort
+                    keys.sort();
+
+                    // If the last one exists, try to read the value
+                    match keys.last() {
+                        Some(key) => {
+                            match std::fs::read_to_string(path.join(key.serialize_key())) {
+                                Ok(data) => answer.answer(
+                                    V::deserialize_value(&data).map(|value| (key.clone(), value)),
+                                ),
+                                Err(_) => answer.answer(None),
+                            }
+                        }
+                        None => answer.answer(None),
+                    };
+                }
+                Err(_) => answer.answer(None),
+            },
+            Ok(StoreRequest::Len(answer)) => match std::fs::read_dir(path) {
+                Ok(paths) => answer.answer(paths.count()),
+                Err(_) => answer.answer(0),
+            },
             Err(_) => break,
         }
     }
