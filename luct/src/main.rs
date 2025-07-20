@@ -38,7 +38,7 @@ async fn main() -> eyre::Result<()> {
                 (
                     config,
                     Box::new(FilesystemStore::<u64, SignedTreeHead>::new(
-                        workdir.join(name),
+                        workdir.join("sth").join(name),
                     )) as _,
                 ),
             )
