@@ -6,23 +6,23 @@ use std::path::{Path, PathBuf};
 pub(crate) struct Args {
     /// The source to check
     #[arg()]
-    source: String,
+    pub(crate) source: String,
 
     /// Specify the working directory
     #[arg(short, long, value_name = "FILE")]
-    workdir: Option<PathBuf>,
+    pub(crate) workdir: Option<PathBuf>,
 
     /// Specify the config directory
     #[arg(short, long, value_name = "FILE")]
-    confdir: Option<PathBuf>,
+    pub(crate) confdir: Option<PathBuf>,
 
     /// Turn debugging information on
     #[arg(short, long, action = clap::ArgAction::Count)]
-    debug: u8,
+    pub(crate) debug: u8,
 
     /// If set, reads certificate chain from a file, otherwise fetches the certificate from the URL
     #[arg(short, long)]
-    file: bool,
+    pub(crate) file: bool,
 }
 
 pub(crate) fn get_workdir(args: &Args) -> PathBuf {

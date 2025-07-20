@@ -12,4 +12,14 @@ license = { workspace = true }
 
 
 [dependencies]
+luct-core = { path = "../luct-core" }
+
+rustls = { workspace = true }
+rustls-platform-verifier = { workspace = true }
+rustls-rustcrypto = { workspace = true }
+
+tokio = { workspace = true, features = ["rt", "macros"] }
+
 clap = { workspace = true, features = ["derive"] }
+eyre = { workspace = true }
+tracing = { workspace = true }

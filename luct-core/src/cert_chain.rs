@@ -17,6 +17,12 @@ pub struct CertificateChain(Vec<Certificate>);
 
 // TODO: Iterator over CertChain
 
+impl From<Vec<Certificate>> for CertificateChain {
+    fn from(value: Vec<Certificate>) -> Self {
+        Self(value)
+    }
+}
+
 impl CertificateChain {
     pub fn from_pem_chain(input: &str) -> Result<Self, CertificateError> {
         let chain = Cert::load_pem_chain(input.as_bytes())?;

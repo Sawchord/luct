@@ -32,6 +32,11 @@ impl Certificate {
         Ok(Self(Cert::from_pem(input.as_bytes())?))
     }
 
+    /// Parse a DER decoded string into a [`Certificate`]
+    pub fn from_der(input: &[u8]) -> Result<Self, CertificateError> {
+        Ok(Self(Cert::from_der(input)?))
+    }
+
     /// Extract the [SCTs](v1::SignedCertificateTimestamp) embedded into this [`Certificate`]
     pub fn extract_scts_v1(&self) -> Result<Vec<v1::SignedCertificateTimestamp>, CertificateError> {
         let Some(extensions) = &self.0.tbs_certificate.extensions else {
