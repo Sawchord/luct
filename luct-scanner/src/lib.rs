@@ -1,28 +1,23 @@
-#![allow(dead_code)]
-use luct_client::{Client, CtClient, CtClientConfig};
-use luct_core::{
-    CertificateChain, CertificateError,
-    store::Store,
-    v1::{SignedCertificateTimestamp, SignedTreeHead},
-};
+use luct_client::{Client, CtClientConfig};
+use luct_core::{CertificateChain, CertificateError, LogId};
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
+use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
 
-pub struct CtScanner<C> {
-    logs: Vec<CtScannerLog<C>>,
+mod lead;
+mod log;
+
+pub use lead::{Conclusion, Lead};
+
+use crate::{lead::EmbeddedSct, log::ScannerLog};
+
+pub struct Scanner<C> {
+    logs: BTreeMap<LogId, ScannerLog<C>>,
     // TODO: CertificateChainStore
     // TODO: Roots denylist
 }
 
-pub(crate) struct CtScannerLog<C> {
-    name: String,
-    client: CtClient<C>,
-    sht_store: Box<dyn Store<u64, SignedTreeHead>>,
-    // TODO: Supported root fingerprints
-}
-
-impl<C> CtScanner<C> {
+impl<C> Scanner<C> {
     pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ScannerError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
         self.collect_leads(cert_chain)
@@ -39,41 +34,35 @@ impl<C> CtScanner<C> {
             .cert()
             .extract_scts_v1()?
             .into_iter()
-            .map(|sct| Lead::EmbeddedSct(sct, chain.clone()))
+            .map(|sct| {
+                Lead::EmbeddedSct(EmbeddedSct {
+                    sct,
+                    chain: chain.clone(),
+                })
+            })
             .collect::<Vec<_>>();
 
         Ok(leads)
     }
 }
 
-impl<C: Client> CtScanner<C> {
+impl<C: Client> Scanner<C> {
     pub async fn investigate_lead(&self, _lead: &Lead) -> Result<Conclusion, ScannerError> {
         todo!()
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CtScannerBuilder {
-    config: CtScannerConfig,
+pub struct ScannerBuilder {
+    config: ScannerConfig,
     logs: Vec<CtClientConfig>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CtScannerConfig {}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Lead {
-    EmbeddedSct(SignedCertificateTimestamp, Arc<CertificateChain>),
-}
+pub struct ScannerConfig {}
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ScannerError {
     #[error("Certificate error: {0}")]
     CertificateError(#[from] CertificateError),
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Conclusion {
-    Safe(String),
-    Unsafe(String),
 }
