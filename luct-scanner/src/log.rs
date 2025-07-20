@@ -51,9 +51,12 @@ impl<C: Client> ScannerLog<C> {
             .check_embedded_sct_inclusion_v1(sct, &sth, chain)
             .await
         {
-            Ok(()) => todo!(),
+            Ok(()) => Ok(Conclusion::Safe(format!(
+                "\"{}\" returned a valid audit proof",
+                self.name
+            ))),
             Err(ClientError::AuditProofError) => Ok(Conclusion::Unsafe(format!(
-                "The log {} returned an Audit proof that failed verification",
+                "\"{}\" returned an audit proof that failed verification",
                 self.name
             ))),
             Err(err) => Err(ScannerError::from(err)),

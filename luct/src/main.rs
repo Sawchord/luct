@@ -1,6 +1,4 @@
-// TODO: Get the certificate chain of the request
-// TODO: Scan for leads
-// TODO: Investigate the leads and print the results
+// TODO: Use tracing to output sources
 
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -69,7 +67,7 @@ async fn main() -> eyre::Result<()> {
     let conclusions = future::join_all(investigations).await;
     for conclusion in conclusions {
         let conclusion = conclusion?;
-        println!("{conclusion}");
+        println!("Conclusion: {conclusion}");
     }
 
     Ok(())
