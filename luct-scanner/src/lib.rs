@@ -1,4 +1,4 @@
-use luct_client::{Client, CtClientConfig};
+use luct_client::{Client, ClientError, CtClientConfig};
 use luct_core::{CertificateChain, CertificateError, LogId};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -47,8 +47,19 @@ impl<C> Scanner<C> {
 }
 
 impl<C: Client> Scanner<C> {
-    pub async fn investigate_lead(&self, _lead: &Lead) -> Result<Conclusion, ScannerError> {
-        todo!()
+    pub async fn investigate_lead(&self, lead: &Lead) -> Result<Conclusion, ScannerError> {
+        match lead {
+            Lead::EmbeddedSct(embedded_sct) => {
+                let Some(log) = self.logs.get(&embedded_sct.sct.log_id()) else {
+                    return Ok(Conclusion::Inconclusive(format!(
+                        "The scanner does not recognize the log {}",
+                        embedded_sct.sct.log_id()
+                    )));
+                };
+
+                log.investigate_embedded_sct(embedded_sct).await
+            }
+        }
     }
 }
 
@@ -65,4 +76,7 @@ pub struct ScannerConfig {}
 pub enum ScannerError {
     #[error("Certificate error: {0}")]
     CertificateError(#[from] CertificateError),
+
+    #[error("Client error: {0}")]
+    ClientError(#[from] ClientError),
 }

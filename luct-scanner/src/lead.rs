@@ -1,9 +1,6 @@
 use std::sync::Arc;
 
-use luct_core::{
-    CertificateChain,
-    v1::{LogId, SignedCertificateTimestamp},
-};
+use luct_core::{CertificateChain, v1::SignedCertificateTimestamp};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Conclusion {
@@ -20,8 +17,13 @@ pub enum Lead {
 
 impl Lead {
     /// Provide a short textual description on the type of lead that is being investigated
-    fn description(&self) -> String {
-        todo!()
+    pub fn description(&self) -> String {
+        match self {
+            Lead::EmbeddedSct(embedded_sct) => format!(
+                "SCT of log {} embedded into the certificate",
+                embedded_sct.sct.log_id()
+            ),
+        }
     }
 }
 

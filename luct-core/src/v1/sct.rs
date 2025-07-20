@@ -125,8 +125,12 @@ pub struct SignedCertificateTimestamp {
 }
 
 impl SignedCertificateTimestamp {
-    pub fn log_id(&self) -> &LogId {
-        &self.id
+    pub fn log_id(&self) -> crate::LogId {
+        crate::LogId::V1(self.id.clone())
+    }
+
+    pub fn timestamp(&self) -> u64 {
+        self.timestamp
     }
 }
 

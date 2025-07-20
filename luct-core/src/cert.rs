@@ -1,8 +1,11 @@
 use crate::{
-    utils::codec::{CodecError, Decode},
+    utils::{
+        codec::{CodecError, Decode},
+        hex_with_colons,
+    },
     v1,
 };
-use itertools::Itertools;
+
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
 use std::{
@@ -91,16 +94,7 @@ pub struct Fingerprint([u8; 32]);
 
 impl Display for Fingerprint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "{}",
-            hex::encode_upper(self.0)
-                .chars()
-                .chunks(2)
-                .into_iter()
-                .map(|mut chunk| format!("{}{}", chunk.next().unwrap(), chunk.next().unwrap()))
-                .join(":")
-        )
+        write!(f, "{}", hex_with_colons(&self.0))
     }
 }
 
@@ -124,7 +118,7 @@ pub enum CertificateError {
 mod tests {
     use super::*;
     use crate::{
-        CertificateChain, LogId,
+        CertificateChain,
         tests::{CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
     };
@@ -151,7 +145,7 @@ mod tests {
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();
-        assert_eq!(log.log_id(), &LogId::V1(scts[0].log_id().clone()));
+        assert_eq!(log.log_id(), &scts[0].log_id());
 
         log.validate_sct_v1(&cert, &scts[0], true).unwrap();
     }

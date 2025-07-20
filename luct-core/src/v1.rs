@@ -1,11 +1,15 @@
 use crate::utils::{
     codec::{CodecError, Decode, Encode},
+    hex_with_colons,
     u24::U24,
     vec::CodecVec,
 };
 pub(crate) use sct::SctList;
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
+use std::{
+    fmt::{self, Display},
+    io::{Read, Write},
+};
 use x509_cert::{
     certificate::{CertificateInner, Rfc5280, TbsCertificateInner},
     der::{Decode as DerDecode, Encode as DerEncode},
@@ -27,6 +31,12 @@ pub use tree::MerkleTreeLeaf;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LogId(pub(crate) [u8; 32]);
+
+impl Display for LogId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{}", hex_with_colons(&self.0))
+    }
+}
 
 impl Encode for LogId {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {

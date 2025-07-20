@@ -1,3 +1,5 @@
+use std::fmt::{self, Display};
+
 use crate::utils::base64::Base64;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -78,6 +80,20 @@ impl CtLogConfig {
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub enum LogId {
     V1(v1::LogId),
+}
+
+impl Display for LogId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            LogId::V1(log_id) => write!(f, "{log_id}"),
+        }
+    }
+}
+
+impl From<v1::LogId> for LogId {
+    fn from(value: v1::LogId) -> Self {
+        Self::V1(value)
+    }
 }
 
 #[cfg(test)]

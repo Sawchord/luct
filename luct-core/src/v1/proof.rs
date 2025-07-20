@@ -58,7 +58,7 @@ mod tests {
 
     use super::*;
     use crate::{
-        CertificateChain, LogId,
+        CertificateChain,
         tests::{
             ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, GOOGLE_AUDIT_PROOF,
             GOOGLE_STH_CONSISTENCY_PROOF, get_log_argon2025h2,
@@ -95,7 +95,7 @@ mod tests {
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();
-        assert_eq!(log.log_id(), &LogId::V1(scts[0].log_id().clone()));
+        assert_eq!(log.log_id(), &scts[0].log_id());
 
         let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
 
