@@ -1,5 +1,7 @@
-use luct_client::{Client, ClientError, CtClientConfig};
-use luct_core::{CertificateChain, CertificateError, LogId};
+use luct_client::{Client, ClientError, CtClient, CtClientConfig};
+use luct_core::{
+    CertificateChain, CertificateError, CtLogConfig, LogId, store::OrderedStore, v1::SignedTreeHead,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
@@ -7,9 +9,8 @@ use thiserror::Error;
 mod lead;
 mod log;
 
-pub use lead::{Conclusion, Lead};
-
 use crate::{lead::EmbeddedSct, log::ScannerLog};
+pub use lead::{Conclusion, Lead};
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
@@ -17,7 +18,30 @@ pub struct Scanner<C> {
     // TODO: Roots denylist
 }
 
-impl<C> Scanner<C> {
+#[allow(clippy::type_complexity)]
+impl<C: Client + Clone> Scanner<C> {
+    pub async fn new_with_client(
+        log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
+        client: C,
+    ) -> Self {
+        let mut logs = BTreeMap::new();
+        for (name, (config, store)) in log_configs {
+            let config = CtClientConfig::from(config);
+            let client = CtClient::new(config, client.clone());
+
+            let log_id = client.log().log_id().clone();
+            let scanner_log = ScannerLog {
+                name,
+                client,
+                sth_store: store,
+            };
+
+            logs.insert(log_id, scanner_log);
+        }
+
+        Self { logs }
+    }
+
     pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ScannerError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
         self.collect_leads(cert_chain)

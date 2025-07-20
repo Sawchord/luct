@@ -1,5 +1,3 @@
-// TODO: Implement Filestore
-
 use luct_core::store::{OrderedStore, Store};
 use std::{
     fs::OpenOptions,
@@ -86,6 +84,7 @@ fn start_storage_loop<K: FilesystemStoreKey, V: FilesystemStoreValue>(
     path: PathBuf,
 ) {
     let path = &path;
+    std::fs::create_dir_all(path).unwrap();
     loop {
         match rx.recv() {
             Ok(StoreRequest::Get { key, answer }) => {
@@ -190,3 +189,5 @@ impl<V> Answer<V> {
         self.done.notify_all();
     }
 }
+
+// TODO: Unittests of FilesystemStore using tempdir
