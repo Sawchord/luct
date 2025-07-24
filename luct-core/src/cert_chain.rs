@@ -6,6 +6,7 @@ use crate::{
 };
 use sha2::{Digest, Sha256};
 use x509_cert::{Certificate as Cert, der::Encode};
+use x509_verify::VerifyingKey;
 
 /// A [`CertificateChain`] chain of trust
 ///
@@ -33,9 +34,31 @@ impl CertificateChain {
             return Err(CertificateError::InvalidChain);
         }
 
-        // TODO: Validate the cert against the actual certificates
+        let chain = Self(chain.into_iter().map(Certificate).collect());
+        chain.verify_chain()?;
+        Ok(chain)
+    }
 
-        Ok(Self(chain.into_iter().map(Certificate).collect()))
+    pub fn verify_chain(&self) -> Result<(), CertificateError> {
+        self.verify_chain_inner(None)
+    }
+
+    pub fn verify_chain_against_root(&self, root: &Certificate) -> Result<(), CertificateError> {
+        self.verify_chain_inner(Some(root))
+    }
+
+    fn verify_chain_inner(&self, maybe_root: Option<&Certificate>) -> Result<(), CertificateError> {
+        for idx in 1..self.0.len() {
+            let key = VerifyingKey::try_from(&self.0[idx].0)?;
+            key.verify(&self.0[idx - 1].0)?;
+        }
+
+        if let Some(root) = maybe_root {
+            let key = VerifyingKey::try_from(&self.0.last().unwrap().0)?;
+            key.verify(&root.0)?;
+        }
+
+        Ok(())
     }
 
     pub fn cert(&self) -> &Certificate {
