@@ -61,14 +61,15 @@ async fn main() -> eyre::Result<()> {
 
     let investigations = leads
         .iter()
-        .map(|lead| scanner.investigate_lead(lead))
+        .map(async |lead| {
+            let conclusion = scanner.investigate_lead(lead).await?;
+            println!("Conclusion: {conclusion}");
+
+            Ok::<(), eyre::Error>(())
+        })
         .collect::<Vec<_>>();
 
-    let conclusions = future::join_all(investigations).await;
-    for conclusion in conclusions {
-        let conclusion = conclusion?;
-        println!("Conclusion: {conclusion}");
-    }
+    future::try_join_all(investigations).await?;
 
     Ok(())
 }
