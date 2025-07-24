@@ -17,7 +17,7 @@ impl<C: Client> ScannerLog<C> {
             Some((_, sth)) => Ok(sth),
             None => {
                 let sth = self.client.get_sth_v1().await?;
-                self.sth_store.insert(sth.timestamp(), sth.clone());
+                self.sth_store.insert(sth.tree_size(), sth.clone());
                 Ok(sth)
             }
         }

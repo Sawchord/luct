@@ -1,3 +1,4 @@
+use futures::future;
 use luct_client::{Client, ClientError, CtClient, CtClientConfig};
 use luct_core::{
     CertificateChain, CertificateError, CtLogConfig, LogId, store::OrderedStore, v1::SignedTreeHead,
@@ -40,6 +41,18 @@ impl<C: Client + Clone> Scanner<C> {
         }
 
         Self { logs }
+    }
+
+    pub async fn update_sths(&self) -> Result<(), ScannerError> {
+        let updates = self
+            .logs
+            .values()
+            .map(|log| log.update_sth())
+            .collect::<Vec<_>>();
+
+        future::try_join_all(updates).await?;
+
+        Ok(())
     }
 
     pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ScannerError> {

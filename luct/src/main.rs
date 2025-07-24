@@ -48,6 +48,10 @@ async fn main() -> eyre::Result<()> {
     let client = luct_client::reqwest::ReqwestClient::new();
     let scanner = Scanner::new_with_client(log_configs, client).await;
 
+    if args.update_sths {
+        scanner.update_sths().await?;
+    }
+
     let chain = fetch_cert_chain(&args.source)?;
     println!("Fingerprint: {}", chain.cert().fingerprint_sha256());
 

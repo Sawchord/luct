@@ -23,6 +23,10 @@ pub(crate) struct Args {
     /// If set, reads certificate chain from a file, otherwise fetches the certificate from the URL
     #[arg(short, long)]
     pub(crate) file: bool,
+
+    /// If set, updates all logs signed tree heads to the latest version, before checking log inclusions
+    #[arg(short, long)]
+    pub(crate) update_sths: bool,
 }
 
 pub(crate) fn get_workdir(args: &Args) -> PathBuf {

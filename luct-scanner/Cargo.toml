@@ -18,5 +18,7 @@ luct-client = { path = "../luct-client" }
 serde = { workspace = true }
 thiserror = { workspace = true }
 
+futures = { workspace = true }
+
 [features]
 default = []
