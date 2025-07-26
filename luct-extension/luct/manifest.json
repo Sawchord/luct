@@ -1,0 +1,18 @@
+{
+    "manifest_version": 2,
+    "name": "luCT certificate scanner",
+    "version": "0.0",
+    "description": "luCT ",
+    "background": {
+        "scripts": [
+            "background.js"
+        ]
+    },
+    "permissions": [
+        "webRequest",
+        "webRequestBlocking",
+        "activeTab",
+        "tabs",
+        "<all_urls>"
+    ]
+}
