@@ -40,12 +40,16 @@ x509-cert = { version = "0.2" }
 x509-verify = { version = "0.4", features = ["x509"] }
 
 rustls = { version = "0.23", default-features = false }
-rustls-platform-verifier = { version = "0.6" }
-rustls-rustcrypto = { version = "0.0.2-alpha" }
+rustls-platform-verifier = { version = "0.6", default-features = false }
+rustls-rustcrypto = { version = "0.0.2-alpha", default-features = false, features = [
+    "alloc",
+] }
 
 # HTTP 
 url = { version = "2", features = ["serde"] }
-reqwest = { version = "0.12", features = ["rustls-tls"] }
+reqwest = { version = "0.12", default-features = false, features = [
+    "rustls-tls",
+] }
 
 # Utilities
 clap = { version = "4", features = ["derive"] }

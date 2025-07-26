@@ -14,3 +14,11 @@ license = { workspace = true }
 crate-type = ["cdylib"]
 
 [dependencies]
+luct-scanner = { path = "../../luct-scanner" }
+luct-store = { path = "../../luct-store" }
+
+wasm-bindgen = { workspace = true }
+web-sys = { workspace = true }
+js-sys = { workspace = true }
+
+getrandom = { version = "0.2", features = ["js"] }
