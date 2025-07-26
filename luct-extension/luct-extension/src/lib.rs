@@ -47,7 +47,7 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub async fn collect_leads(&self, leads: Array) -> Result<(), String> {
+    pub async fn collect_leads(&self, leads: Array) -> Result<Vec<Lead>, String> {
         let cert_chain_bytes = leads
             .to_vec()
             .into_iter()
@@ -64,9 +64,8 @@ impl Scanner {
             .map_err(|err| format!("{err}"))?;
         //log(&format!("{leads:?}"));
 
-        log("still alive");
-        //todo!()
-        Ok(())
+        log("collected leads");
+        Ok(leads.into_iter().map(Lead).collect())
     }
 }
 

@@ -22,6 +22,8 @@ function load_scanner() {
 function add_listener() {
     browser.webRequest.onHeadersReceived.addListener(async (details) => {
         //log(`Got a request for ${details.url} with ID ${details.requestId}`)
+        log(details)
+
 
         let requestId = details.requestId
 
@@ -32,8 +34,10 @@ function add_listener() {
 
         //log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
         let certs = securityInfo.certificates.map((info) => info.rawDER);
-        await scanner.collect_leads(certs);
-        log(certs)
+        //log(certs)
+
+        let leads = await scanner.collect_leads(certs);
+        //log(leads)
 
     }, ALL_SITES, extraInfoSpec)
 
