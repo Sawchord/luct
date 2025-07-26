@@ -29,12 +29,14 @@ pub struct Certificate(pub(crate) Cert);
 impl Certificate {
     /// Parse a PEM decoded string into a [`Certificate`]
     pub fn from_pem(input: &str) -> Result<Self, CertificateError> {
-        Ok(Self(Cert::from_pem(input.as_bytes())?))
+        Ok(Self(
+            Cert::from_pem(input.as_bytes()).map_err(CodecError::DerError)?,
+        ))
     }
 
     /// Parse a DER decoded string into a [`Certificate`]
     pub fn from_der(input: &[u8]) -> Result<Self, CertificateError> {
-        Ok(Self(Cert::from_der(input)?))
+        Ok(Self(Cert::from_der(input).map_err(CodecError::DerError)?))
     }
 
     /// Extract the [SCTs](v1::SignedCertificateTimestamp) embedded into this [`Certificate`]
@@ -111,9 +113,6 @@ pub enum CertificateError {
 
     #[error("The certificate chain is malformed")]
     InvalidChain,
-
-    #[error("Failed to parse a DER encoded certificate: {0}")]
-    DerParseError(#[from] x509_cert::der::Error),
 
     #[error("Failed to decode a value: {0}")]
     CodecError(#[from] CodecError),

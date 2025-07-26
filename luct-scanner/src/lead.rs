@@ -5,11 +5,16 @@ use std::{
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub enum LeadResult {
+    Conclusion(Conclusion),
+    FollowUp(Vec<Lead>),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Conclusion {
     Safe(String),
     Inconclusive(String),
     Unsafe(String),
-    FollowUp(Vec<Lead>),
 }
 
 impl Display for Conclusion {
@@ -18,7 +23,6 @@ impl Display for Conclusion {
             Conclusion::Safe(reason) => write!(f, "Safe: {reason}"),
             Conclusion::Inconclusive(reason) => write!(f, "Inconclusive: {reason}"),
             Conclusion::Unsafe(reason) => write!(f, "UNSAFE!: {reason}"),
-            Conclusion::FollowUp(_) => write!(f, "The investigation found new leads"),
         }
     }
 }

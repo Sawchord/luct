@@ -21,7 +21,6 @@ impl CtLog {
             sct_version: Version::V1,
             timestamp: sct.timestamp,
             entry: cert.as_log_entry_v1(as_precert).map_err(|err| match err {
-                CertificateError::DerParseError(err) => SignatureValidationError::DerError(err),
                 CertificateError::CodecError(err) => SignatureValidationError::CodecError(err),
                 _ => unreachable!(),
             })?,

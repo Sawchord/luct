@@ -26,7 +26,7 @@ impl From<Vec<Certificate>> for CertificateChain {
 
 impl CertificateChain {
     pub fn from_pem_chain(input: &str) -> Result<Self, CertificateError> {
-        let chain = Cert::load_pem_chain(input.as_bytes())?;
+        let chain = Cert::load_pem_chain(input.as_bytes()).map_err(CodecError::DerError)?;
 
         // We need at least a chain of depth 2 (root + leaf), since root certs themselves
         // can not be logged in this way
@@ -85,7 +85,8 @@ impl CertificateChain {
             .0
             .tbs_certificate
             .subject_public_key_info
-            .encode_to_vec(&mut subject_public_key_bytes)?;
+            .encode_to_vec(&mut subject_public_key_bytes)
+            .map_err(CodecError::DerError)?;
         let issuer_key_hash: [u8; 32] = Sha256::digest(&subject_public_key_bytes).into();
 
         // TODO: Change the issuer, if a special precert signing certificate is being used
@@ -124,7 +125,6 @@ impl CertificateChain {
             leaf: v1::tree::Leaf::TimestampedEntry(v1::tree::TimestampedEntry {
                 timestamp: sct.timestamp,
                 log_entry: self.as_log_entry_v1(as_precert).map_err(|err| match err {
-                    CertificateError::DerParseError(err) => CodecError::DerError(err),
                     CertificateError::CodecError(err) => err,
                     _ => unreachable!(),
                 })?,
