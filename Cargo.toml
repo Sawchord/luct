@@ -61,3 +61,8 @@ itertools = { version = "0.14" }
 # Async
 tokio = { version = "1" }
 futures = { version = "0.3" }
+
+# WASM
+wasm-bindgen = { version = "0.2" }
+web-sys = { version = "0.3" }
+js-sys = { version = "0.3" }

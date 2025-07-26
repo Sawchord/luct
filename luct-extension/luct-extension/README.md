@@ -18,5 +18,6 @@ npm install -g web-ext
 ### Run
 
 ```
+wasm-pack build luct-extension/luct-extension --target web
 web-ext run --devtools
 ```
