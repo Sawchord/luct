@@ -1,7 +1,7 @@
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{store::OrderedStore, v1::SignedTreeHead};
 
-use crate::{Conclusion, ScannerError, lead::EmbeddedSct};
+use crate::{Conclusion, lead::EmbeddedSct};
 
 pub(crate) struct ScannerLog<C> {
     pub(crate) name: String,
@@ -12,7 +12,7 @@ pub(crate) struct ScannerLog<C> {
 
 impl<C: Client> ScannerLog<C> {
     /// Returns the latests STH, if it exists
-    pub(crate) async fn latest_sth(&self) -> Result<SignedTreeHead, ScannerError> {
+    pub(crate) async fn latest_sth(&self) -> Result<SignedTreeHead, ClientError> {
         match self.sth_store.last() {
             Some((_, sth)) => Ok(sth),
             None => {
@@ -24,7 +24,7 @@ impl<C: Client> ScannerLog<C> {
     }
 
     /// Updates the log to the newest STH, checks consistency if possible
-    pub(crate) async fn update_sth(&self) -> Result<(), ScannerError> {
+    pub(crate) async fn update_sth(&self) -> Result<(), ClientError> {
         let new_sth = self.client.get_sth_v1().await?;
 
         if let Some((_, old_sth)) = self.sth_store.last() {
@@ -38,7 +38,7 @@ impl<C: Client> ScannerLog<C> {
     pub(crate) async fn investigate_embedded_sct(
         &self,
         sct: &EmbeddedSct,
-    ) -> Result<Conclusion, ScannerError> {
+    ) -> Result<Conclusion, ClientError> {
         let EmbeddedSct { sct, chain } = sct;
 
         if sct.timestamp() > self.latest_sth().await?.timestamp() {
@@ -55,11 +55,7 @@ impl<C: Client> ScannerLog<C> {
                 "\"{}\" returned a valid audit proof",
                 self.name
             ))),
-            Err(ClientError::AuditProofError) => Ok(Conclusion::Unsafe(format!(
-                "\"{}\" returned an audit proof that failed verification",
-                self.name
-            ))),
-            Err(err) => Err(ScannerError::from(err)),
+            Err(err) => Ok(err.into()),
         }
     }
 }

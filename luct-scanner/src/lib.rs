@@ -1,5 +1,5 @@
 use futures::future;
-use luct_client::{Client, CtClient, CtClientConfig};
+use luct_client::{Client, ClientError, CtClient, CtClientConfig};
 use luct_core::{CertificateChain, CtLogConfig, LogId, store::OrderedStore, v1::SignedTreeHead};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -8,7 +8,7 @@ mod lead;
 mod log;
 
 use crate::{lead::EmbeddedSct, log::ScannerLog};
-pub use lead::{Conclusion, Lead, ScannerConfig, ScannerError};
+pub use lead::{Conclusion, Lead, LeadResult, ScannerConfig};
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
@@ -40,7 +40,7 @@ impl<C: Client + Clone> Scanner<C> {
         Self { logs }
     }
 
-    pub async fn update_sths(&self) -> Result<(), ScannerError> {
+    pub async fn update_sths(&self) -> Result<(), ClientError> {
         let updates = self
             .logs
             .values()
@@ -52,12 +52,12 @@ impl<C: Client + Clone> Scanner<C> {
         Ok(())
     }
 
-    pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ScannerError> {
+    pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ClientError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
         self.collect_leads(cert_chain)
     }
 
-    pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ScannerError> {
+    pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ClientError> {
         // TODO: For embedded SCT, match with the log name immiditately, such that we can print the log
 
         // TODO: Check that no CA is in the denylist of the scanner
@@ -81,17 +81,28 @@ impl<C: Client + Clone> Scanner<C> {
 }
 
 impl<C: Client> Scanner<C> {
-    pub async fn investigate_lead(&self, lead: &Lead) -> Result<Conclusion, ScannerError> {
+    pub async fn investigate_lead(&self, lead: &Lead) -> LeadResult {
+        let result = self.investigate_lead_impl(lead).await;
+
+        match result {
+            Ok(result) => result,
+            Err(err) => LeadResult::Conclusion(err.into()),
+        }
+    }
+
+    pub async fn investigate_lead_impl(&self, lead: &Lead) -> Result<LeadResult, ClientError> {
         match lead {
             Lead::EmbeddedSct(embedded_sct) => {
                 let Some(log) = self.logs.get(&embedded_sct.sct.log_id()) else {
-                    return Ok(Conclusion::Inconclusive(format!(
+                    return Ok(LeadResult::Conclusion(Conclusion::Inconclusive(format!(
                         "The scanner does not recognize the log {}",
                         embedded_sct.sct.log_id()
-                    )));
+                    ))));
                 };
 
-                log.investigate_embedded_sct(embedded_sct).await
+                log.investigate_embedded_sct(embedded_sct)
+                    .await
+                    .map(LeadResult::Conclusion)
             }
         }
     }

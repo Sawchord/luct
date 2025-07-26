@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 /// Indicates, whether an error should be treated as an inconclusive result, or an unsafe result
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Severity {
@@ -16,6 +18,6 @@ pub enum Severity {
     Unsafe,
 }
 
-pub trait CheckSeverity {
+pub trait CheckSeverity: Display {
     fn severity(&self) -> Severity;
 }

@@ -10,7 +10,7 @@ use clap::Parser;
 use eyre::Context;
 use futures::future;
 use luct_core::{CtLogConfig, v1::SignedTreeHead};
-use luct_scanner::Scanner;
+use luct_scanner::{LeadResult, Scanner};
 use luct_store::FilesystemStore;
 
 mod args;
@@ -55,25 +55,47 @@ async fn main() -> eyre::Result<()> {
     let chain = fetch_cert_chain(&args.source)?;
     println!("Fingerprint: {}", chain.cert().fingerprint_sha256());
 
-    let leads = scanner
+    let mut leads = scanner
         .collect_leads(Arc::new(chain))
         .with_context(|| format!("failed to collext leads for {}", args.source))?;
 
-    for lead in &leads {
-        println!("Found a lead: {lead}")
+    loop {
+        for lead in &leads {
+            println!("Found a lead: {lead}")
+        }
+
+        let investigations: Vec<_> = leads
+            .iter()
+            .map(async |lead| {
+                let result = scanner.investigate_lead(lead).await;
+                match scanner.investigate_lead(lead).await {
+                    LeadResult::Conclusion(conclusion) => {
+                        println!("Conclusion: {conclusion}")
+                    }
+                    LeadResult::FollowUp(_) => (),
+                };
+
+                result
+            })
+            .collect();
+
+        let investigations = future::join_all(investigations).await;
+
+        let follow_ups = investigations
+            .into_iter()
+            .filter_map(|result| match result {
+                LeadResult::Conclusion(_) => None,
+                LeadResult::FollowUp(leads) => Some(leads),
+            })
+            .flatten()
+            .collect::<Vec<_>>();
+
+        if follow_ups.is_empty() {
+            break;
+        } else {
+            leads = follow_ups;
+        }
     }
-
-    let investigations = leads
-        .iter()
-        .map(async |lead| {
-            let conclusion = scanner.investigate_lead(lead).await?;
-            println!("Conclusion: {conclusion}");
-
-            Ok::<(), eyre::Error>(())
-        })
-        .collect::<Vec<_>>();
-
-    future::try_join_all(investigations).await?;
 
     Ok(())
 }

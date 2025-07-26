@@ -1,39 +1,32 @@
-use luct_client::ClientError;
-use luct_core::{
-    CertificateChain, CertificateError, CheckSeverity, v1::SignedCertificateTimestamp,
-};
+use luct_core::{CertificateChain, CheckSeverity, Severity, v1::SignedCertificateTimestamp};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},
     sync::Arc,
 };
-use thiserror::Error;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScannerConfig {}
-
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum ScannerError {
-    #[error("Certificate error: {0}")]
-    CertificateError(#[from] CertificateError),
-
-    #[error("Client error: {0}")]
-    ClientError(#[from] ClientError),
-}
-
-impl CheckSeverity for ScannerError {
-    fn severity(&self) -> luct_core::Severity {
-        match self {
-            ScannerError::CertificateError(certificate_error) => certificate_error.severity(),
-            ScannerError::ClientError(client_error) => client_error.severity(),
-        }
-    }
-}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LeadResult {
     Conclusion(Conclusion),
     FollowUp(Vec<Lead>),
+}
+
+impl From<Conclusion> for LeadResult {
+    fn from(value: Conclusion) -> Self {
+        Self::Conclusion(value)
+    }
+}
+
+impl<E: CheckSeverity> From<E> for Conclusion {
+    fn from(value: E) -> Self {
+        match value.severity() {
+            Severity::Inconclusive => Conclusion::Inconclusive(format!("{value}")),
+            Severity::Unsafe => Conclusion::Unsafe(format!("{value}")),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
