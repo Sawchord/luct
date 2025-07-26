@@ -46,7 +46,7 @@ async fn main() -> eyre::Result<()> {
         .collect::<BTreeMap<_, _>>();
 
     let client = luct_client::reqwest::ReqwestClient::new();
-    let scanner = Scanner::new_with_client(log_configs, client).await;
+    let scanner = Scanner::new_with_client(log_configs, client);
 
     if args.update_sths {
         scanner.update_sths().await?;

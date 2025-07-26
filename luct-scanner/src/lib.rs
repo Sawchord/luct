@@ -18,7 +18,7 @@ pub struct Scanner<C> {
 
 #[allow(clippy::type_complexity)]
 impl<C: Client + Clone> Scanner<C> {
-    pub async fn new_with_client(
+    pub fn new_with_client(
         log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
         client: C,
     ) -> Self {
