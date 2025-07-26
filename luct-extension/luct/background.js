@@ -1,23 +1,31 @@
-var log = console.log.bind(console)
+let log = console.log.bind(console)
+let ALL_SITES = { urls: ['<all_urls>'] }
+let extraInfoSpec = ['blocking'];
 
-log(`\n\nTLS browser extension loaded`)
+log(`Loading luCT extension`)
 
-var ALL_SITES = { urls: ['<all_urls>'] }
-var extraInfoSpec = ['blocking'];
 
-browser.webRequest.onHeadersReceived.addListener(async function (details) {
-    log(`\n\nGot a request for ${details.url} with ID ${details.requestId}`)
+fetch(browser.runtime.getURL('assets/logs.toml'))
+    .then(res => {
+        res.text().then((logs) => log('parsed log'))
+    })
 
-    var requestId = details.requestId
+function add_listener() {
+    browser.webRequest.onHeadersReceived.addListener(async (details) => {
+        log(`\n\nGot a request for ${details.url} with ID ${details.requestId}`)
 
-    var securityInfo = await browser.webRequest.getSecurityInfo(requestId, {
-        certificateChain: true,
-        rawDER: false
-    });
+        let requestId = details.requestId
 
-    log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
+        let securityInfo = await browser.webRequest.getSecurityInfo(requestId, {
+            certificateChain: true,
+            rawDER: true
+        });
 
-}, ALL_SITES, extraInfoSpec)
+        log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
 
-log('Added listener')
+    }, ALL_SITES, extraInfoSpec)
 
+    log('Added listener')
+}
+
+add_listener()
