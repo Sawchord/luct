@@ -1,17 +1,14 @@
 use futures::future;
-use luct_client::{Client, ClientError, CtClient, CtClientConfig};
-use luct_core::{
-    CertificateChain, CertificateError, CtLogConfig, LogId, store::OrderedStore, v1::SignedTreeHead,
-};
+use luct_client::{Client, CtClient, CtClientConfig};
+use luct_core::{CertificateChain, CtLogConfig, LogId, store::OrderedStore, v1::SignedTreeHead};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
-use thiserror::Error;
 
 mod lead;
 mod log;
 
 use crate::{lead::EmbeddedSct, log::ScannerLog};
-pub use lead::{Conclusion, Lead};
+pub use lead::{Conclusion, Lead, ScannerConfig, ScannerError};
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
@@ -104,16 +101,4 @@ impl<C: Client> Scanner<C> {
 pub struct ScannerBuilder {
     config: ScannerConfig,
     logs: Vec<CtClientConfig>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ScannerConfig {}
-
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
-pub enum ScannerError {
-    #[error("Certificate error: {0}")]
-    CertificateError(#[from] CertificateError),
-
-    #[error("Client error: {0}")]
-    ClientError(#[from] ClientError),
 }

@@ -1,8 +1,23 @@
-use luct_core::{CertificateChain, v1::SignedCertificateTimestamp};
+use luct_client::ClientError;
+use luct_core::{CertificateChain, CertificateError, v1::SignedCertificateTimestamp};
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},
     sync::Arc,
 };
+use thiserror::Error;
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScannerConfig {}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum ScannerError {
+    #[error("Certificate error: {0}")]
+    CertificateError(#[from] CertificateError),
+
+    #[error("Client error: {0}")]
+    ClientError(#[from] ClientError),
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum LeadResult {

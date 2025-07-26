@@ -57,9 +57,6 @@ pub enum SignatureValidationError {
     #[error("Signature verification failed")]
     InvalidSignature,
 
-    #[error("Error decoding a DER value: {0}")]
-    DerError(#[from] x509_cert::der::Error),
-
     #[error("Error decoding a value: {0}")]
     CodecError(#[from] CodecError),
 }
