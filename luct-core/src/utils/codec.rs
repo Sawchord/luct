@@ -5,6 +5,8 @@ use std::{
 };
 use thiserror::Error;
 
+use crate::{CheckSeverity, Severity};
+
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CodecError {
     #[error("Error of underlying IO: {0}")]
@@ -23,6 +25,18 @@ pub enum CodecError {
     VectorTooLong { received: usize, max: usize },
     // #[error("A field contained {received} bytes (expected {expected} bytes)")]
     // VectorTooShort { received: usize, expected: usize },
+}
+
+impl CheckSeverity for CodecError {
+    fn severity(&self) -> Severity {
+        match self {
+            CodecError::IoError(_) => Severity::Inconclusive,
+            CodecError::DerError(_) => Severity::Unsafe,
+            CodecError::UnknownVariant(_, _) => Severity::Unsafe,
+            CodecError::UnexpectedVariant => Severity::Unsafe,
+            CodecError::VectorTooLong { .. } => Severity::Unsafe,
+        }
+    }
 }
 
 impl From<std::io::Error> for CodecError {

@@ -1,5 +1,7 @@
 use luct_client::ClientError;
-use luct_core::{CertificateChain, CertificateError, v1::SignedCertificateTimestamp};
+use luct_core::{
+    CertificateChain, CertificateError, CheckSeverity, v1::SignedCertificateTimestamp,
+};
 use serde::{Deserialize, Serialize};
 use std::{
     fmt::{self, Display},
@@ -17,6 +19,15 @@ pub enum ScannerError {
 
     #[error("Client error: {0}")]
     ClientError(#[from] ClientError),
+}
+
+impl CheckSeverity for ScannerError {
+    fn severity(&self) -> luct_core::Severity {
+        match self {
+            ScannerError::CertificateError(certificate_error) => certificate_error.severity(),
+            ScannerError::ClientError(client_error) => client_error.severity(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

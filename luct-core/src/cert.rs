@@ -1,4 +1,5 @@
 use crate::{
+    CheckSeverity, Severity,
     utils::{
         codec::{CodecError, Decode},
         hex_with_colons,
@@ -119,6 +120,17 @@ pub enum CertificateError {
 
     #[error("Failed to verify certificate: {0}")]
     VerificationError(x509_verify::Error),
+}
+
+impl CheckSeverity for CertificateError {
+    fn severity(&self) -> Severity {
+        match self {
+            CertificateError::InvalidPreCert => Severity::Unsafe,
+            CertificateError::InvalidChain => Severity::Unsafe,
+            CertificateError::CodecError(codec_error) => codec_error.severity(),
+            CertificateError::VerificationError(_) => Severity::Unsafe,
+        }
+    }
 }
 
 impl From<x509_verify::Error> for CertificateError {

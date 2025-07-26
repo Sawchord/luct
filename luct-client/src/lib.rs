@@ -1,5 +1,6 @@
 use luct_core::{
-    CertificateError, CtLog, CtLogConfig, SignatureValidationError, v1::SignedTreeHead,
+    CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
+    v1::SignedTreeHead,
 };
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -76,6 +77,21 @@ impl From<serde_json::Error> for ClientError {
         ClientError::JsonError {
             line: value.line(),
             column: value.column(),
+        }
+    }
+}
+
+impl CheckSeverity for ClientError {
+    fn severity(&self) -> Severity {
+        match self {
+            ClientError::UnsupportedVersion => Severity::Inconclusive,
+            ClientError::JsonError { .. } => Severity::Unsafe,
+            ClientError::CertificateError(err) => err.severity(),
+            ClientError::SignatureValidationFailed(_, err) => err.severity(),
+            ClientError::ConsistencyProofError => Severity::Unsafe,
+            ClientError::AuditProofError => Severity::Unsafe,
+            ClientError::ConnectionError(_) => Severity::Inconclusive,
+            ClientError::ResponseError { .. } => Severity::Inconclusive,
         }
     }
 }
