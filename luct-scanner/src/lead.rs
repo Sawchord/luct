@@ -1,6 +1,7 @@
 use luct_core::{CertificateChain, CheckSeverity, Severity, v1::SignedCertificateTimestamp};
 use serde::{Deserialize, Serialize};
 use std::{
+    cmp::Ordering,
     fmt::{self, Display},
     sync::Arc,
 };
@@ -42,6 +43,26 @@ impl Display for Conclusion {
             Conclusion::Safe(reason) => write!(f, "Safe: {reason}"),
             Conclusion::Inconclusive(reason) => write!(f, "Inconclusive: {reason}"),
             Conclusion::Unsafe(reason) => write!(f, "UNSAFE!: {reason}"),
+        }
+    }
+}
+
+impl PartialOrd for Conclusion {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(self.cmp(other))
+    }
+}
+
+impl Ord for Conclusion {
+    fn cmp(&self, other: &Self) -> Ordering {
+        match (self, other) {
+            (Conclusion::Safe(_), Conclusion::Safe(_)) => Ordering::Equal,
+            (Conclusion::Safe(_), _) => Ordering::Greater,
+            (Conclusion::Inconclusive(_), Conclusion::Safe(_)) => Ordering::Less,
+            (Conclusion::Inconclusive(_), Conclusion::Inconclusive(_)) => Ordering::Equal,
+            (Conclusion::Inconclusive(_), Conclusion::Unsafe(_)) => Ordering::Greater,
+            (Conclusion::Unsafe(_), Conclusion::Unsafe(_)) => Ordering::Equal,
+            (Conclusion::Unsafe(_), _) => Ordering::Less,
         }
     }
 }
