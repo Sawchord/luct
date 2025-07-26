@@ -1,35 +1,19 @@
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
-use js_sys::Array;
+use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
-use luct_core::{CtLogConfig, store::MemoryStore, v1::SignedTreeHead};
-use luct_scanner::Scanner as CtScanner;
-use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
+use luct_core::{CertificateChain, CtLogConfig, store::MemoryStore, v1::SignedTreeHead};
+use luct_scanner::{
+    Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Scanner as CtScanner,
+};
+use wasm_bindgen::prelude::wasm_bindgen;
 
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
-}
-
-// Called when the Wasm module is instantiated
-#[wasm_bindgen(start)]
-fn main() -> Result<(), JsValue> {
-    // Use `web_sys`'s global `window` function to get a handle on the global
-    // window object.
-    let window = web_sys::window().expect("no global `window` exists");
-    let document = window.document().expect("should have a document on window");
-    let body = document.body().expect("document should have a body");
-
-    // Manufacture the element we're gonna append
-    let val = document.create_element("p")?;
-    val.set_inner_html("Hello from Rust!");
-
-    body.append_child(&val)?;
-
-    Ok(())
 }
 
 #[wasm_bindgen]
@@ -58,11 +42,39 @@ impl Scanner {
         let client = luct_client::reqwest::ReqwestClient::new();
         let scanner = CtScanner::new_with_client(log_configs, client);
 
+        log("Initialized scanner");
         Ok(Scanner(scanner))
     }
 
     #[wasm_bindgen]
-    pub async fn collect_leads(&self, _leads: Array) {
-        todo!()
+    pub async fn collect_leads(&self, leads: Array) -> Result<(), String> {
+        let cert_chain_bytes = leads
+            .to_vec()
+            .into_iter()
+            .map(|value| Uint8Array::from(value).to_vec())
+            .collect::<Vec<_>>();
+
+        let cert_chain =
+            CertificateChain::from_der_chain(&cert_chain_bytes).map_err(|err| format!("{err}"))?;
+        //log(&format!("{:?}", cert_chain));
+
+        let leads = self
+            .0
+            .collect_leads(Arc::new(cert_chain))
+            .map_err(|err| format!("{err}"))?;
+        //log(&format!("{leads:?}"));
+
+        log("still alive");
+        //todo!()
+        Ok(())
     }
 }
+
+#[wasm_bindgen]
+pub struct Lead(CtLead);
+
+#[wasm_bindgen]
+pub struct LeadResult(CtLeadResult);
+
+#[wasm_bindgen]
+pub struct Conclusion(CtConclusion);

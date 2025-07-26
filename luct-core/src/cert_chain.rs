@@ -5,7 +5,10 @@ use crate::{
     v1,
 };
 use sha2::{Digest, Sha256};
-use x509_cert::{Certificate as Cert, der::Encode};
+use x509_cert::{
+    Certificate as Cert,
+    der::{Decode, Encode},
+};
 use x509_verify::VerifyingKey;
 
 /// A [`CertificateChain`] chain of trust
@@ -27,6 +30,24 @@ impl From<Vec<Certificate>> for CertificateChain {
 impl CertificateChain {
     pub fn from_pem_chain(input: &str) -> Result<Self, CertificateError> {
         let chain = Cert::load_pem_chain(input.as_bytes()).map_err(CodecError::DerError)?;
+
+        // We need at least a chain of depth 2 (root + leaf), since root certs themselves
+        // can not be logged in this way
+        if chain.len() < 2 {
+            return Err(CertificateError::InvalidChain);
+        }
+
+        let chain = Self(chain.into_iter().map(Certificate).collect());
+        chain.verify_chain()?;
+        Ok(chain)
+    }
+
+    pub fn from_der_chain(input: &[Vec<u8>]) -> Result<Self, CertificateError> {
+        let chain = input
+            .iter()
+            .map(|bytes| Cert::from_der(bytes))
+            .collect::<Result<Vec<_>, _>>()
+            .map_err(CodecError::DerError)?;
 
         // We need at least a chain of depth 2 (root + leaf), since root certs themselves
         // can not be logged in this way
