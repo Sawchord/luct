@@ -55,20 +55,21 @@ impl Scanner {
 
         let cert_chain =
             CertificateChain::from_der_chain(&cert_chain_bytes).map_err(|err| format!("{err}"))?;
-        log(&format!("{cert_chain:?}"));
+        //log(&format!("{cert_chain:?}"));
 
         let leads = self
             .0
             .collect_leads(Arc::new(cert_chain))
             .map_err(|err| format!("{err}"))?;
-        log(&format!("{leads:?}"));
+        //log(&format!("{leads:?}"));
 
-        log("collected leads");
+        //log("collected leads");
         Ok(leads.into_iter().map(Lead).collect())
     }
 
     #[wasm_bindgen]
     pub async fn investigate_lead(&self, lead: Lead) -> LeadResult {
+        //log("investigating lead");
         LeadResult(self.0.investigate_lead(&lead.0).await)
     }
 }
