@@ -22,7 +22,7 @@ function load_scanner() {
 
 function add_listener() {
     browser.webRequest.onHeadersReceived.addListener(async (details) => {
-        //log(`Got a request for ${details.url} with ID ${details.requestId}`)
+        log(`Got a request for ${details.url} with ID ${details.requestId}`)
         //log(details)
 
 
@@ -38,25 +38,19 @@ function add_listener() {
         //log(certs)
 
         let leads = scanner.collect_leads(certs);
-
         for (let lead of leads) {
-            let result = await scanner.investigate_lead(lead);
-            let conclusion = result.conclusion();
+            log("Investigating: " + lead.description());
 
-            if (conclusion) {
-                log(conclusion.description());
-            }
-            // TODO: Handle follow ups
+            scanner.investigate_lead(lead).then((result) => {
+                let conclusion = result.conclusion();
+
+                if (conclusion) {
+                    log(conclusion.description());
+                }
+                // TODO: Handle follow ups
+            });
+
         }
-
-        // await Promise.all(leads.map((lead) => lead.then((result) => {
-        //     let conclusion = result.conclusion();
-        //     log("investigated conclusion")
-        //     if (conclusion) {
-        //         log(conclusion.description())
-        //     }
-        // })));
-
         //log(leads)
 
     }, ALL_SITES, extraInfoSpec)

@@ -33,6 +33,10 @@ impl<C> CtClient<C> {
     pub fn log(&self) -> &CtLog {
         &self.log
     }
+
+    pub fn config(&self) -> &CtClientConfig {
+        &self.config
+    }
 }
 
 pub trait Client {
@@ -103,6 +107,16 @@ pub struct CtClientConfig {
 
     /// Fetch the values from another url instead
     fetch_url: Option<Url>,
+}
+
+impl CtClientConfig {
+    pub fn log_config(&self) -> &CtLogConfig {
+        &self.log
+    }
+
+    pub fn fetch_url(&self) -> &Option<Url> {
+        &self.fetch_url
+    }
 }
 
 impl From<CtLogConfig> for CtClientConfig {

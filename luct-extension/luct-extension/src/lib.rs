@@ -78,6 +78,14 @@ impl Scanner {
 pub struct Lead(CtLead);
 
 #[wasm_bindgen]
+impl Lead {
+    #[wasm_bindgen]
+    pub fn description(&self) -> String {
+        format!("{}", self.0)
+    }
+}
+
+#[wasm_bindgen]
 pub struct LeadResult(CtLeadResult);
 
 #[wasm_bindgen]
