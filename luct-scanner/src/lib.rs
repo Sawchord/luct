@@ -39,7 +39,9 @@ impl<C: Client + Clone> Scanner<C> {
 
         Self { logs }
     }
+}
 
+impl<C: Client> Scanner<C> {
     pub async fn update_sths(&self) -> Result<(), ClientError> {
         let updates = self
             .logs
@@ -52,11 +54,14 @@ impl<C: Client + Clone> Scanner<C> {
         Ok(())
     }
 
+    /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series
+    /// of PEM encoded certificates.
     pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ClientError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
         self.collect_leads(cert_chain)
     }
 
+    /// Collect the [`Leads`](Lead) from a [`CertificateChain`]
     pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ClientError> {
         // TODO: For embedded SCT, match with the log name immiditately, such that we can print the log
 
@@ -78,9 +83,7 @@ impl<C: Client + Clone> Scanner<C> {
 
         Ok(leads)
     }
-}
 
-impl<C: Client> Scanner<C> {
     pub async fn investigate_lead(&self, lead: &Lead) -> LeadResult {
         let result = self.investigate_lead_impl(lead).await;
 
@@ -90,7 +93,7 @@ impl<C: Client> Scanner<C> {
         }
     }
 
-    pub async fn investigate_lead_impl(&self, lead: &Lead) -> Result<LeadResult, ClientError> {
+    async fn investigate_lead_impl(&self, lead: &Lead) -> Result<LeadResult, ClientError> {
         match lead {
             Lead::EmbeddedSct(embedded_sct) => {
                 let Some(log) = self.logs.get(&embedded_sct.sct.log_id()) else {
