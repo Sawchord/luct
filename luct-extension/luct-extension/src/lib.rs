@@ -1,8 +1,14 @@
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
+// TODO: Implement BrowserLocalStore
+
 use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
-use luct_core::{CertificateChain, CtLogConfig, store::MemoryStore, v1::SignedTreeHead};
+use luct_core::{
+    CertificateChain, CtLogConfig,
+    store::MemoryStore,
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
+};
 use luct_scanner::{
     Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Scanner as CtScanner,
 };
@@ -39,7 +45,9 @@ impl Scanner {
             .collect::<BTreeMap<_, _>>();
 
         let client = luct_client::reqwest::ReqwestClient::new();
-        let scanner = CtScanner::new_with_client(log_configs, client);
+        let sct_cache =
+            Box::new(MemoryStore::<[u8; 32], SignedCertificateTimestamp>::default()) as _;
+        let scanner = CtScanner::new_with_client(log_configs, sct_cache, client);
 
         log("Initialized scanner");
         Ok(Scanner(scanner))

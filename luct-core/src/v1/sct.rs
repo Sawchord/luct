@@ -1,6 +1,8 @@
 use crate::{
     CertificateChain, CertificateError, CtLog, Version,
     signature::{Signature, SignatureValidationError},
+    store::Hashable,
+    tree::HashOutput,
     utils::{
         codec::{CodecError, Decode, Encode},
         metered::MeteredRead,
@@ -8,6 +10,8 @@ use crate::{
     },
     v1::{LogEntry, LogId, SignatureType},
 };
+use serde::{Deserialize, Serialize};
+use sha2::{Digest, Sha256};
 use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
 impl CtLog {
@@ -114,7 +118,7 @@ impl Decode for SctList {
 /// A signed certificate timestamp of version 1.
 ///
 /// See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SignedCertificateTimestamp {
     pub(crate) sct_version: Version,
     pub(crate) id: LogId,
@@ -153,6 +157,14 @@ impl Decode for SignedCertificateTimestamp {
             extensions: CodecVec::decode(&mut reader)?,
             signature: Signature::decode(&mut reader)?,
         })
+    }
+}
+
+impl Hashable for SignedCertificateTimestamp {
+    fn hash(&self) -> HashOutput {
+        let mut bytes = Cursor::new(vec![]);
+        self.encode(&mut bytes).unwrap();
+        Sha256::digest(bytes.into_inner()).into()
     }
 }
 

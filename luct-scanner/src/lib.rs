@@ -1,6 +1,10 @@
 use futures::future;
 use luct_client::{Client, ClientError, CtClient, CtClientConfig};
-use luct_core::{CertificateChain, CtLogConfig, LogId, store::OrderedStore, v1::SignedTreeHead};
+use luct_core::{
+    CertificateChain, CtLogConfig, LogId,
+    store::{OrderedStore, Store},
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -12,6 +16,7 @@ pub use lead::{Conclusion, Lead, LeadResult, ScannerConfig};
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
+    sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
     // TODO: CertificateChainStore
     // TODO: Roots denylist
 }
@@ -20,6 +25,7 @@ pub struct Scanner<C> {
 impl<C: Client + Clone> Scanner<C> {
     pub fn new_with_client(
         log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
+        sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
         client: C,
     ) -> Self {
         let mut logs = BTreeMap::new();
@@ -37,7 +43,7 @@ impl<C: Client + Clone> Scanner<C> {
             logs.insert(log_id, scanner_log);
         }
 
-        Self { logs }
+        Self { logs, sct_cache }
     }
 }
 

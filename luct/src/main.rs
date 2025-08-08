@@ -1,7 +1,5 @@
 // TODO: Use tracing to output sources
 
-use std::{collections::BTreeMap, sync::Arc};
-
 use crate::{
     args::{Args, get_confpath, get_workdir},
     fetch::fetch_cert_chain,
@@ -9,9 +7,13 @@ use crate::{
 use clap::Parser;
 use eyre::Context;
 use futures::future;
-use luct_core::{CtLogConfig, v1::SignedTreeHead};
+use luct_core::{
+    CtLogConfig,
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
+};
 use luct_scanner::{LeadResult, Scanner};
 use luct_store::FilesystemStore;
+use std::{collections::BTreeMap, sync::Arc};
 
 mod args;
 mod fetch;
@@ -45,8 +47,11 @@ async fn main() -> eyre::Result<()> {
         })
         .collect::<BTreeMap<_, _>>();
 
+    let sct_cache =
+        Box::new(FilesystemStore::<[u8; 32], SignedCertificateTimestamp>::new(workdir.join("sct")))
+            as _;
     let client = luct_client::reqwest::ReqwestClient::new();
-    let scanner = Scanner::new_with_client(log_configs, client);
+    let scanner = Scanner::new_with_client(log_configs, sct_cache, client);
 
     if args.update_sths {
         scanner.update_sths().await?;

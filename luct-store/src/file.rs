@@ -1,7 +1,4 @@
-use luct_core::{
-    store::{OrderedStore, Store},
-    v1::SignedTreeHead,
-};
+use luct_core::store::{OrderedStore, Store};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -13,15 +10,7 @@ use std::{
     },
 };
 
-pub trait FilesystemStoreKey: Clone + Ord + Send + 'static {
-    fn serialize_key(&self) -> String;
-    fn deserialize_key(key: &str) -> Option<Self>;
-}
-
-pub trait FilesystemStoreValue: Clone + Send + 'static {
-    fn serialize_value(&self) -> String;
-    fn deserialize_value(value: &str) -> Option<Self>;
-}
+use crate::{StringStoreKey, StringStoreValue};
 
 #[derive(Clone)]
 pub struct FilesystemStore<K, V> {
@@ -30,7 +19,7 @@ pub struct FilesystemStore<K, V> {
     tx: Sender<StoreRequest<K, V>>,
 }
 
-impl<K: FilesystemStoreKey, V: FilesystemStoreValue> FilesystemStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
     pub fn new(path: PathBuf) -> FilesystemStore<K, V> {
         let (tx, rx) = channel();
         start_storage_loop(rx, path.clone());
@@ -43,7 +32,7 @@ impl<K: FilesystemStoreKey, V: FilesystemStoreValue> FilesystemStore<K, V> {
     }
 }
 
-impl<K: FilesystemStoreKey, V: FilesystemStoreValue> Store<K, V> for FilesystemStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for FilesystemStore<K, V> {
     fn insert(&self, key: K, value: V) {
         let answer = Answer::new();
         self.tx
@@ -74,7 +63,7 @@ impl<K: FilesystemStoreKey, V: FilesystemStoreValue> Store<K, V> for FilesystemS
     }
 }
 
-impl<K: FilesystemStoreKey, V: FilesystemStoreValue> OrderedStore<K, V> for FilesystemStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> OrderedStore<K, V> for FilesystemStore<K, V> {
     fn last(&self) -> Option<(K, V)> {
         let answer = Answer::new();
         self.tx.send(StoreRequest::Last(answer.clone())).unwrap();
@@ -82,7 +71,7 @@ impl<K: FilesystemStoreKey, V: FilesystemStoreValue> OrderedStore<K, V> for File
     }
 }
 
-fn start_storage_loop<K: FilesystemStoreKey, V: FilesystemStoreValue>(
+fn start_storage_loop<K: StringStoreKey, V: StringStoreValue>(
     rx: Receiver<StoreRequest<K, V>>,
     path: PathBuf,
 ) {
@@ -192,26 +181,6 @@ impl<V> Answer<V> {
     fn answer(self, value: V) {
         *self.response.lock().unwrap() = Some(value);
         self.done.notify_all();
-    }
-}
-
-impl FilesystemStoreKey for u64 {
-    fn serialize_key(&self) -> String {
-        self.to_string()
-    }
-
-    fn deserialize_key(key: &str) -> Option<Self> {
-        key.parse().ok()
-    }
-}
-
-impl FilesystemStoreValue for SignedTreeHead {
-    fn serialize_value(&self) -> String {
-        serde_json::to_string(self).unwrap()
-    }
-
-    fn deserialize_value(value: &str) -> Option<Self> {
-        serde_json::from_str(value).ok()
     }
 }
 
