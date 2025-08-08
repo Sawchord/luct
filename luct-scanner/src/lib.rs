@@ -109,7 +109,7 @@ impl<C: Client> Scanner<C> {
                     ))));
                 };
 
-                log.investigate_embedded_sct(embedded_sct)
+                log.investigate_embedded_sct(embedded_sct, self)
                     .await
                     .map(LeadResult::Conclusion)
             }

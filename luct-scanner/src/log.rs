@@ -1,7 +1,10 @@
 use luct_client::{Client, ClientError, CtClient};
-use luct_core::{store::OrderedStore, v1::SignedTreeHead};
+use luct_core::{
+    store::{Hashable, OrderedStore},
+    v1::SignedTreeHead,
+};
 
-use crate::{Conclusion, lead::EmbeddedSct};
+use crate::{Conclusion, Scanner, lead::EmbeddedSct};
 
 pub(crate) struct ScannerLog<C> {
     pub(crate) name: String,
@@ -38,24 +41,31 @@ impl<C: Client> ScannerLog<C> {
     pub(crate) async fn investigate_embedded_sct(
         &self,
         sct: &EmbeddedSct,
+        scanner: &Scanner<C>,
     ) -> Result<Conclusion, ClientError> {
         let EmbeddedSct { sct, chain } = sct;
+
+        if scanner.sct_cache.get(&sct.hash()).is_some() {
+            return Ok(Conclusion::Safe(format!(
+                "cache returned valid SCT of \"{}\"",
+                self.name
+            )));
+        }
 
         if sct.timestamp() > self.latest_sth().await?.timestamp() {
             self.update_sth().await?;
         }
         let sth = self.latest_sth().await?;
 
-        match self
-            .client
+        self.client
             .check_embedded_sct_inclusion_v1(sct, &sth, chain)
-            .await
-        {
-            Ok(()) => Ok(Conclusion::Safe(format!(
-                "\"{}\" returned a valid audit proof",
-                self.name
-            ))),
-            Err(err) => Ok(err.into()),
-        }
+            .await?;
+
+        scanner.sct_cache.insert(sct.hash(), sct.clone());
+
+        Ok(Conclusion::Safe(format!(
+            "\"{}\" returned a valid audit proof",
+            self.name
+        )))
     }
 }
