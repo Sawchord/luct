@@ -2,12 +2,19 @@ use crate::config::Config;
 use axum::{
     Router,
     body::Body,
-    extract::{Query, State, WebSocketUpgrade, ws::WebSocket},
+    extract::{
+        Query, State, WebSocketUpgrade,
+        ws::{Message, WebSocket},
+    },
     response::Response,
     routing::get,
 };
 use serde::Deserialize;
-use tokio::{io::AsyncReadExt, net::TcpStream, select};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    net::TcpStream,
+    select,
+};
 
 mod config;
 
@@ -63,7 +70,41 @@ async fn handle_connection(
 
         loop {
             select! {
-                data = ws.recv() => {todo!()},
+                // Handle receiving data from the web socket side
+                data = ws.recv() => {
+                    match data {
+                        None => {
+                            tracing::debug!("Shutting down conntextion to {:?}", destination.to);
+                            let _ = stream.shutdown().await;
+                            break;
+                        },
+                        Some(data) => match data {
+                            Err(err) =>{
+                                tracing::warn!("Error while reading from websocket: {:?}", err);
+                                let _ = ws.send(Message::Close(None)).await;
+                                break;
+                            },
+                            Ok(data) => match data {
+                                Message::Binary(bytes) => {
+                                    tracing::trace!("Received {} bytes of data from websocket", bytes.len());
+                                    let _ = stream.write_all(&bytes).await;
+                                    //tracing::trace!("Forwarded {} bytes", bytes.len());
+                                },
+                                Message::Close(_) => {
+                                    tracing::debug!("Shutting down conntextion to {:?}", destination.to);
+                                    let _ = stream.shutdown().await;
+                                    break;
+                                },
+                                Message::Ping(bytes) => {
+                                    tracing::debug!("Received ping");
+                                    let _ = ws.send(Message::Pong(bytes)).await;
+                                },
+                                Message::Text(_) => tracing::warn!("Received unexpected text data"),
+                                Message::Pong(_) => tracing::debug!("Received pong"),
+                            },
+                        },
+                    }
+                },
                 read = stream.read(&mut buf) => {todo!()},
             }
         }
