@@ -48,6 +48,7 @@ async fn handle_connection(
 ) -> Response {
     tracing::debug!("Received a new connection request to {:?}", destination.to);
 
+    // Check that destination is enabled in config
     if !config.enabled_urls.iter().any(|url| url == &destination.to) {
         tracing::debug!("Connection request rejected since it does not target enabled URL");
 
@@ -57,6 +58,7 @@ async fn handle_connection(
             .unwrap();
     }
 
+    // Connect to destination
     let Ok(mut stream) = TcpStream::connect(&destination.to).await else {
         return Response::builder()
             .status(400)
@@ -65,6 +67,8 @@ async fn handle_connection(
     };
     tracing::debug!("TCP stream to target established");
 
+    // TODO: Close WS with a reason
+    // TODO: Check on results
     ws.on_upgrade(async move |mut ws: WebSocket| {
         let mut buf = [0; 1500];
 
@@ -81,7 +85,8 @@ async fn handle_connection(
                         Some(data) => match data {
                             Err(err) =>{
                                 tracing::warn!("Error while reading from websocket: {:?}", err);
-                                let _ = ws.send(Message::Close(None)).await;
+                                //let _ = ws.send(Message::Close(None)).await;
+                                let _ = stream.shutdown().await;
                                 break;
                             },
                             Ok(data) => match data {
@@ -105,7 +110,20 @@ async fn handle_connection(
                         },
                     }
                 },
-                read = stream.read(&mut buf) => {todo!()},
+                read = stream.read(&mut buf) => {
+                    match read {
+                        Err(err) => {
+                            tracing::warn!("Error while reading TCP stream: {:?}", err);
+                            let _ = ws.send(Message::Close(None)).await;
+                            break;
+                        },
+                        Ok(read) => {
+                            tracing::trace!("Read {} bytes of data", read);
+                            let new_buf = buf[..read].to_vec();
+                            let _ = ws.send(Message::Binary(new_buf.into())).await;
+                        },
+                    }
+                },
             }
         }
     })
