@@ -11,8 +11,35 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
+# HTTP
+hyper = { workspace = true }
+hyper-util = { workspace = true }
+# hyper-rustls = { workspace = true }
 
+url = { workspace = true }
+http-body-util = { workspace = true }
+
+rustls = { workspace = true }
+# Crypto
+rustls-rustcrypto = { workspace = true }
+
+# Async
+futures = { workspace = true }
+tower = { workspace = true }
+
+# Util
+thiserror = { workspace = true }
+
+# Wasm
 wasm-bindgen = { workspace = true }
 
 [dev-dependencies]
 wasm-bindgen-test = { workspace = true }
+
+# This needs to be imported here to set the "js" feature,
+# otherwise the crate would not compile to wasm
+getrandom = { version = "0.2", features = ["js"] }
+
+rustls-pki-types = { version = "1", default-features = false, features = [
+    "web",
+] }
