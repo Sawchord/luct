@@ -25,13 +25,12 @@ impl Client {
             )
             .with_no_client_auth();
 
-        let server_name = ServerName::try_from(dst.domain().unwrap())
+        let server_name = ServerName::try_from(dst.host_str().unwrap())
             .unwrap()
             .to_owned();
         let mut conn = ClientConnection::new(Arc::new(config), server_name).unwrap();
 
-        // TODO: Setup the websocket stream and connect it to rustls
-        let mut ws_stream = WsStream::new(proxy).await?;
+        let mut ws_stream = WsStream::new(proxy)?;
         let mut tls = Stream::new(&mut conn, &mut ws_stream);
 
         // TODO: Initiate the connection
@@ -39,6 +38,26 @@ impl Client {
 
         // TODO: Send connection to the web-sys executor
 
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    #![allow(dead_code)]
+    use super::*;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    async fn set_test() {
+        let client = Client::new(
+            Url::parse("ws://127.0.0.1:3000").unwrap(),
+            Url::parse("https://127.0.0.1:8080").unwrap(),
+        )
+        .await
+        .unwrap();
         todo!()
     }
 }
