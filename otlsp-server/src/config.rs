@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 /// Configure the OTLSP server
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

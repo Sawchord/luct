@@ -34,9 +34,9 @@ async fn main() -> eyre::Result<()> {
 
     let router = Router::new()
         .route(&config.route, get(handle_connection))
-        .with_state(config);
+        .with_state(config.clone());
 
-    tracing::info!("Start serving requests");
+    tracing::info!("Serving requests at {}:{}", config.endpoint, config.route);
     axum::serve(listener, router).await.unwrap();
     Ok(())
 }

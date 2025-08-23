@@ -9,3 +9,10 @@ publish = { workspace = true }
 categories = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
+
+[dependencies]
+
+wasm-bindgen = { workspace = true }
+
+[dev-dependencies]
+wasm-bindgen-test = { workspace = true }
