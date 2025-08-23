@@ -31,6 +31,8 @@ tower = { workspace = true }
 thiserror = { workspace = true }
 
 # Wasm
+web-sys = { workspace = true }
+js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 
 # This needs to be imported here to set the "js" feature,
