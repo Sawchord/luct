@@ -1,4 +1,4 @@
-use crate::error::OtlspError;
+use crate::{console_log, error::OtlspError};
 use js_sys::{ArrayBuffer, JsString, Uint8Array};
 use std::{
     collections::VecDeque,
@@ -10,21 +10,8 @@ use std::{
     task::Waker,
 };
 use url::Url;
-use wasm_bindgen::{
-    JsCast,
-    prelude::{Closure, wasm_bindgen},
-};
+use wasm_bindgen::{JsCast, prelude::Closure};
 use web_sys::{BinaryType, Blob, MessageEvent, WebSocket};
-
-macro_rules! console_log {
-    ($($t:tt)*) => (log(&format_args!($($t)*).to_string()))
-}
-
-#[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = console)]
-    fn log(s: &str);
-}
 
 #[derive(Debug, Clone)]
 pub(crate) struct WsStream {
