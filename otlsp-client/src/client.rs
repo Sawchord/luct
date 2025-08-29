@@ -1,7 +1,13 @@
 use crate::{error::OtlspError, ws_stream::WsStream};
+use hyper::rt::{Read, ReadBufCursor, Write};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, Stream, client::WebPkiServerVerifier};
 use rustls_pki_types::ServerName;
-use std::sync::Arc;
+use std::{
+    io,
+    pin::Pin,
+    sync::{Arc, Mutex},
+    task::{Context, Poll, Waker},
+};
 use url::Url;
 
 pub struct Client {}
@@ -30,14 +36,52 @@ impl Client {
             .to_owned();
         let mut conn = ClientConnection::new(Arc::new(config), server_name).unwrap();
 
-        let mut ws_stream = WsStream::new(proxy)?;
-        let mut tls = Stream::new(&mut conn, &mut ws_stream);
+        let mut ws_stream = WsStream::new(proxy, dst).await?;
 
-        // TODO: Initiate the connection
-        //let (sender, connection) = hyper::client::conn::http1::handshake(tls).await.unwrap();
+        // Initiate the connection
+        let waker = ws_stream.waker();
+        let tls = Stream::new(&mut conn, &mut ws_stream);
+        let (sender, connection) =
+            hyper::client::conn::http1::handshake::<_, String>(AsyncStream { stream: tls, waker })
+                .await
+                .unwrap();
 
         // TODO: Send connection to the web-sys executor
 
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+struct AsyncStream<'a> {
+    stream: Stream<'a, ClientConnection, WsStream>,
+    waker: Arc<Mutex<Vec<Waker>>>,
+}
+
+impl<'a> Read for AsyncStream<'a> {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: ReadBufCursor<'_>,
+    ) -> Poll<Result<(), io::Error>> {
+        todo!()
+    }
+}
+
+impl<'a> Write for AsyncStream<'a> {
+    fn poll_write(
+        self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<Result<usize, io::Error>> {
+        todo!()
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+        todo!()
+    }
+
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         todo!()
     }
 }
