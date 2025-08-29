@@ -1,5 +1,5 @@
 use crate::{console_log, error::OtlspError};
-use js_sys::{ArrayBuffer, JsString, Uint8Array};
+use js_sys::{ArrayBuffer, JsString, Promise, Uint8Array};
 use std::{
     collections::VecDeque,
     io,
@@ -10,7 +10,8 @@ use std::{
     task::Waker,
 };
 use url::Url;
-use wasm_bindgen::{JsCast, prelude::Closure};
+use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
+use wasm_bindgen_futures::JsFuture;
 use web_sys::{BinaryType, Blob, MessageEvent, WebSocket};
 
 #[derive(Debug, Clone)]
@@ -50,7 +51,7 @@ impl WsStream {
         let websocket = WebSocket::new(&request_string).unwrap();
         websocket.set_binary_type(BinaryType::Arraybuffer);
 
-        // TODO: Should we await the opening of the channel here?
+        Self::await_opened(&websocket).await?;
 
         let cloned_buffer = input_buffer.clone();
         let waker_cloned = waker.clone();
@@ -62,7 +63,7 @@ impl WsStream {
                 console_log!("ArrayBuffer received {}bytes: {:?}", len, array.to_vec());
 
                 cloned_buffer.lock().unwrap().extend(array.to_vec());
-                wake_all(&waker_cloned);
+                Self::wake_all(&waker_cloned);
             } else if let Ok(blob) = e.data().dyn_into::<Blob>() {
                 console_log!("message event, received Blob: {:?}", blob);
             } else if let Ok(txt) = e.data().dyn_into::<JsString>() {
@@ -95,6 +96,57 @@ impl WsStream {
 
     pub fn waker(&self) -> Arc<Mutex<Vec<Waker>>> {
         self.waker.clone()
+    }
+
+    /// Set up the connection or error out
+    async fn await_opened(websocket: &WebSocket) -> Result<(), OtlspError> {
+        // These are here to hold the closures until the promise is resolved
+        let mut open_cb = None;
+        let mut error_cb = None;
+
+        let opened = Promise::new(&mut |ok, err| {
+            let onopen_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
+                console_log!("Opened websocket connection: {:?}", e.data().as_string());
+                ok.call0(&JsValue::null()).unwrap();
+            });
+            websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
+            open_cb = Some(onopen_callback);
+
+            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
+                console_log!("Failed to open websocket connection",);
+                err.call1(
+                    &JsValue::null(),
+                    &JsValue::from("Failed to open the connection"),
+                )
+                .unwrap();
+            });
+            websocket.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
+            error_cb = Some(onerror_callback)
+        });
+
+        // Await the promise and check the errors
+        match JsFuture::from(opened).await {
+            Ok(_) => (),
+            Err(err) => {
+                return Err(OtlspError::Unreachable(
+                    err.as_string().unwrap_or("Failed to connect".to_string()),
+                ));
+            }
+        };
+
+        // Unset the callbacks
+        websocket.set_onopen(None);
+        websocket.set_onerror(None);
+
+        Ok(())
+    }
+
+    // Wake all wakers in the lsit
+    fn wake_all(waker: &Arc<Mutex<Vec<Waker>>>) {
+        let mut waker = waker.lock().unwrap();
+        for w in waker.drain(..) {
+            w.wake()
+        }
     }
 }
 
@@ -145,13 +197,6 @@ impl Drop for WsStream {
 
         // Set the stream to closed, then wake up all the wakers, so they read the EOF
         self.is_closed.store(true, Ordering::SeqCst);
-        wake_all(&self.waker);
-    }
-}
-
-fn wake_all(waker: &Arc<Mutex<Vec<Waker>>>) {
-    let mut waker = waker.lock().unwrap();
-    for w in waker.drain(..) {
-        w.wake()
+        Self::wake_all(&self.waker);
     }
 }
