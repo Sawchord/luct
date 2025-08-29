@@ -15,12 +15,13 @@ use tokio::{
     net::TcpStream,
     select,
 };
+use url::{Host, Url};
 
 mod config;
 
 #[derive(Deserialize)]
 struct Destination {
-    to: String,
+    to: Url,
 }
 
 #[tokio::main]
@@ -47,10 +48,14 @@ async fn handle_connection(
     ws: WebSocketUpgrade,
 ) -> Response {
     tracing::debug!("Received a new connection request to {:?}", destination.to);
+    tracing::debug!("Enabled: {:?}", config.enabled_urls);
 
     // Check that destination is enabled in config
     if !config.enabled_urls.iter().any(|url| url == &destination.to) {
-        tracing::debug!("Connection request rejected since it does not target enabled URL");
+        tracing::debug!(
+            "Connection request rejected since {} is not target enabled URL",
+            destination.to
+        );
 
         return Response::builder()
             .status(400)
@@ -59,16 +64,30 @@ async fn handle_connection(
     }
 
     // Connect to destination
-    let Ok(mut stream) = TcpStream::connect(&destination.to).await else {
+    let stream = match (destination.to.host(), destination.to.port()) {
+        (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,
+        (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
+        (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
+        _ => {
+            tracing::debug!("Failed to parse destination");
+            return Response::builder()
+                .status(400)
+                .body(Body::from("Failed to parse destination"))
+                .unwrap();
+        }
+    };
+    let Ok(mut stream) = stream else {
+        tracing::debug!("Failed to connect to server");
         return Response::builder()
             .status(400)
-            .body(Body::from("Requested destination is not enabled"))
+            .body(Body::from("Failed to connect to destination"))
             .unwrap();
     };
     tracing::debug!("TCP stream to target established");
 
     // TODO: Close WS with a reason
     // TODO: Check on results
+    // TODO: Separate TCP and WS sides and connect them with a bounded channel
     ws.on_upgrade(async move |mut ws: WebSocket| {
         let mut buf = [0; 1500];
 

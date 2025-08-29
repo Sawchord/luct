@@ -12,6 +12,11 @@ use std::{
 };
 use url::Url;
 
+// TODO: Builder, to allow setting certs manually
+// TODO: Check that starvations etc can't happen
+// TODO: Replace unwraps with specific errors
+// TODO: Try to get error response bodys
+
 pub struct Client {}
 
 impl Client {

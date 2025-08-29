@@ -45,7 +45,7 @@ impl WsStream {
         let input_buffer = Arc::new(Mutex::new(VecDeque::<u8>::new()));
         let waker = Arc::new(Mutex::new(vec![]));
 
-        let request_string = format!("{}?to=\"{}\"", proxy.as_str(), dst.as_str());
+        let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
         console_log!("Connecting to: {:?}", request_string);
 
         let websocket = WebSocket::new(&request_string).unwrap();
@@ -112,8 +112,12 @@ impl WsStream {
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             open_cb = Some(onopen_callback);
 
-            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
-                console_log!("Failed to open websocket connection",);
+            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |_e: MessageEvent| {
+                // console_log!(
+                //     "Failed to open websocket connection {:?}, ", //{:?}",
+                //     //e.data(),
+                //     e.origin()
+                // );
                 err.call1(
                     &JsValue::null(),
                     &JsValue::from("Failed to open the connection"),
