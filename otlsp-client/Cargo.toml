@@ -34,6 +34,7 @@ thiserror = { workspace = true }
 web-sys = { workspace = true }
 js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
 
 # This needs to be imported here to set the "js" feature,
 # otherwise the crate would not compile to wasm
