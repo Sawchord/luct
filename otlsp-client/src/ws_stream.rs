@@ -171,7 +171,7 @@ impl io::Read for WsStream {
                 "No new data available".to_string(),
             ))
         } else {
-            console_log!("Read {} bytes", new_bytes_len);
+            console_log!("WsStream read {} bytes", new_bytes_len);
             Ok(new_bytes_len)
         }
     }

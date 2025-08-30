@@ -87,7 +87,7 @@ impl hyper::rt::Read for AsyncStream {
             // If we got data back, we return it
             Ok(read) => {
                 // TODO: Handle situation where read+buf has not enough space
-                console_log!("Added {} bytes", read);
+                console_log!("AsyncStream read {} bytes", read);
                 read_buf.put_slice(&buf[..read]);
                 Poll::Ready(Ok(()))
             }

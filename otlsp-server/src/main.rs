@@ -184,9 +184,15 @@ async fn handle_tcp_stream_receive(
         }
         Ok(read) => {
             tracing::trace!("Read {} bytes of data", read);
-            let new_buf = buf[..read].to_vec();
-            let _ = ws.send(Message::Binary(new_buf.into())).await;
-            true
+
+            if read == 0 {
+                let _ = ws.send(Message::Close(None)).await;
+                false
+            } else {
+                let new_buf = buf[..read].to_vec();
+                let _ = ws.send(Message::Binary(new_buf.into())).await;
+                true
+            }
         }
     }
 }
