@@ -1,12 +1,11 @@
 use crate::{console_log, error::OtlspError};
 use js_sys::{ArrayBuffer, JsString, Promise, Uint8Array};
 use std::{
+    cell::RefCell,
     collections::VecDeque,
     io,
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
+    rc::Rc,
+    sync::atomic::{AtomicBool, Ordering},
     task::Waker,
 };
 use url::Url;
@@ -19,31 +18,31 @@ pub(crate) struct WsStream {
     websocket: WebSocket,
 
     // TODO: Use a vectored buffer to avoid extensive copying
-    input_buffer: Arc<Mutex<VecDeque<u8>>>,
+    input_buffer: Rc<RefCell<VecDeque<u8>>>,
 
     /// Since hyper expects async channels, we need to have the ability to
     /// wake channels, if there is new data available
-    waker: Arc<Mutex<Vec<Waker>>>,
+    waker: Rc<RefCell<Vec<Waker>>>,
 
-    is_closed: Arc<AtomicBool>,
+    is_closed: Rc<AtomicBool>,
 
     /// Handle to the onmessage callback function.
     ///
     /// Since [`WsStream`] gets closed by dropping it, holding on to the onmessage
     /// callback like this ensures, that the closure exists long enough to be always
     /// callable by the websocket connection.
-    _onmessage: Arc<Closure<dyn FnMut(MessageEvent)>>,
+    _onmessage: Rc<Closure<dyn FnMut(MessageEvent)>>,
 
     /// Handle to the onclose callback function.
     ///
     /// We hold on to it for the same reason
-    _onclose: Arc<Closure<dyn FnMut(MessageEvent)>>,
+    _onclose: Rc<Closure<dyn FnMut(MessageEvent)>>,
 }
 
 impl WsStream {
     pub async fn new(proxy: Url, dst: Url) -> Result<Self, OtlspError> {
-        let input_buffer = Arc::new(Mutex::new(VecDeque::<u8>::new()));
-        let waker = Arc::new(Mutex::new(vec![]));
+        let waker = Rc::new(RefCell::new(vec![]));
+        let input_buffer = Rc::new(RefCell::new(VecDeque::<u8>::new()));
 
         let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
         console_log!("Connecting to: {:?}", request_string);
@@ -63,10 +62,8 @@ impl WsStream {
                 console_log!("arrayBuffer received {} bytes", len);
 
                 console_log!("Alive1");
-                let cb = cloned_buffer.lock();
+                cloned_buffer.borrow_mut().extend(array.to_vec());
                 console_log!("Alive2");
-                //cb.unwrap().extend(array.to_vec());
-                console_log!("Alive3");
                 Self::wake_all(&waker_cloned);
             } else if let Ok(blob) = e.data().dyn_into::<Blob>() {
                 console_log!("message event, received Blob: {:?}", blob);
@@ -79,7 +76,7 @@ impl WsStream {
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
 
         // Initialize on_close to set the is_closed atomic bool to true
-        let is_closed = Arc::new(AtomicBool::new(false));
+        let is_closed = Rc::new(AtomicBool::new(false));
         let is_closed_clone = is_closed.clone();
         let onclose_callback = Closure::<dyn FnMut(_)>::new(move |_: MessageEvent| {
             is_closed_clone.store(true, Ordering::Relaxed);
@@ -92,13 +89,13 @@ impl WsStream {
             waker,
             is_closed,
             #[allow(clippy::arc_with_non_send_sync)]
-            _onmessage: Arc::new(onmessage_callback),
+            _onmessage: Rc::new(onmessage_callback),
             #[allow(clippy::arc_with_non_send_sync)]
-            _onclose: Arc::new(onclose_callback),
+            _onclose: Rc::new(onclose_callback),
         })
     }
 
-    pub fn waker(&self) -> Arc<Mutex<Vec<Waker>>> {
+    pub fn waker(&self) -> Rc<RefCell<Vec<Waker>>> {
         self.waker.clone()
     }
 
@@ -145,11 +142,12 @@ impl WsStream {
     }
 
     /// Wake all wakers in the list
-    fn wake_all(waker: &Arc<Mutex<Vec<Waker>>>) {
-        let mut waker = waker.lock().unwrap();
+    fn wake_all(waker: &Rc<RefCell<Vec<Waker>>>) {
+        let mut waker = waker.borrow_mut();
         for w in waker.drain(..) {
             w.wake()
         }
+        console_log!("Woked")
     }
 }
 
@@ -157,19 +155,22 @@ impl io::Read for WsStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         console_log!("Reading from WsStream");
 
-        let mut lock = self.input_buffer.lock().unwrap();
-        let new_elems = lock.drain(..buf.len()).collect::<Vec<_>>();
-        buf.copy_from_slice(&new_elems);
+        let mut input = self.input_buffer.borrow_mut();
+        let new_bytes_len = std::cmp::min(buf.len(), input.len());
+
+        for (idx, byte) in input.drain(..new_bytes_len).enumerate() {
+            buf[idx] = byte;
+        }
 
         // If there were no bytes in the input buffer, but the connection is still open,
         // we need to return an interrupted error
-        if new_elems.is_empty() && !self.is_closed.load(Ordering::Relaxed) {
+        if new_bytes_len == 0 && !self.is_closed.load(Ordering::Relaxed) {
             Err(io::Error::new(
-                io::ErrorKind::Interrupted,
+                io::ErrorKind::WouldBlock,
                 "No new data available".to_string(),
             ))
         } else {
-            Ok(new_elems.len())
+            Ok(new_bytes_len)
         }
     }
 }

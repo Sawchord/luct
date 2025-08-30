@@ -5,9 +5,11 @@ use rustls::{
 };
 use rustls_pki_types::ServerName;
 use std::{
+    cell::RefCell,
     io::{self, Read, Write},
     pin::Pin,
-    sync::{Arc, Mutex},
+    rc::Rc,
+    sync::Arc,
     task::{Context, Poll, Waker},
 };
 use url::Url;
@@ -68,7 +70,7 @@ impl Client {
 #[derive(Debug)]
 struct AsyncStream {
     stream: StreamOwned<ClientConnection, WsStream>,
-    waker: Arc<Mutex<Vec<Waker>>>,
+    waker: Rc<RefCell<Vec<Waker>>>,
 }
 
 impl hyper::rt::Read for AsyncStream {
@@ -89,8 +91,8 @@ impl hyper::rt::Read for AsyncStream {
             }
             // If we get an Interrupted error, we add the waker to waker,
             // such that the task gets woken up if the WsStream receives new bytes
-            Err(err) if err.kind() == io::ErrorKind::Interrupted => {
-                self.waker.lock().unwrap().push(cx.waker().clone());
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                self.waker.borrow_mut().push(cx.waker().clone());
                 Poll::Pending
             }
             // Other errors are being returned verbatim
