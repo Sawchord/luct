@@ -1,6 +1,6 @@
 use crate::config::{Config, is_valid_destination};
 use axum::{
-    Router,
+    Error, Router,
     body::Body,
     extract::{
         Query, State, WebSocketUpgrade,
@@ -105,55 +105,88 @@ async fn handle_connection(
             select! {
                 // Handle receiving data from the web socket side
                 data = ws.recv() => {
-                    match data {
-                        None => {
-                            tracing::debug!("Shutting down connction to {:?}", destination.to);
-                            let _ = stream.shutdown().await;
-                            break;
-                        },
-                        Some(data) => match data {
-                            Err(err) =>{
-                                tracing::warn!("Error while reading from websocket: {:?}", err);
-                                //let _ = ws.send(Message::Close(None)).await;
-                                let _ = stream.shutdown().await;
-                                break;
-                            },
-                            Ok(data) => match data {
-                                Message::Binary(bytes) => {
-                                    tracing::trace!("Received {} bytes of data from websocket", bytes.len());
-                                    let _ = stream.write_all(&bytes).await;
-                                    //tracing::trace!("Forwarded {} bytes", bytes.len());
-                                },
-                                Message::Close(_) => {
-                                    tracing::debug!("Shutting down conntextion to {:?}", destination.to);
-                                    let _ = stream.shutdown().await;
-                                    break;
-                                },
-                                Message::Ping(bytes) => {
-                                    tracing::debug!("Received ping");
-                                    let _ = ws.send(Message::Pong(bytes)).await;
-                                },
-                                Message::Text(_) => tracing::warn!("Received unexpected text data"),
-                                Message::Pong(_) => tracing::debug!("Received pong"),
-                            },
-                        },
+                    if !handle_websocket_receive(data, &mut ws, &mut stream, &destination).await {
+                        break;
                     }
                 },
+                // Handle receiving data from the tcp socket side
                 read = stream.read(&mut buf) => {
-                    match read {
-                        Err(err) => {
-                            tracing::warn!("Error while reading TCP stream: {:?}", err);
-                            let _ = ws.send(Message::Close(None)).await;
-                            break;
-                        },
-                        Ok(read) => {
-                            tracing::trace!("Read {} bytes of data", read);
-                            let new_buf = buf[..read].to_vec();
-                            let _ = ws.send(Message::Binary(new_buf.into())).await;
-                        },
+                    if !handle_tcp_stream_receive(read, &buf, &mut ws, &mut stream, &destination).await {
+                        break;
                     }
                 },
             }
         }
     })
+}
+
+async fn handle_websocket_receive(
+    data: Option<Result<Message, Error>>,
+    ws: &mut WebSocket,
+    stream: &mut TcpStream,
+    destination: &Query<Destination>,
+) -> bool {
+    match data {
+        None => {
+            tracing::debug!("Shutting down connction to {:?}", destination.to);
+            let _ = stream.shutdown().await;
+            false
+        }
+        Some(data) => match data {
+            Err(err) => {
+                tracing::warn!("Error while reading from websocket: {:?}", err);
+                //let _ = ws.send(Message::Close(None)).await;
+                let _ = stream.shutdown().await;
+                false
+            }
+            Ok(data) => match data {
+                Message::Binary(bytes) => {
+                    tracing::trace!("Received {} bytes of data from websocket", bytes.len());
+                    let _ = stream.write_all(&bytes).await;
+                    //tracing::trace!("Forwarded {} bytes", bytes.len());
+                    true
+                }
+                Message::Close(_) => {
+                    tracing::debug!("Shutting down conntextion to {:?}", destination.to);
+                    let _ = stream.shutdown().await;
+                    false
+                }
+                Message::Ping(bytes) => {
+                    tracing::debug!("Received ping");
+                    let _ = ws.send(Message::Pong(bytes)).await;
+                    true
+                }
+                Message::Text(_) => {
+                    tracing::warn!("Received unexpected text data");
+                    true
+                }
+                Message::Pong(_) => {
+                    tracing::debug!("Received pong");
+                    true
+                }
+            },
+        },
+    }
+}
+
+async fn handle_tcp_stream_receive(
+    read: tokio::io::Result<usize>,
+    buf: &[u8],
+    ws: &mut WebSocket,
+    _stream: &mut TcpStream,
+    _destination: &Query<Destination>,
+) -> bool {
+    match read {
+        Err(err) => {
+            tracing::warn!("Error while reading TCP stream: {:?}", err);
+            let _ = ws.send(Message::Close(None)).await;
+            false
+        }
+        Ok(read) => {
+            tracing::trace!("Read {} bytes of data", read);
+            let new_buf = buf[..read].to_vec();
+            let _ = ws.send(Message::Binary(new_buf.into())).await;
+            true
+        }
+    }
 }
