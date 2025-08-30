@@ -60,9 +60,13 @@ impl WsStream {
                 console_log!("message event, received arraybuffer: {:?}", abuf);
                 let array = Uint8Array::new(&abuf);
                 let len = array.byte_length() as usize;
-                console_log!("ArrayBuffer received {}bytes: {:?}", len, array.to_vec());
+                console_log!("arrayBuffer received {} bytes", len);
 
-                cloned_buffer.lock().unwrap().extend(array.to_vec());
+                console_log!("Alive1");
+                let cb = cloned_buffer.lock();
+                console_log!("Alive2");
+                //cb.unwrap().extend(array.to_vec());
+                console_log!("Alive3");
                 Self::wake_all(&waker_cloned);
             } else if let Ok(blob) = e.data().dyn_into::<Blob>() {
                 console_log!("message event, received Blob: {:?}", blob);
@@ -113,11 +117,6 @@ impl WsStream {
             open_cb = Some(onopen_callback);
 
             let onerror_callback = Closure::<dyn FnMut(_)>::new(move |_e: MessageEvent| {
-                // console_log!(
-                //     "Failed to open websocket connection {:?}, ", //{:?}",
-                //     //e.data(),
-                //     e.origin()
-                // );
                 err.call1(
                     &JsValue::null(),
                     &JsValue::from("Failed to open the connection"),
@@ -145,7 +144,7 @@ impl WsStream {
         Ok(())
     }
 
-    // Wake all wakers in the lsit
+    /// Wake all wakers in the list
     fn wake_all(waker: &Arc<Mutex<Vec<Waker>>>) {
         let mut waker = waker.lock().unwrap();
         for w in waker.drain(..) {
@@ -156,7 +155,9 @@ impl WsStream {
 
 impl io::Read for WsStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let mut lock: std::sync::MutexGuard<'_, VecDeque<u8>> = self.input_buffer.lock().unwrap();
+        console_log!("Reading from WsStream");
+
+        let mut lock = self.input_buffer.lock().unwrap();
         let new_elems = lock.drain(..buf.len()).collect::<Vec<_>>();
         buf.copy_from_slice(&new_elems);
 
@@ -175,6 +176,8 @@ impl io::Read for WsStream {
 
 impl io::Write for WsStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
+        console_log!("Writing to WsStream");
+
         self.websocket
             .send_with_js_u8_array(&Uint8Array::from(buf))
             .map_err(|err| {

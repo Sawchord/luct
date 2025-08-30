@@ -135,7 +135,8 @@ mod tests {
     async fn set_test() {
         let mut sender = Client::create(
             Url::parse("ws://127.0.0.1:3000").unwrap(),
-            Url::parse("https://127.0.0.1:8080").unwrap(),
+            //Url::parse("https://127.0.0.1:8080").unwrap(),
+            Url::parse("https://google.com").unwrap(),
         )
         .await
         .unwrap();
