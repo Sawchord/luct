@@ -1,4 +1,4 @@
-use crate::config::Config;
+use crate::config::{Config, is_valid_destination};
 use axum::{
     Router,
     body::Body,
@@ -47,11 +47,18 @@ async fn handle_connection(
     destination: Query<Destination>,
     ws: WebSocketUpgrade,
 ) -> Response {
-    tracing::debug!("Received a new connection request to {:?}", destination.to);
-    tracing::debug!("Enabled: {:?}", config.enabled_urls);
+    tracing::debug!(
+        "Received a new connection request to {}",
+        destination.to.as_str()
+    );
+    //tracing::debug!("Enabled: {:?}", config.enabled_urls);
 
     // Check that destination is enabled in config
-    if !config.enabled_urls.iter().any(|url| url == &destination.to) {
+    if !config
+        .enabled_urls
+        .iter()
+        .any(|url| is_valid_destination(url, &destination.to))
+    {
         tracing::debug!(
             "Connection request rejected since {} is not target enabled URL",
             destination.to
@@ -64,7 +71,10 @@ async fn handle_connection(
     }
 
     // Connect to destination
-    let stream = match (destination.to.host(), destination.to.port()) {
+    let stream = match (
+        destination.to.host(),
+        destination.to.port_or_known_default(),
+    ) {
         (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,
         (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
         (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
@@ -97,7 +107,7 @@ async fn handle_connection(
                 data = ws.recv() => {
                     match data {
                         None => {
-                            tracing::debug!("Shutting down conntextion to {:?}", destination.to);
+                            tracing::debug!("Shutting down connction to {:?}", destination.to);
                             let _ = stream.shutdown().await;
                             break;
                         },
