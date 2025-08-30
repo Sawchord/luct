@@ -86,12 +86,15 @@ impl hyper::rt::Read for AsyncStream {
         match self.stream.read(&mut buf) {
             // If we got data back, we return it
             Ok(read) => {
+                // TODO: Handle situation where read+buf has not enough space
+                console_log!("Added {} bytes", read);
                 read_buf.put_slice(&buf[..read]);
                 Poll::Ready(Ok(()))
             }
             // If we get an Interrupted error, we add the waker to waker,
             // such that the task gets woken up if the WsStream receives new bytes
             Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                console_log!("AsyncStream would block");
                 self.waker.borrow_mut().push(cx.waker().clone());
                 Poll::Pending
             }
@@ -107,20 +110,31 @@ impl hyper::rt::Read for AsyncStream {
 impl hyper::rt::Write for AsyncStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
-        _cx: &mut Context<'_>,
+        cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
-        console_log!("Calling async write");
-        self.stream.write_all(buf)?;
+        console_log!("Calling async write with {} bytes", buf.len());
 
-        Poll::Ready(Ok(buf.len()))
+        match self.stream.write_all(buf) {
+            Ok(()) => Poll::Ready(Ok(buf.len())),
+            Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
+                console_log!("AsyncStream would block");
+                self.waker.borrow_mut().push(cx.waker().clone());
+                Poll::Pending
+            }
+            Err(err) => {
+                console_log!("Error writing Async Stream: {:?}", err);
+                Err(err)?
+            }
+        }
     }
 
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
-        todo!()
+        Poll::Ready(Ok(()))
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+        // TODO: Implement
         todo!()
     }
 }

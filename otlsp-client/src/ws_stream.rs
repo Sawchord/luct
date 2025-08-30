@@ -56,21 +56,21 @@ impl WsStream {
         let waker_cloned = waker.clone();
         let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
             if let Ok(abuf) = e.data().dyn_into::<ArrayBuffer>() {
-                console_log!("message event, received arraybuffer: {:?}", abuf);
+                //console_log!("received arraybuffer: {:?}", abuf);
                 let array = Uint8Array::new(&abuf);
                 let len = array.byte_length() as usize;
-                console_log!("arrayBuffer received {} bytes", len);
+                console_log!("ArrayBuffer received {} bytes", len);
 
-                console_log!("Alive1");
-                cloned_buffer.borrow_mut().extend(array.to_vec());
-                console_log!("Alive2");
-                Self::wake_all(&waker_cloned);
+                if len > 0 {
+                    cloned_buffer.borrow_mut().extend(array.to_vec());
+                    Self::wake_all(&waker_cloned);
+                }
             } else if let Ok(blob) = e.data().dyn_into::<Blob>() {
-                console_log!("message event, received Blob: {:?}", blob);
+                console_log!("received Blob: {:?}", blob);
             } else if let Ok(txt) = e.data().dyn_into::<JsString>() {
-                console_log!("message event, received Text: {:?}", txt);
+                console_log!("received Text: {:?}", txt);
             } else {
-                console_log!("message event, received Unknown: {:?}", e.data());
+                console_log!("received Unknown: {:?}", e.data());
             }
         });
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
@@ -165,11 +165,13 @@ impl io::Read for WsStream {
         // If there were no bytes in the input buffer, but the connection is still open,
         // we need to return an interrupted error
         if new_bytes_len == 0 && !self.is_closed.load(Ordering::Relaxed) {
+            console_log!("WsStream would block");
             Err(io::Error::new(
                 io::ErrorKind::WouldBlock,
                 "No new data available".to_string(),
             ))
         } else {
+            console_log!("Read {} bytes", new_bytes_len);
             Ok(new_bytes_len)
         }
     }
@@ -177,7 +179,7 @@ impl io::Read for WsStream {
 
 impl io::Write for WsStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        console_log!("Writing to WsStream");
+        console_log!("Writing to WsStream {} bytes", buf.len());
 
         self.websocket
             .send_with_js_u8_array(&Uint8Array::from(buf))
