@@ -1,6 +1,7 @@
 #!/bin/bash
 
 export RUST_LOG=trace
+export RUSTBACKTRACE=1
 
 echo "Starting server"
 miniserve data/ -p 8080 --tls-cert localhost.crt --tls-key localhost.key &

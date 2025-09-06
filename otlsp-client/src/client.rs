@@ -190,12 +190,10 @@ mod tests {
     async fn e2e_test() {
         let mut sender = OtlspClientBuilder::new(Url::parse("ws://127.0.0.1:3000").unwrap())
             .with_webpki_roots()
-            .with_root_cert(
-                Certificate::from_pem(include_str!("../e2e-test/localhost.crt")).unwrap(),
-            )
+            .with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
             .handshake(
-                Url::parse("https://127.0.0.1:8080").unwrap(),
-                //Url::parse("https://google.com").unwrap(),
+                Url::parse("https://localhost:8080").unwrap(),
+                //Url::parse("https://google.com:443").unwrap(),
             )
             .await
             .unwrap();
@@ -203,7 +201,7 @@ mod tests {
         console_log!("Still alive");
 
         let req = Request::builder()
-            .uri("/test.txt")
+            .uri("/")
             .method("GET")
             .body("".to_string())
             .unwrap();
@@ -217,5 +215,6 @@ mod tests {
 
         const TEXT: &str = include_str!("../e2e-test/data/test.txt");
         assert_eq!(Bytes::from(TEXT), response);
+        console_log!("{}", String::from_utf8_lossy(&response));
     }
 }

@@ -19,11 +19,13 @@ openssl ecparam -name secp384r1 -genkey -out ca.key
 openssl req -new -x509 -days 36524 -key "ca.key" -sha384 -out ca.crt
 
 openssl ecparam -name secp384r1 -genkey -out localhost.key
-openssl req -new -x509 -days 36524 -key "localhost.key" -sha384 -out localhost.csr
+#openssl req -new -extensions v3_req -key "localhost.key" -sha384 -out localhost.csr
+openssl req -new -nodes -key "localhost.key" -config csrconfig.txt -out localhost.csr
 
 #openssl ca -key "ca.key" -in "localhost.csr" -out localhost.crt
 #openssl ca -gencrl -keyfile ca.key -cert localhost.csr -out localhost.crt
-openssl x509 -req -in localhost.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out localhost.crt
+openssl x509 -req  -extensions req_ext -extfile csrconfig.txt -in localhost.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out localhost.crt
+#openssl x509 -req -signkey ca.key -in localhost.csr -out localhost.crt
 ```
 
 ## Running

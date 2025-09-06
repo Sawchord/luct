@@ -21,6 +21,7 @@ impl Default for Config {
             endpoint: String::from("0.0.0.0:3000"),
             enabled_urls: vec![
                 Url::parse("https://127.0.0.1:8080").unwrap(),
+                Url::parse("https://localhost:8080").unwrap(),
                 Url::parse("https://google.com").unwrap(),
             ],
         }

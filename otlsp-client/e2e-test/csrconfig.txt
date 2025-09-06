@@ -1,0 +1,22 @@
+[ req ]
+default_md = sha384
+prompt = no
+req_extensions = req_ext
+distinguished_name = req_distinguished_name
+[ req_distinguished_name ]
+commonName = localhost
+countryName = US
+stateOrProvinceName = Louisiana
+localityName = Slidell
+organizationName = Testco
+[ req_ext ]
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=critical,serverAuth,clientAuth
+subjectAltName = @alt_names
+[ alt_names ]
+IP.0 = 1.1.1.1
+IP.1 = 2.2.2.2
+DNS.0 = server1.example.com
+DNS.1 = server2.example.com
+email.0 = email1@example.com
+email.1 = email2@example.com
