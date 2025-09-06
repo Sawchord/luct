@@ -22,6 +22,7 @@ http-body-util = { workspace = true }
 rustls = { workspace = true }
 rustls-rustcrypto = { workspace = true }
 webpki-roots = { workspace = true }
+x509-cert = { workspace = true }
 
 # Async
 futures = { workspace = true }

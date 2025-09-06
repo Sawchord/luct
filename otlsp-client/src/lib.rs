@@ -3,7 +3,7 @@ mod error;
 mod ws_stream;
 use wasm_bindgen::prelude::wasm_bindgen;
 
-pub use client::Client;
+pub use client::OtlspClientBuilder;
 
 #[wasm_bindgen]
 extern "C" {
