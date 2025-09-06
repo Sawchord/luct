@@ -182,6 +182,7 @@ mod tests {
         body::{Buf, Bytes},
     };
     use wasm_bindgen_test::wasm_bindgen_test;
+    use x509_cert::der::DecodePem;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     /// NOTE: This test requires setup that can be found in the e2e test directory
@@ -189,9 +190,12 @@ mod tests {
     async fn e2e_test() {
         let mut sender = OtlspClientBuilder::new(Url::parse("ws://127.0.0.1:3000").unwrap())
             .with_webpki_roots()
+            .with_root_cert(
+                Certificate::from_pem(include_str!("../e2e-test/localhost.crt")).unwrap(),
+            )
             .handshake(
-                //Url::parse("https://127.0.0.1:8080").unwrap(),
-                Url::parse("https://google.com").unwrap(),
+                Url::parse("https://127.0.0.1:8080").unwrap(),
+                //Url::parse("https://google.com").unwrap(),
             )
             .await
             .unwrap();
