@@ -190,6 +190,7 @@ mod tests {
         let client = get_client();
 
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
+        cert.verify_chain().unwrap();
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let sth = client.get_sth_v1().await.unwrap();

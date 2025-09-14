@@ -130,6 +130,7 @@ mod tests {
         let log_entry1 = entry.log_entry;
 
         let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
+        cert2.verify_chain().unwrap();
         let log_entry2 = cert2.as_log_entry_v1(true).unwrap();
 
         assert_eq!(log_entry1, log_entry2);
@@ -141,6 +142,7 @@ mod tests {
         let leaf1 = response.entries[0].leaf_input.0.0.clone();
 
         let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
+        cert2.verify_chain().unwrap();
         let sct2 = cert2.cert().extract_scts_v1().unwrap();
         let leaf2 = cert2.as_leaf_v1(&sct2[0], true).unwrap();
 

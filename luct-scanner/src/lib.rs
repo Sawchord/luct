@@ -64,6 +64,7 @@ impl<C: Client> Scanner<C> {
     /// of PEM encoded certificates.
     pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ClientError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
+        cert_chain.verify_chain()?;
         self.collect_leads(cert_chain)
     }
 

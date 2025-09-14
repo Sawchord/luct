@@ -92,6 +92,7 @@ mod tests {
     #[test]
     fn audit_sct() {
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
+        cert.verify_chain().unwrap();
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();
