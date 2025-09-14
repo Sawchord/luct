@@ -11,7 +11,7 @@ use luct_core::{
     CtLogConfig,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
-use luct_scanner::{LeadResult, Scanner};
+use luct_scanner::{LeadResult, Log, Scanner};
 use luct_store::FilesystemStore;
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -32,26 +32,21 @@ async fn main() -> eyre::Result<()> {
     })?;
     let log_configs: BTreeMap<String, CtLogConfig> = toml::from_str(&config)?;
 
-    let log_configs = log_configs
-        .into_iter()
-        .map(|(name, config)| {
-            (
-                name.clone(),
-                (
-                    config,
-                    Box::new(FilesystemStore::<u64, SignedTreeHead>::new(
-                        workdir.join("sth").join(name),
-                    )) as _,
-                ),
-            )
-        })
-        .collect::<BTreeMap<_, _>>();
-
     let sct_cache =
         Box::new(FilesystemStore::<[u8; 32], SignedCertificateTimestamp>::new(workdir.join("sct")))
             as _;
     let client = luct_client::reqwest::ReqwestClient::new();
-    let scanner = Scanner::new_with_client(log_configs, sct_cache, client);
+    let mut scanner = Scanner::new_with_client(sct_cache, client);
+
+    for (name, config) in log_configs {
+        scanner.add_log(Log {
+            name: name.clone(),
+            config,
+            sth_store: Box::new(FilesystemStore::<u64, SignedTreeHead>::new(
+                workdir.join("sth").join(name),
+            )) as _,
+        });
+    }
 
     if args.update_sths {
         scanner.update_sths().await?;

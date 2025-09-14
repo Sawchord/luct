@@ -1,10 +1,6 @@
 use futures::future;
 use luct_client::{Client, ClientError, CtClient, CtClientConfig};
-use luct_core::{
-    CertificateChain, CtLogConfig, LogId,
-    store::{OrderedStore, Store},
-    v1::{SignedCertificateTimestamp, SignedTreeHead},
-};
+use luct_core::{CertificateChain, LogId, store::Store, v1::SignedCertificateTimestamp};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -12,11 +8,15 @@ mod lead;
 mod log;
 
 use crate::{lead::EmbeddedSct, log::ScannerLog};
-pub use lead::{Conclusion, Lead, LeadResult, ScannerConfig};
+pub use {
+    lead::{Conclusion, Lead, LeadResult, ScannerConfig},
+    log::Log,
+};
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
     sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
+    client: C,
     // TODO: CertificateChainStore
     // TODO: Roots denylist
 }
@@ -24,26 +24,29 @@ pub struct Scanner<C> {
 #[allow(clippy::type_complexity)]
 impl<C: Client + Clone> Scanner<C> {
     pub fn new_with_client(
-        log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
+        //log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
         sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
         client: C,
     ) -> Self {
-        let mut logs = BTreeMap::new();
-        for (name, (config, store)) in log_configs {
-            let config = CtClientConfig::from(config);
-            let client = CtClient::new(config, client.clone());
-
-            let log_id = client.log().log_id().clone();
-            let scanner_log = ScannerLog {
-                name,
-                client,
-                sth_store: store,
-            };
-
-            logs.insert(log_id, scanner_log);
+        Self {
+            logs: BTreeMap::new(),
+            sct_cache,
+            client,
         }
+    }
 
-        Self { logs, sct_cache }
+    pub fn add_log(&mut self, log: Log) -> &mut Self {
+        let config = CtClientConfig::from(log.config);
+        let client = CtClient::new(config, self.client.clone());
+        let log_id = client.log().log_id().clone();
+        let scanner_log = ScannerLog {
+            name: log.name,
+            client,
+            sth_store: log.sth_store,
+        };
+
+        self.logs.insert(log_id, scanner_log);
+        self
     }
 }
 

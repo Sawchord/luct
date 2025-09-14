@@ -1,11 +1,20 @@
+use crate::{Conclusion, Scanner, lead::EmbeddedSct};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
+    CtLogConfig,
     store::{Hashable, OrderedStore},
     v1::SignedTreeHead,
 };
 
-use crate::{Conclusion, Scanner, lead::EmbeddedSct};
+pub struct Log {
+    pub name: String,
+    pub config: CtLogConfig,
+    pub sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
+    // TODO: Add roots fingerprint store
+}
 
+/// Internal structure holding references to per log
+/// clients and stores
 pub(crate) struct ScannerLog<C> {
     pub(crate) name: String,
     pub(crate) client: CtClient<C>,

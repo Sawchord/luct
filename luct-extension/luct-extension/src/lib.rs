@@ -8,7 +8,8 @@ use luct_core::{
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use luct_scanner::{
-    Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Scanner as CtScanner,
+    Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Log,
+    Scanner as CtScanner,
 };
 use std::{collections::BTreeMap, sync::Arc};
 use wasm_bindgen::prelude::wasm_bindgen;
@@ -31,24 +32,6 @@ impl Scanner {
         let log_configs: BTreeMap<String, CtLogConfig> =
             toml::from_str(&config).map_err(|err| format!("{err}"))?;
 
-        let log_configs = log_configs
-            .into_iter()
-            .map(|(name, config)| {
-                (
-                    name.clone(),
-                    (
-                        config,
-                        Box::new(
-                            BrowserStore::<u64, SignedTreeHead>::new_local_store(format!(
-                                "sth/{name}"
-                            ))
-                            .expect("Failed to initialize STH store"),
-                        ) as _,
-                    ),
-                )
-            })
-            .collect::<BTreeMap<_, _>>();
-
         let client = luct_client::reqwest::ReqwestClient::new();
         let sct_cache = Box::new(
             BrowserStore::<[u8; 32], SignedCertificateTimestamp>::new_local_store(
@@ -56,7 +39,18 @@ impl Scanner {
             )
             .expect("Failed to inistalize SCT cache"),
         ) as _;
-        let scanner = CtScanner::new_with_client(log_configs, sct_cache, client);
+        let mut scanner = CtScanner::new_with_client(sct_cache, client);
+
+        for (name, config) in log_configs {
+            scanner.add_log(Log {
+                name: name.clone(),
+                config,
+                sth_store: Box::new(
+                    BrowserStore::<u64, SignedTreeHead>::new_local_store(format!("sth/{name}"))
+                        .expect("Failed to initialize STH store"),
+                ) as _,
+            });
+        }
 
         log("Initialized scanner");
         Ok(Scanner(scanner))
