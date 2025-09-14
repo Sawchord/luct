@@ -52,4 +52,10 @@ pub(crate) struct GetEntriesData {
     pub(crate) extra_data: Base64<Vec<u8>>,
 }
 
-// TODO: GetRoots support
+/// Response returned by call to `/ct/v1/get-roots`
+///
+/// See RFC 6962 4.7
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct GetRootsResponse {
+    pub(crate) certificates: Vec<Base64<Vec<u8>>>,
+}

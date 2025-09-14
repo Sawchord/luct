@@ -17,6 +17,7 @@ use x509_cert::{
 
 pub(crate) mod proof;
 pub mod responses;
+pub(crate) mod roots;
 pub(crate) mod sct;
 pub(crate) mod sth;
 pub(crate) mod tree;

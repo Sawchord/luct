@@ -1,3 +1,4 @@
+use crate::utils::codec::{Codec, Decode, Encode};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use serde::{Deserialize, Deserializer, Serialize, Serializer, de, ser};
 use std::{
@@ -5,8 +6,6 @@ use std::{
     io::{Cursor, Write},
     ops::{Deref, DerefMut},
 };
-
-use crate::utils::codec::{Codec, Decode, Encode};
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct Base64<T>(pub T);
