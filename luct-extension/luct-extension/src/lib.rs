@@ -1,10 +1,10 @@
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
+use crate::store::BrowserStore;
 use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
 use luct_core::{
     CertificateChain, CtLogConfig,
-    store::MemoryStore,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use luct_scanner::{
@@ -38,15 +38,24 @@ impl Scanner {
                     name.clone(),
                     (
                         config,
-                        Box::new(MemoryStore::<u64, SignedTreeHead>::default()) as _,
+                        Box::new(
+                            BrowserStore::<u64, SignedTreeHead>::new_local_store(format!(
+                                "sth/{name}"
+                            ))
+                            .expect("Failed to initialize STH store"),
+                        ) as _,
                     ),
                 )
             })
             .collect::<BTreeMap<_, _>>();
 
         let client = luct_client::reqwest::ReqwestClient::new();
-        let sct_cache =
-            Box::new(MemoryStore::<[u8; 32], SignedCertificateTimestamp>::default()) as _;
+        let sct_cache = Box::new(
+            BrowserStore::<[u8; 32], SignedCertificateTimestamp>::new_local_store(
+                "sct".to_string(),
+            )
+            .expect("Failed to inistalize SCT cache"),
+        ) as _;
         let scanner = CtScanner::new_with_client(log_configs, sct_cache, client);
 
         log("Initialized scanner");

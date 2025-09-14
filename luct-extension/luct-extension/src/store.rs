@@ -24,6 +24,10 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     fn get_key_string(&self, key: &K) -> String {
         format!("{}/{}", self.prefix, key.serialize_key())
     }
+
+    fn key_from_str(&self, key: &str) -> Option<K> {
+        K::deserialize_key(&key[self.prefix.len() + 1..])
+    }
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for BrowserStore<K, V> {
@@ -64,9 +68,11 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStore<K, V> for Browse
             .get_item(&key)
             .expect("Failed to retreive last element of store")?;
 
-        let key = K::deserialize_key(&key[self.prefix.len()..])?;
+        let key = self.key_from_str(&key)?;
         let val = V::deserialize_value(&val)?;
 
         Some((key, val))
     }
 }
+
+// TODO: Unit tests for browser local store
