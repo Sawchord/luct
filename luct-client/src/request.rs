@@ -6,9 +6,15 @@
 use crate::{Client, ClientError, CtClient};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use luct_core::{
-    store::Hashable, tree::{AuditProof, ConsistencyProof, TreeHead}, v1::{
-        responses::{GetProofByHashResponse, GetSthConsistencyResponse, GetSthResponse}, SignedCertificateTimestamp, SignedTreeHead
-    }, CertificateChain, CertificateError
+    Certificate, CertificateChain, CertificateError,
+    store::Hashable,
+    tree::{AuditProof, ConsistencyProof, TreeHead},
+    v1::{
+        SignedCertificateTimestamp, SignedTreeHead,
+        responses::{
+            GetProofByHashResponse, GetRootsResponse, GetSthConsistencyResponse, GetSthResponse,
+        },
+    },
 };
 use std::cmp::Ordering;
 
@@ -104,8 +110,7 @@ impl<C: Client> CtClient<C> {
             .await?;
         self.check_status(status, &response)?;
 
-        let response: GetProofByHashResponse =
-            serde_json::from_str(&response).map_err(|_| ClientError::AuditProofError)?;
+        let response: GetProofByHashResponse = serde_json::from_str(&response)?;
         let proof = AuditProof::try_from(response).map_err(|_| ClientError::AuditProofError)?;
         let tree_head = TreeHead::try_from(sth).map_err(|_| ClientError::AuditProofError)?;
 
@@ -115,6 +120,20 @@ impl<C: Client> CtClient<C> {
         }
 
         Ok(())
+    }
+
+    pub async fn get_roots_v1(&self) -> Result<Vec<Certificate>, ClientError> {
+        self.assert_v1()?;
+
+        let url = self.get_full_v1_url();
+        let (status, response) = self
+            .client
+            .get(&url.join("get-roots").unwrap(), &[])
+            .await?;
+        self.check_status(status, &response)?;
+
+        let response: GetRootsResponse = serde_json::from_str(&response)?;
+        Ok((&response).into())
     }
 }
 

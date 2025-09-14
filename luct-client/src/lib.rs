@@ -162,7 +162,7 @@ mod tests {
         version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
-        mdd = 86400
+        mmd = 86400
     ";
 
     const ARGON2025H2_STH_0506: &str = "{
@@ -209,5 +209,14 @@ mod tests {
             },
             client,
         )
+    }
+
+    #[tokio::test]
+    #[ignore = "Makes an HTTP call, for manual testing only"]
+    async fn get_roots() {
+        let client = get_client();
+
+        let roots = client.get_roots_v1().await.unwrap();
+        assert!(!roots.is_empty())
     }
 }
