@@ -1,4 +1,4 @@
-use luct_core::store::Store;
+use luct_core::store::{OrderedStore, Store};
 use luct_store::{StringStoreKey, StringStoreValue};
 use std::marker::PhantomData;
 use web_sys::{Storage, window};
@@ -32,7 +32,7 @@ impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for BrowserStore<K, V> 
         let val = value.serialize_value();
 
         self.storage
-            .set(&key, &val)
+            .set_item(&key, &val)
             .expect("Failed to insert value into local store");
     }
 
@@ -40,12 +40,33 @@ impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for BrowserStore<K, V> 
         let key = self.get_key_string(key);
 
         self.storage
-            .get(&key)
+            .get_item(&key)
             .expect("Failed to retreive value from local store")
             .and_then(|val| V::deserialize_value(&val))
     }
 
     fn len(&self) -> usize {
-        self.storage.length().unwrap() as usize
+        self.storage
+            .length()
+            .expect("Failed to retreive store length") as usize
+    }
+}
+
+impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStore<K, V> for BrowserStore<K, V> {
+    fn last(&self) -> Option<(K, V)> {
+        let key = self
+            .storage
+            .key(self.len() as u32 - 1)
+            .expect("Failed to retreive key index of last element")?;
+
+        let val = self
+            .storage
+            .get_item(&key)
+            .expect("Failed to retreive last element of store")?;
+
+        let key = K::deserialize_key(&key[self.prefix.len()..])?;
+        let val = V::deserialize_value(&val)?;
+
+        Some((key, val))
     }
 }
