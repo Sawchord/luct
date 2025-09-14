@@ -1,7 +1,5 @@
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-// TODO: Implement BrowserLocalStore
-
 use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
 use luct_core::{
@@ -14,6 +12,8 @@ use luct_scanner::{
 };
 use std::{collections::BTreeMap, sync::Arc};
 use wasm_bindgen::prelude::wasm_bindgen;
+
+mod store;
 
 #[wasm_bindgen]
 extern "C" {
