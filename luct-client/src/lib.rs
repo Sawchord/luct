@@ -2,7 +2,6 @@ use luct_core::{
     CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
     v1::SignedTreeHead,
 };
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 use url::Url;
 
@@ -16,26 +15,20 @@ mod util;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CtClient<C> {
-    config: CtClientConfig,
     log: CtLog,
     client: C,
 }
 
 impl<C> CtClient<C> {
-    pub fn new(config: CtClientConfig, client: C) -> Self {
+    pub fn new(config: CtLogConfig, client: C) -> Self {
         Self {
-            log: CtLog::new(config.log.clone()),
-            config,
+            log: CtLog::new(config),
             client,
         }
     }
 
     pub fn log(&self) -> &CtLog {
         &self.log
-    }
-
-    pub fn config(&self) -> &CtClientConfig {
-        &self.config
     }
 }
 
@@ -100,34 +93,6 @@ impl CheckSeverity for ClientError {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct CtClientConfig {
-    /// The configuration of the log itself
-    log: CtLogConfig,
-
-    /// Fetch the values from another url instead
-    fetch_url: Option<Url>,
-}
-
-impl CtClientConfig {
-    pub fn log_config(&self) -> &CtLogConfig {
-        &self.log
-    }
-
-    pub fn fetch_url(&self) -> &Option<Url> {
-        &self.fetch_url
-    }
-}
-
-impl From<CtLogConfig> for CtClientConfig {
-    fn from(log: CtLogConfig) -> Self {
-        Self {
-            log,
-            fetch_url: None,
-        }
-    }
-}
-
 impl<C: Client> CtClient<C> {
     pub async fn update_sth_v1(
         &self,
@@ -152,7 +117,7 @@ impl<C: Client> CtClient<C> {
 #[cfg(all(test, feature = "reqwest"))]
 mod tests {
     use super::*;
-    use crate::{CtClientConfig, reqwest::ReqwestClient};
+    use crate::reqwest::ReqwestClient;
     use luct_core::{
         CertificateChain, CtLogConfig,
         v1::{SignedTreeHead, responses::GetSthResponse},
@@ -203,13 +168,7 @@ mod tests {
     fn get_client() -> CtClient<ReqwestClient> {
         let config: CtLogConfig = toml::from_str(ARGON2025H2).unwrap();
         let client = ReqwestClient::new();
-        CtClient::new(
-            CtClientConfig {
-                log: config,
-                fetch_url: None,
-            },
-            client,
-        )
+        CtClient::new(config, client)
     }
 
     #[tokio::test]

@@ -1,6 +1,8 @@
 use futures::future;
-use luct_client::{Client, ClientError, CtClient, CtClientConfig};
-use luct_core::{CertificateChain, LogId, store::Store, v1::SignedCertificateTimestamp};
+use luct_client::{Client, ClientError, CtClient};
+use luct_core::{
+    CertificateChain, CtLogConfig, LogId, store::Store, v1::SignedCertificateTimestamp,
+};
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 
@@ -36,8 +38,7 @@ impl<C: Client + Clone> Scanner<C> {
     }
 
     pub fn add_log(&mut self, log: Log) -> &mut Self {
-        let config = CtClientConfig::from(log.config);
-        let client = CtClient::new(config, self.client.clone());
+        let client = CtClient::new(log.config, self.client.clone());
         let log_id = client.log().log_id().clone();
         let scanner_log = ScannerLog {
             name: log.name,
@@ -124,5 +125,5 @@ impl<C: Client> Scanner<C> {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ScannerBuilder {
     config: ScannerConfig,
-    logs: Vec<CtClientConfig>,
+    logs: Vec<CtLogConfig>,
 }

@@ -20,6 +20,12 @@ pub enum Version {
     V1,
 }
 
+impl Default for Version {
+    fn default() -> Self {
+        Self::V1
+    }
+}
+
 impl Serialize for Version {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where

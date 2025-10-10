@@ -4,17 +4,12 @@ use url::Url;
 
 impl<C> CtClient<C> {
     pub(crate) fn get_full_v1_url(&self) -> Url {
-        let base_url = self
-            .config
-            .fetch_url
-            .as_ref()
-            .unwrap_or(self.config.log.url());
-
+        let base_url = self.log().config().fetch_url();
         base_url.join("ct/v1/").unwrap()
     }
 
     pub(crate) fn assert_v1(&self) -> Result<(), ClientError> {
-        match self.config.log.version() {
+        match self.log().config().version() {
             Version::V1 => Ok(()),
             #[allow(unreachable_patterns)]
             _ => Err(ClientError::UnsupportedVersion),

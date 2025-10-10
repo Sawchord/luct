@@ -42,18 +42,30 @@ impl CtLog {
     pub fn log_id(&self) -> &LogId {
         &self.log_id
     }
+
+    pub fn config(&self) -> &CtLogConfig {
+        &self.config
+    }
 }
 
 /// Configuration of a [`CtLog`]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CtLogConfig {
+    #[serde(default)]
+    /// The [`Version`] of this log
     version: Version,
 
     /// The [`Url`] at which the log operates
     url: Url,
 
+    /// Public key used to sign
     key: Base64<Vec<u8>>,
+
+    /// Maximum merge delay
     mmd: u64,
+
+    /// Fetch the values from another url instead
+    fetch_url: Option<Url>,
 }
 
 impl CtLogConfig {
@@ -64,12 +76,18 @@ impl CtLogConfig {
             url,
             key: Base64(key),
             mmd,
+            fetch_url: None,
         }
     }
 
     /// Return the [`Url`] of this log
     pub fn url(&self) -> &Url {
         &self.url
+    }
+
+    /// Return the fetch [`Url`] for this log
+    pub fn fetch_url(&self) -> &Url {
+        self.fetch_url.as_ref().unwrap_or(self.url())
     }
 
     /// Return the [`Version`] of this log
@@ -104,7 +122,6 @@ mod tests {
     use base64::{Engine, prelude::BASE64_STANDARD};
 
     const ARGON2025H1: &str = "
-        version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
         mmd = 86400
