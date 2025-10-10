@@ -37,6 +37,12 @@ pub enum Conclusion {
     Unsafe(String),
 }
 
+impl Conclusion {
+    pub fn is_safe(&self) -> bool {
+        matches!(self, Conclusion::Safe(_))
+    }
+}
+
 impl Display for Conclusion {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {

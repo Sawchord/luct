@@ -138,4 +138,3 @@ impl<C: Client> CtClient<C> {
 }
 
 // TODO: Low level get entries call
-// TODO: Low level get roots call
