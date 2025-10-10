@@ -8,7 +8,7 @@ use clap::Parser;
 use eyre::Context;
 use futures::future;
 use luct_core::{
-    CtLogConfig,
+    CtLogConfig, Fingerprint,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use luct_scanner::{LeadResult, Log, Scanner};
@@ -43,7 +43,10 @@ async fn main() -> eyre::Result<()> {
             name: name.clone(),
             config,
             sth_store: Box::new(FilesystemStore::<u64, SignedTreeHead>::new(
-                workdir.join("sth").join(name),
+                workdir.join("sth").join(name.clone()),
+            )) as _,
+            root_fingerprints: Box::new(FilesystemStore::<Fingerprint, ()>::new(
+                workdir.join("roots").join(name),
             )) as _,
         });
     }

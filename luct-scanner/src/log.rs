@@ -1,8 +1,8 @@
 use crate::{Conclusion, Scanner, lead::EmbeddedSct};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    CtLogConfig,
-    store::{Hashable, OrderedStore},
+    CtLogConfig, Fingerprint,
+    store::{Hashable, OrderedStore, Store},
     v1::SignedTreeHead,
 };
 
@@ -10,7 +10,7 @@ pub struct Log {
     pub name: String,
     pub config: CtLogConfig,
     pub sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
-    // TODO: Add roots fingerprint store
+    pub root_fingerprints: Box<dyn Store<Fingerprint, ()>>,
 }
 
 /// Internal structure holding references to per log
