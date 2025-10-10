@@ -15,7 +15,7 @@ pub(crate) mod utils;
 pub mod v1;
 mod version;
 
-pub use cert::{Certificate, CertificateError};
+pub use cert::{Certificate, CertificateError, Fingerprint};
 pub use cert_chain::CertificateChain;
 pub use errors::{CheckSeverity, Severity};
 pub use signature::{HashAlgorithm, SignatureAlgorithm, SignatureValidationError};

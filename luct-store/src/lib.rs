@@ -1,6 +1,9 @@
 mod file;
 pub use file::FilesystemStore;
-use luct_core::v1::{SignedCertificateTimestamp, SignedTreeHead};
+use luct_core::{
+    Fingerprint,
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
+};
 
 pub trait StringStoreKey: Clone + Ord + Send + 'static {
     fn serialize_key(&self) -> String;
@@ -32,6 +35,29 @@ impl StringStoreKey for [u8; 32] {
             .map(|val| val.try_into().ok())
             .ok()
             .flatten()
+    }
+}
+
+impl StringStoreKey for Fingerprint {
+    fn serialize_key(&self) -> String {
+        self.0.serialize_key()
+    }
+
+    fn deserialize_key(key: &str) -> Option<Self> {
+        <[u8; 32]>::deserialize_key(key).map(Fingerprint)
+    }
+}
+
+impl StringStoreValue for () {
+    fn serialize_value(&self) -> String {
+        String::new()
+    }
+
+    fn deserialize_value(value: &str) -> Option<Self> {
+        match value {
+            "" => Some(()),
+            _ => None,
+        }
     }
 }
 

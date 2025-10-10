@@ -98,7 +98,7 @@ impl Certificate {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub struct Fingerprint([u8; 32]);
+pub struct Fingerprint(pub [u8; 32]);
 
 impl Display for Fingerprint {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
