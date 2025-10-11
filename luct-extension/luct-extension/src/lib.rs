@@ -3,10 +3,7 @@
 use crate::store::BrowserStore;
 use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
-use luct_core::{
-    CertificateChain, CtLogConfig, Fingerprint,
-    v1::{SignedCertificateTimestamp, SignedTreeHead},
-};
+use luct_core::{CertificateChain, CtLogConfig, v1::SignedCertificateTimestamp};
 use luct_scanner::{
     Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Log,
     Scanner as CtScanner,
@@ -47,11 +44,11 @@ impl Scanner {
                 name: name.clone(),
                 config,
                 sth_store: Box::new(
-                    BrowserStore::<u64, SignedTreeHead>::new_local_store(format!("sth/{name}"))
+                    BrowserStore::new_local_store(format!("sth/{name}"))
                         .expect("Failed to initialize STH store"),
                 ) as _,
-                root_fingerprints: Box::new(
-                    BrowserStore::<Fingerprint, ()>::new_local_store(format!("roots/{name}"))
+                root_keys: Box::new(
+                    BrowserStore::new_local_store(format!("roots/{name}"))
                         .expect("Failed to initialize allowed roots fingerprint store"),
                 ),
             });

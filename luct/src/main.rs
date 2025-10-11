@@ -7,10 +7,7 @@ use crate::{
 use clap::Parser;
 use eyre::Context;
 use futures::future;
-use luct_core::{
-    CtLogConfig, Fingerprint,
-    v1::{SignedCertificateTimestamp, SignedTreeHead},
-};
+use luct_core::{CtLogConfig, v1::SignedCertificateTimestamp};
 use luct_scanner::{LeadResult, Log, Scanner};
 use luct_store::FilesystemStore;
 use std::{collections::BTreeMap, sync::Arc};
@@ -42,12 +39,8 @@ async fn main() -> eyre::Result<()> {
         scanner.add_log(Log {
             name: name.clone(),
             config,
-            sth_store: Box::new(FilesystemStore::<u64, SignedTreeHead>::new(
-                workdir.join("sth").join(name.clone()),
-            )) as _,
-            root_fingerprints: Box::new(FilesystemStore::<Fingerprint, ()>::new(
-                workdir.join("roots").join(name),
-            )) as _,
+            sth_store: Box::new(FilesystemStore::new(workdir.join("sth").join(name.clone()))) as _,
+            root_keys: Box::new(FilesystemStore::new(workdir.join("roots").join(name))) as _,
         });
     }
 
