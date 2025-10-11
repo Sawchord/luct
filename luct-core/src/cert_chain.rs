@@ -19,8 +19,6 @@ use x509_verify::VerifyingKey;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct CertificateChain(Vec<Certificate>);
 
-// TODO: Iterator over CertChain
-
 impl From<Vec<Certificate>> for CertificateChain {
     fn from(value: Vec<Certificate>) -> Self {
         Self(value)

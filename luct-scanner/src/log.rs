@@ -6,7 +6,7 @@ use luct_core::{
     v1::SignedTreeHead,
 };
 
-// TODO: Replace with builder patters
+// TODO: Replace with builder pattern
 pub struct Log {
     pub name: String,
     pub config: CtLogConfig,

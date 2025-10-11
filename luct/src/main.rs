@@ -1,5 +1,3 @@
-// TODO: Use tracing to output sources
-
 use crate::{
     args::{Args, get_confpath, get_workdir},
     fetch::fetch_cert_chain,
