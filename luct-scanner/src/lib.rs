@@ -46,7 +46,7 @@ impl<C: Client + Clone> Scanner<C> {
             name: log.name,
             client,
             sth_store: log.sth_store,
-            root_fingerprints: log.root_fingerprints,
+            root_keys: log.root_keys,
         };
 
         self.logs.insert(log_id, scanner_log);

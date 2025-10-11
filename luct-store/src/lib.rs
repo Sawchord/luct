@@ -25,6 +25,16 @@ impl StringStoreKey for u64 {
     }
 }
 
+impl StringStoreKey for Vec<u8> {
+    fn serialize_key(&self) -> String {
+        hex::encode(self)
+    }
+
+    fn deserialize_key(key: &str) -> Option<Self> {
+        hex::decode(key).ok()
+    }
+}
+
 impl StringStoreKey for [u8; 32] {
     fn serialize_key(&self) -> String {
         hex::encode(self)

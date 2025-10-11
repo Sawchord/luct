@@ -1,7 +1,7 @@
 use crate::{Conclusion, Scanner, lead::EmbeddedSct};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    CtLogConfig, Fingerprint,
+    Certificate, CtLogConfig,
     store::{Hashable, OrderedStore, Store},
     v1::SignedTreeHead,
 };
@@ -11,7 +11,7 @@ pub struct Log {
     pub name: String,
     pub config: CtLogConfig,
     pub sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
-    pub root_fingerprints: Box<dyn Store<Fingerprint, ()>>,
+    pub root_keys: Box<dyn Store<Vec<u8>, ()>>,
 }
 
 /// Internal structure holding references to per log
@@ -20,7 +20,7 @@ pub(crate) struct ScannerLog<C> {
     pub(crate) name: String,
     pub(crate) client: CtClient<C>,
     pub(crate) sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
-    pub(crate) root_fingerprints: Box<dyn Store<Fingerprint, ()>>,
+    pub(crate) root_keys: Box<dyn Store<Vec<u8>, ()>>,
 }
 
 impl<C: Client> ScannerLog<C> {
@@ -48,9 +48,7 @@ impl<C: Client> ScannerLog<C> {
             .await?;
 
         // Check that the roots certificate is included in the list of allowed roots
-        let root_validation = self
-            .validate_root(&chain.root().fingerprint_sha256())
-            .await?;
+        let root_validation = self.validate_root(chain.root()).await?;
         if !root_validation.is_safe() {
             return Ok(root_validation);
         }
@@ -87,21 +85,28 @@ impl<C: Client> ScannerLog<C> {
         Ok(())
     }
 
-    async fn validate_root(&self, fingerprint: &Fingerprint) -> Result<Conclusion, ClientError> {
-        if self.root_fingerprints.get(fingerprint).is_some() {
-            return Ok(Conclusion::Safe(format!(
-                "Fingerprint {fingerprint} matches allowed roots"
-            )));
+    async fn validate_root(&self, root: &Certificate) -> Result<Conclusion, ClientError> {
+        let Some(key_id) = root
+            .get_authority_key_info()
+            .or_else(|| root.get_subject_key_info())
+        else {
+            return Ok(Conclusion::Inconclusive(
+                "Certificate chain is not RFC5280 compliant".to_string(),
+            ));
+        };
+
+        if self.root_keys.get(&key_id).is_some() {
+            return Ok(Conclusion::Safe(
+                "Fingerprint matches allowed roots".to_string(),
+            ));
         }
 
         self.update_roots().await?;
 
-        match self.root_fingerprints.get(fingerprint) {
-            Some(()) => Ok(Conclusion::Safe(format!(
-                "Root {fingerprint} matches allowed roots"
-            ))),
+        match self.root_keys.get(&key_id) {
+            Some(()) => Ok(Conclusion::Safe("Root matches allowed roots".to_string())),
             None => Ok(Conclusion::Unsafe(format!(
-                "Root {fingerprint} is not included in the list of allowed roots of log {}",
+                "Root is not included in the list of allowed roots of log {}",
                 self.name
             ))),
         }
@@ -110,7 +115,9 @@ impl<C: Client> ScannerLog<C> {
     async fn update_roots(&self) -> Result<(), ClientError> {
         let certs = self.client.get_roots_v1().await?;
         for cert in certs {
-            self.root_fingerprints.insert(cert.fingerprint_sha256(), ());
+            if let Some(key_id) = cert.get_subject_key_info() {
+                self.root_keys.insert(key_id, ());
+            }
         }
 
         Ok(())
