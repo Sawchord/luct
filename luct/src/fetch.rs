@@ -1,9 +1,6 @@
 use eyre::{Context, Report};
 use luct_core::{Certificate, CertificateChain};
-use rustls::{
-    SignatureScheme,
-    pki_types::{CertificateDer, ServerName, UnixTime},
-};
+use rustls::pki_types::ServerName;
 use rustls_platform_verifier::BuilderVerifierExt as _;
 use std::{
     io::{Read, Write},
@@ -21,15 +18,10 @@ pub(crate) fn fetch_cert_chain(url: &str) -> eyre::Result<CertificateChain> {
         .with_context(|| format!("failed to convert given host (\"{url}\") to server name"))?
         .to_owned();
 
-    let mut config =
-        rustls::ClientConfig::builder_with_provider(rustls_rustcrypto::provider().into())
-            .with_protocol_versions(&[&rustls::version::TLS13])?
-            .with_platform_verifier()?
-            .with_no_client_auth();
-
-    config
-        .dangerous()
-        .set_certificate_verifier(Arc::new(NoopServerCertVerifier));
+    let config = rustls::ClientConfig::builder_with_provider(rustls_rustcrypto::provider().into())
+        .with_protocol_versions(&[&rustls::version::TLS13])?
+        .with_platform_verifier()?
+        .with_no_client_auth();
 
     let mut conn = rustls::ClientConnection::new(Arc::new(config), server_name)?;
 
@@ -79,56 +71,4 @@ Accept-Encoding: identity
         .unwrap();
 
     Ok(chain)
-}
-
-#[derive(Debug)]
-struct NoopServerCertVerifier;
-
-impl rustls::client::danger::ServerCertVerifier for NoopServerCertVerifier {
-    fn verify_server_cert(
-        &self,
-        _end_entity: &CertificateDer<'_>,
-        _intermediates: &[CertificateDer<'_>],
-        _server_name: &ServerName<'_>,
-        _ocsp_response: &[u8],
-        _now: UnixTime,
-    ) -> Result<rustls::client::danger::ServerCertVerified, rustls::Error> {
-        Ok(rustls::client::danger::ServerCertVerified::assertion())
-    }
-
-    fn verify_tls12_signature(
-        &self,
-        _message: &[u8],
-        _cert: &CertificateDer<'_>,
-        _dss: &rustls::DigitallySignedStruct,
-    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
-    }
-
-    fn verify_tls13_signature(
-        &self,
-        _message: &[u8],
-        _cert: &CertificateDer<'_>,
-        _dss: &rustls::DigitallySignedStruct,
-    ) -> Result<rustls::client::danger::HandshakeSignatureValid, rustls::Error> {
-        Ok(rustls::client::danger::HandshakeSignatureValid::assertion())
-    }
-
-    fn supported_verify_schemes(&self) -> Vec<rustls::SignatureScheme> {
-        vec![
-            SignatureScheme::RSA_PKCS1_SHA1,
-            SignatureScheme::ECDSA_SHA1_Legacy,
-            SignatureScheme::RSA_PKCS1_SHA256,
-            SignatureScheme::ECDSA_NISTP256_SHA256,
-            SignatureScheme::RSA_PKCS1_SHA384,
-            SignatureScheme::ECDSA_NISTP384_SHA384,
-            SignatureScheme::RSA_PKCS1_SHA512,
-            SignatureScheme::ECDSA_NISTP521_SHA512,
-            SignatureScheme::RSA_PSS_SHA256,
-            SignatureScheme::RSA_PSS_SHA384,
-            SignatureScheme::RSA_PSS_SHA512,
-            SignatureScheme::ED25519,
-            SignatureScheme::ED448,
-        ]
-    }
 }
