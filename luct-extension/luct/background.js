@@ -7,14 +7,13 @@ let extraInfoSpec = ['blocking'];
 log(`Loading luCT extension`)
 var scanner;
 
-init().then(load_scanner)
+init().then(load_scanner).then(add_listener)
 
 function load_scanner() {
     fetch(browser.runtime.getURL('assets/logs.toml'))
         .then(res => {
             res.text().then((logs) => {
                 log('parsed log');
-                //log(logs)
                 scanner = new Scanner(logs);
             })
         })
@@ -58,4 +57,3 @@ function add_listener() {
     log('Added listener')
 }
 
-add_listener()

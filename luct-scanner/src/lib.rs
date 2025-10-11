@@ -1,3 +1,4 @@
+use crate::{lead::EmbeddedSct, log::ScannerLog};
 use futures::future;
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
@@ -5,15 +6,13 @@ use luct_core::{
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
-
-mod lead;
-mod log;
-
-use crate::{lead::EmbeddedSct, log::ScannerLog};
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::Log,
 };
+
+mod lead;
+mod log;
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
@@ -30,7 +29,6 @@ impl<C: Client + Clone> Scanner<C> {
     }
 
     pub fn new_with_client(
-        //log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
         sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
         client: C,
     ) -> Self {
@@ -79,8 +77,6 @@ impl<C: Client> Scanner<C> {
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`]
     pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ClientError> {
-        // TODO: For embedded SCT, match with the log name immiditately, such that we can print the log
-
         // TODO: Check that no CA is in the denylist of the scanner
         // TODO: Get OCSP SCT leads
         // TODO: Get revocation list leads
