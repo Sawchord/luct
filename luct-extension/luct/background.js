@@ -37,7 +37,7 @@ function add_listener() {
         let certs = securityInfo.certificates.map((info) => info.rawDER);
         //log(certs)
 
-        let leads = scanner.collect_leads(certs);
+        let leads = scanner.collect_leads(details.url, certs);
         for (let lead of leads) {
             log("Investigating: " + lead.description());
 

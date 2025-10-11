@@ -12,6 +12,7 @@ use luct_scanner::{
     Scanner as CtScanner,
 };
 use std::{collections::BTreeMap, sync::Arc};
+use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 mod store;
@@ -61,7 +62,17 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub fn collect_leads(&self, leads: Array) -> Result<Vec<Lead>, String> {
+    pub fn collect_leads(&self, url: String, leads: Array) -> Result<Vec<Lead>, String> {
+        let url = Url::parse(&url).map_err(|err| format!("{err}"))?;
+        if self
+            .0
+            .logs()
+            .any(|log| log.config().url().domain() == url.domain())
+        {
+            log("Skipping request to log itself to prevent recursion");
+            return Ok(vec![]);
+        }
+
         let cert_chain_bytes = leads
             .to_vec()
             .into_iter()

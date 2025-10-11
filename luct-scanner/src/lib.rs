@@ -1,7 +1,7 @@
 use futures::future;
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    CertificateChain, CtLogConfig, LogId, store::Store, v1::SignedCertificateTimestamp,
+    CertificateChain, CtLog, CtLogConfig, LogId, store::Store, v1::SignedCertificateTimestamp,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -25,6 +25,10 @@ pub struct Scanner<C> {
 
 #[allow(clippy::type_complexity)]
 impl<C: Client + Clone> Scanner<C> {
+    pub fn logs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CtLog> + 'a> {
+        Box::new(self.logs.values().map(|val| val.client.log()))
+    }
+
     pub fn new_with_client(
         //log_configs: BTreeMap<String, (CtLogConfig, Box<dyn OrderedStore<u64, SignedTreeHead>>)>,
         sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
