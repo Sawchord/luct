@@ -6,7 +6,6 @@ use crate::{
     },
     v1,
 };
-
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
 use std::{
@@ -17,11 +16,17 @@ use thiserror::Error;
 use x509_cert::{
     Certificate as Cert,
     der::{Decode as CertDecode, DecodePem, Encode as CertEncode, asn1::OctetString},
+    ext::pkix::{AuthorityKeyIdentifier, SubjectKeyIdentifier},
 };
 
 pub(crate) const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
 pub(crate) const CT_POISON: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
+
+pub(crate) const SUBJECT_KEY_ID: ObjectIdentifier =
+    const_oid::db::rfc5280::ID_CE_SUBJECT_KEY_IDENTIFIER;
+pub(crate) const AUTH_KEY_ID: ObjectIdentifier =
+    const_oid::db::rfc5280::ID_CE_AUTHORITY_KEY_IDENTIFIER;
 
 /// A X.509 certificate
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -94,6 +99,35 @@ impl Certificate {
 
         let hash: [u8; 32] = Sha256::digest(&cert_bytes).into();
         Fingerprint(hash)
+    }
+
+    pub fn get_subject_key_info(&self) -> Option<Vec<u8>> {
+        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+            return None;
+        };
+
+        extensions
+            .iter()
+            .find(|extension| extension.extn_id == SUBJECT_KEY_ID)
+            .and_then(|extension| {
+                SubjectKeyIdentifier::from_der(extension.extn_value.as_bytes()).ok()
+            })
+            .map(|key_id| key_id.0.as_bytes().to_vec())
+    }
+
+    pub fn get_authority_key_info(&self) -> Option<Vec<u8>> {
+        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+            return None;
+        };
+
+        extensions
+            .iter()
+            .find(|extension| extension.extn_id == AUTH_KEY_ID)
+            .and_then(|extension| {
+                AuthorityKeyIdentifier::from_der(extension.extn_value.as_bytes()).ok()
+            })
+            .and_then(|key_id| key_id.key_identifier)
+            .map(|key_id| key_id.as_bytes().to_vec())
     }
 }
 

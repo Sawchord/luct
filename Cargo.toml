@@ -38,6 +38,7 @@ digest = { version = "0.10" }
 sha2 = { version = "0.10" }
 x509-cert = { version = "0.2" }
 x509-verify = { version = "0.4", features = ["x509"] }
+const-oid = { version = "0.9", features = ["db"] }
 
 rustls = { version = "0.23", default-features = false }
 rustls-platform-verifier = { version = "0.6", default-features = false }
