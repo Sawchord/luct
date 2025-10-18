@@ -40,18 +40,17 @@ impl Scanner {
         let mut scanner = CtScanner::new_with_client(sct_cache, client);
 
         for (name, config) in log_configs {
-            scanner.add_log(Log {
-                name: name.clone(),
-                config,
-                sth_store: Box::new(
-                    BrowserStore::new_local_store(format!("sth/{name}"))
-                        .expect("Failed to initialize STH store"),
-                ) as _,
-                root_keys: Box::new(
-                    BrowserStore::new_local_store(format!("roots/{name}"))
-                        .expect("Failed to initialize allowed roots fingerprint store"),
-                ),
-            });
+            scanner.add_log(
+                Log::new(name.clone(), config)
+                    .with_sth_store(
+                        BrowserStore::new_local_store(format!("sth/{name}"))
+                            .expect("Failed to initialize STH store"),
+                    )
+                    .with_root_key_store(
+                        BrowserStore::new_local_store(format!("roots/{name}"))
+                            .expect("Failed to initialize allowed roots fingerprint store"),
+                    ),
+            );
         }
 
         log("Initialized scanner");

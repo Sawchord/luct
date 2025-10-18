@@ -34,12 +34,11 @@ async fn main() -> eyre::Result<()> {
     let mut scanner = Scanner::new_with_client(sct_cache, client);
 
     for (name, config) in log_configs {
-        scanner.add_log(Log {
-            name: name.clone(),
-            config,
-            sth_store: Box::new(FilesystemStore::new(workdir.join("sth").join(name.clone()))) as _,
-            root_keys: Box::new(FilesystemStore::new(workdir.join("roots").join(name))) as _,
-        });
+        scanner.add_log(
+            Log::new(name.clone(), config)
+                .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name.clone())))
+                .with_root_key_store(FilesystemStore::new(workdir.join("roots").join(name))),
+        );
     }
 
     if args.update_sths {

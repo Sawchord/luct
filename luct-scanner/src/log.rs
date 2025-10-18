@@ -6,12 +6,35 @@ use luct_core::{
     v1::SignedTreeHead,
 };
 
-// TODO: Replace with builder pattern
 pub struct Log {
-    pub name: String,
-    pub config: CtLogConfig,
-    pub sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
-    pub root_keys: Box<dyn Store<Vec<u8>, ()>>,
+    pub(crate) name: String,
+    pub(crate) config: CtLogConfig,
+    pub(crate) sth_store: Option<Box<dyn OrderedStore<u64, SignedTreeHead>>>,
+    pub(crate) root_keys: Option<Box<dyn Store<Vec<u8>, ()>>>,
+}
+
+impl Log {
+    pub fn new(name: String, config: CtLogConfig) -> Self {
+        Self {
+            name,
+            config,
+            sth_store: None,
+            root_keys: None,
+        }
+    }
+
+    pub fn with_sth_store(
+        mut self,
+        store: impl OrderedStore<u64, SignedTreeHead> + 'static,
+    ) -> Self {
+        self.sth_store = Some(Box::new(store) as _);
+        self
+    }
+
+    pub fn with_root_key_store(mut self, store: impl Store<Vec<u8>, ()> + 'static) -> Self {
+        self.root_keys = Some(Box::new(store) as _);
+        self
+    }
 }
 
 /// Internal structure holding references to per log
