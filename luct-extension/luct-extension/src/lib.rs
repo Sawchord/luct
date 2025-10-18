@@ -90,7 +90,7 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub async fn investigate_lead(&self, lead: Lead) -> LeadResult {
+    pub async fn investigate_lead(&self, lead: &Lead) -> LeadResult {
         //log("investigating lead");
         LeadResult(self.0.investigate_lead(&lead.0).await)
     }

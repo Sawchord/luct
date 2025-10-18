@@ -37,20 +37,15 @@ function add_listener() {
         //log(certs)
 
         let leads = scanner.collect_leads(details.url, certs);
-        for (let lead of leads) {
-            log("Investigating: " + lead.description());
+        //log(leads);
+        let investigations = leads.map((lead) => scanner.investigate_lead(lead).then((result) => {
+            log("Investigated: " + lead.description());
+            log("Conclusion: " + result.conclusion().description());
+            return [lead, result]
+        }));
 
-            scanner.investigate_lead(lead).then((result) => {
-                let conclusion = result.conclusion();
-
-                if (conclusion) {
-                    log(conclusion.description());
-                }
-                // TODO: Handle follow ups
-            });
-
-        }
-        //log(leads)
+        let results = await Promise.all(investigations);
+        //log(results)
 
     }, ALL_SITES, extraInfoSpec)
 
