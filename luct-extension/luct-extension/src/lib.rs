@@ -138,4 +138,19 @@ impl Conclusion {
     pub fn description(&self) -> String {
         format!("{}", self.0)
     }
+
+    #[wasm_bindgen]
+    pub fn is_safe(&self) -> bool {
+        matches!(self.0, CtConclusion::Safe(_))
+    }
+
+    #[wasm_bindgen]
+    pub fn is_inconclusive(&self) -> bool {
+        matches!(self.0, CtConclusion::Inconclusive(_))
+    }
+
+    #[wasm_bindgen]
+    pub fn is_unsafe(&self) -> bool {
+        matches!(self.0, CtConclusion::Unsafe(_))
+    }
 }
