@@ -4,9 +4,77 @@ let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }
 let extraInfoSpec = ['blocking'];
 
+class TabState {
+    constructor() {
+        this.tabs = new Map();
+    }
+
+    async updateTabResult(tabId, url, result) {
+        var tab = this.tabs.get(tabId);
+        if (!tab) {
+            log("Initializing new tab: " + tabId);
+            tab = new TabSecurity(url);
+        }
+
+        tab.update(url, result);
+        this.tabs.set(tabId, tab);
+        await this.updateTabUrl(tabId);
+    }
+
+    async updateTabUrl(tabId) {
+        let tab = this.tabs.get(tabId);
+        if (!tab) {
+            return;
+        }
+
+        if (tab.safety === "safe") {
+            await browser.pageAction.setIcon({ tabId: tabId, path: "assets/icons/luct_safe.svg" })
+            await browser.pageAction.show(tabId);
+        } else {
+            await browser.pageAction.setIcon({ tabId: tabId, path: "assets/icons/luct_unsafe.svg" })
+            await browser.pageAction.show(tabId);
+        }
+    }
+
+    deleteTab(tabId) {
+        let toDelete = [];
+        this.tabs.forEach((_value, key) => {
+            if (key[0] === tabId) {
+                toDelete.push(key);
+            }
+        });
+
+        toDelete.forEach((key) => this.tabs.delete(key));
+    }
+}
+
+class TabSecurity {
+    constructor(url) {
+        this.url = url;
+        this.safety = "safe";
+        this.checks = [];
+    }
+
+    update(url, result) {
+        if (this.url !== url) {
+            this.url = url;
+            this.checks = [];
+            this.safety = "safe"
+        };
+
+        this.checks.push(result);
+
+        if (result.conclusion().is_unsafe()) {
+            this.safety = "unsafe";
+        } else if (this.safety !== "unsafe" && result.conclusion().is_inconclusive()) {
+            this.safety = "inconclusive";
+        }
+    }
+}
+
 log(`Loading luCT extension`)
 var scanner;
-var tabState = new Map();
+var tabState = new TabState();
 
 init().then(load_scanner).then(add_listener).then(setup_tab_actions)
 
@@ -23,7 +91,7 @@ function load_scanner() {
 function add_listener() {
     browser.webRequest.onHeadersReceived.addListener(async (details) => {
         log(`Got a request for ${details.url} with ID ${details.requestId}`)
-        log("Tab id: " + details.tabId)
+        //log("Tab id: " + details.tabId)
 
         let requestId = details.requestId
 
@@ -32,6 +100,7 @@ function add_listener() {
             rawDER: true
         });
 
+        //log(details)
         //log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
         let certs = securityInfo.certificates.map((info) => info.rawDER);
         //log(certs)
@@ -46,17 +115,7 @@ function add_listener() {
 
         let results = await Promise.all(investigations);
 
-        if (results.find((result) => result[1].conclusion().is_unsafe())) {
-            log("WEBSITE UNSAFE");
-        } else if (results.find((result) => result[1].conclusion().is_inconclusive())) {
-            log("Cannot determine safety of website");
-        } else {
-            log("The website is safe");
-        }
-
-        // TODO: We need to check the state of the tab, and potentially
-        // downgrade the security if we find inconclusive of unsafe results
-        // then update the pageaction
+        results.forEach(async (result) => await tabState.updateTabResult(details.tabId, details.documentUrl, result[1]))
 
     }, ALL_SITES, extraInfoSpec)
 
@@ -66,18 +125,16 @@ function add_listener() {
 function setup_tab_actions() {
     browser.tabs.onRemoved.addListener((tabId) => {
         log(`Tab ${tabId} was closed`)
-        // TODO: Remove the tabState corresponding to this tab
+        tabState.deleteTab(tabId);
     });
 
-    browser.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    browser.tabs.onUpdated.addListener(async (tabId, _changeInfo, tab) => {
         log(`Tab ${tabId} has updated url`)
         log(tab)
-        // TODO: Remove the tabState and page action
-        // NOTE: The initial calls to the new url happen before this event is
-        // triggered. We need to map tabId -> url -> state, and then remove
-        // all url -> state mappings here that don't belong to the current url
+        await tabState.updateTabUrl(tabId);
     },
         { properties: ["url"] }
     )
 
 }
+

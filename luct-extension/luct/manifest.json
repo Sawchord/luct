@@ -9,6 +9,10 @@
         ],
         "type": "module"
     },
+    "page_action": {
+        "default_icon": "assets/icons/luct_unsafe.svg",
+        "browser_style": true
+    },
     "permissions": [
         "webRequest",
         "webRequestBlocking",
