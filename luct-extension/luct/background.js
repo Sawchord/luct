@@ -95,27 +95,29 @@ function add_listener() {
 
         let requestId = details.requestId
 
-        let securityInfo = await browser.webRequest.getSecurityInfo(requestId, {
+        browser.webRequest.getSecurityInfo(requestId, {
             certificateChain: true,
             rawDER: true
+        }).then(async (securityInfo) => {
+            //log(details)
+            //log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
+            let certs = securityInfo.certificates.map((info) => info.rawDER);
+            //log(certs)
+
+            let leads = scanner.collect_leads(details.url, certs);
+            //log(leads);
+            let investigations = leads.map((lead) => scanner.investigate_lead(lead).then((result) => {
+                log("Investigated: " + lead.description());
+                log("Conclusion: " + result.conclusion().description());
+                return [lead, result]
+            }));
+
+            let results = await Promise.all(investigations);
+
+            results.forEach(async (result) => await tabState.updateTabResult(details.tabId, details.documentUrl, result[1]))
         });
 
-        //log(details)
-        //log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
-        let certs = securityInfo.certificates.map((info) => info.rawDER);
-        //log(certs)
 
-        let leads = scanner.collect_leads(details.url, certs);
-        //log(leads);
-        let investigations = leads.map((lead) => scanner.investigate_lead(lead).then((result) => {
-            log("Investigated: " + lead.description());
-            log("Conclusion: " + result.conclusion().description());
-            return [lead, result]
-        }));
-
-        let results = await Promise.all(investigations);
-
-        results.forEach(async (result) => await tabState.updateTabResult(details.tabId, details.documentUrl, result[1]))
 
     }, ALL_SITES, extraInfoSpec)
 
