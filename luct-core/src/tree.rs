@@ -13,7 +13,12 @@ pub struct Tree<N, L, V> {
     values: PhantomData<V>,
 }
 
-impl<N: Store<NodeKey, HashOutput>, L: IndexedStore<V>, V: Hashable> Tree<N, L, V> {
+impl<N, L, V> Tree<N, L, V>
+where
+    N: Store<NodeKey, HashOutput>,
+    L: IndexedStore<V>,
+    V: Hashable,
+{
     pub fn new(node_store: N, leaf_store: L) -> Self {
         Self {
             nodes: node_store,
@@ -32,7 +37,7 @@ impl<N: Store<NodeKey, HashOutput>, L: IndexedStore<V>, V: Hashable> Tree<N, L, 
         let end = idx + 1;
         let mut diff = 2;
 
-        while end % diff == 0 {
+        while end.is_multiple_of(diff) {
             let start = end - diff;
 
             let key = NodeKey { start, end };
@@ -100,7 +105,7 @@ impl<N: Store<NodeKey, HashOutput>, L: IndexedStore<V>, V: Hashable> Tree<N, L, 
 
         let mut path = vec![];
 
-        while n.start + 1 != n.end {
+        while !n.is_leaf() {
             let (left, right) = n.split();
             if m < right.start {
                 let elem = self.nodes.get(&right)?;
@@ -334,6 +339,10 @@ impl NodeKey {
     fn is_balanced(&self) -> bool {
         let diff = self.end - self.start;
         diff.is_power_of_two()
+    }
+
+    fn is_leaf(&self) -> bool {
+        self.start + 1 == self.end
     }
 }
 

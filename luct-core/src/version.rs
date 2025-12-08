@@ -15,15 +15,10 @@ use crate::utils::codec::{CodecError, Decode, Encode};
 /// Currently, only [`Version::V1`] is supported
 ///
 /// See RFC 6962 3.2
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Default)]
 pub enum Version {
+    #[default]
     V1,
-}
-
-impl Default for Version {
-    fn default() -> Self {
-        Self::V1
-    }
 }
 
 impl Serialize for Version {
