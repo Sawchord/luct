@@ -8,6 +8,7 @@ use url::Url;
 mod cert;
 mod cert_chain;
 mod errors;
+pub mod log_list;
 pub(crate) mod signature;
 pub mod store;
 pub mod tree;
@@ -18,6 +19,7 @@ mod version;
 pub use cert::{Certificate, CertificateError, Fingerprint};
 pub use cert_chain::CertificateChain;
 pub use errors::{CheckSeverity, Severity};
+
 pub use signature::{HashAlgorithm, SignatureAlgorithm, SignatureValidationError};
 pub use version::Version;
 

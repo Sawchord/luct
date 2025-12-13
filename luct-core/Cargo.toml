@@ -27,6 +27,7 @@ const-oid = { workspace = true }
 
 thiserror = { workspace = true }
 itertools = { workspace = true }
+chrono = { workspace = true }
 
 [dev-dependencies]
 toml = { workspace = true }
