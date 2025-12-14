@@ -23,10 +23,9 @@ struct Logs {
     description: String,
     log_id: Base64<Vec<u8>>,
     key: Base64<Vec<u8>>,
-
     mmd: u64,
     dns: Option<String>,
-    // TODO: State
+    state: Option<State>,
     temporal_interval: Option<Interval>,
     log_type: Option<LogType>,
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
@@ -48,6 +47,30 @@ enum LogUrl {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum State {
+    Pending {
+        timestamp: DateTime<Utc>,
+    },
+    Qualified {
+        timestamp: DateTime<Utc>,
+    },
+    Usable {
+        timestamp: DateTime<Utc>,
+    },
+    Readonly {
+        timestamp: DateTime<Utc>,
+        final_tree_head: FinalTreeHead,
+    },
+    Retired {
+        timestamp: DateTime<Utc>,
+    },
+    Rejected {
+        timestamp: DateTime<Utc>,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 struct Interval {
     start_inclusive: DateTime<Utc>,
     end_exclusive: DateTime<Utc>,
@@ -65,6 +88,12 @@ enum LogType {
 struct PreviousOwner {
     name: String,
     end_time: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct FinalTreeHead {
+    sha256_root_hash: Base64<Vec<u8>>,
+    tree_size: u64,
 }
 
 #[cfg(test)]
