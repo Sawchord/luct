@@ -25,11 +25,12 @@ struct Logs {
     key: Base64<Vec<u8>>,
 
     mmd: u64,
-    // TODO: DNS
+    dns: Option<String>,
     // TODO: State
     temporal_interval: Option<Interval>,
-    // TODO: Log type
-    // TODO: Previous owners
+    log_type: Option<LogType>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
+    previous_owners: Vec<PreviousOwner>,
     #[serde(flatten)]
     url: LogUrl,
 }
@@ -50,6 +51,20 @@ enum LogUrl {
 struct Interval {
     start_inclusive: DateTime<Utc>,
     end_exclusive: DateTime<Utc>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+enum LogType {
+    Prod,
+    Test,
+    MonitoringOnly,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+struct PreviousOwner {
+    name: String,
+    end_time: DateTime<Utc>,
 }
 
 #[cfg(test)]
