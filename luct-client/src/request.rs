@@ -23,11 +23,11 @@ use std::cmp::Ordering;
 impl<C: Client> CtClient<C> {
     pub async fn get_sth_v1(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
-        let url = self.get_full_v1_url();
+        let url = self.get_full_v1_url().join("get-sth").unwrap();
 
         // Fetch and parse the signed tree head
-        let (status, response) = self.client.get(&url.join("get-sth").unwrap(), &[]).await?;
-        self.check_status(status, &response)?;
+        let (status, response) = self.client.get(&url, &[]).await?;
+        self.check_status(&url, status, &response)?;
         let response: GetSthResponse = serde_json::from_str(&response)?;
         let response = SignedTreeHead::from(response);
 
@@ -57,15 +57,12 @@ impl<C: Client> CtClient<C> {
         let second_idx = second.tree_size().to_string();
 
         // Fetch and parse inclusion proof
-        let url = self.get_full_v1_url();
+        let url = self.get_full_v1_url().join("get-sth-consistency").unwrap();
         let (status, response) = self
             .client
-            .get(
-                &url.join("get-sth-consistency").unwrap(),
-                &[("first", &first_idx), ("second", &second_idx)],
-            )
+            .get(&url, &[("first", &first_idx), ("second", &second_idx)])
             .await?;
-        self.check_status(status, &response)?;
+        self.check_status(&url, status, &response)?;
 
         let response: GetSthConsistencyResponse = serde_json::from_str(&response)?;
         let proof =
@@ -100,15 +97,12 @@ impl<C: Client> CtClient<C> {
         let tree_size = sth.tree_size().to_string();
 
         // Fetch and parse inclusion proof
-        let url = self.get_full_v1_url();
+        let url = self.get_full_v1_url().join("get-proof-by-hash").unwrap();
         let (status, response) = self
             .client
-            .get(
-                &url.join("get-proof-by-hash").unwrap(),
-                &[("hash", &leaf_hash), ("tree_size", &tree_size)],
-            )
+            .get(&url, &[("hash", &leaf_hash), ("tree_size", &tree_size)])
             .await?;
-        self.check_status(status, &response)?;
+        self.check_status(&url, status, &response)?;
 
         let response: GetProofByHashResponse = serde_json::from_str(&response)?;
         let proof = AuditProof::try_from(response).map_err(|_| ClientError::AuditProofError)?;
@@ -125,12 +119,9 @@ impl<C: Client> CtClient<C> {
     pub async fn get_roots_v1(&self) -> Result<Vec<Certificate>, ClientError> {
         self.assert_v1()?;
 
-        let url = self.get_full_v1_url();
-        let (status, response) = self
-            .client
-            .get(&url.join("get-roots").unwrap(), &[])
-            .await?;
-        self.check_status(status, &response)?;
+        let url = self.get_full_v1_url().join("get-roots").unwrap();
+        let (status, response) = self.client.get(&url, &[]).await?;
+        self.check_status(&url, status, &response)?;
 
         let response: GetRootsResponse = serde_json::from_str(&response)?;
         Ok((&response).into())

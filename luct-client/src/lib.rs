@@ -65,8 +65,8 @@ pub enum ClientError {
     #[error("Failed to connect to host: {0}")]
     ConnectionError(String),
 
-    #[error("The server returned error: {code}: {msg}")]
-    ResponseError { code: u16, msg: String },
+    #[error("Request to {url} returned error: {code}: {msg}")]
+    ResponseError { url: String, code: u16, msg: String },
 }
 
 impl From<serde_json::Error> for ClientError {

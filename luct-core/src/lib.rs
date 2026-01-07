@@ -65,6 +65,9 @@ pub struct CtLogConfig {
     version: Version,
 
     /// The [`Url`] at which the log operates
+    ///
+    /// In case of an RFC 6962 log, this is the url at which the endpoint lives.
+    /// In the case of a tiled log, this corresponds to the submission url
     url: Url,
 
     /// Public key used to sign
@@ -72,9 +75,6 @@ pub struct CtLogConfig {
 
     /// Maximum merge delay
     mmd: u64,
-
-    /// Fetch the values from another url instead
-    fetch_url: Option<Url>,
 }
 
 impl CtLogConfig {
@@ -85,7 +85,7 @@ impl CtLogConfig {
 
     /// Return the fetch [`Url`] for this log
     pub fn fetch_url(&self) -> &Url {
-        self.fetch_url.as_ref().unwrap_or(self.url())
+        self.url()
     }
 
     /// Return the [`Version`] of this log
