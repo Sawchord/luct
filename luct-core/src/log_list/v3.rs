@@ -62,6 +62,7 @@ impl LogList {
             .filter(|&log| type_filter(&log.log_type))
             .filter_map(|log| {
                 let config = CtLogConfig {
+                    description: log.description.clone(),
                     version: Version::V1,
                     url: match &log.url {
                         LogUrl::Log { url } => url.clone(),

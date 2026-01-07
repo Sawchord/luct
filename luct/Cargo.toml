@@ -10,13 +10,15 @@ categories = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
 
-
 [dependencies]
 luct-core = { path = "../luct-core" }
 luct-client = { path = "../luct-client" }
 luct-scanner = { path = "../luct-scanner" }
 luct-store = { path = "../luct-store" }
 
+serde_json = { workspace = true }
+
+# TODO: Remove
 toml = { workspace = true }
 
 rustls = { workspace = true }

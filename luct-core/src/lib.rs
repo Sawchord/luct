@@ -48,11 +48,18 @@ impl CtLog {
     pub fn config(&self) -> &CtLogConfig {
         &self.config
     }
+
+    pub fn description(&self) -> &str {
+        &self.config.description
+    }
 }
 
 /// Configuration of a [`CtLog`]
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CtLogConfig {
+    /// Short description of the log
+    description: String,
+
     #[serde(default)]
     /// The [`Version`] of this log
     version: Version,
@@ -71,17 +78,6 @@ pub struct CtLogConfig {
 }
 
 impl CtLogConfig {
-    /// Create a new [`CtLogConfig`]
-    pub fn new(version: Version, url: Url, key: Vec<u8>, mmd: u64) -> Self {
-        Self {
-            version,
-            url,
-            key: Base64(key),
-            mmd,
-            fetch_url: None,
-        }
-    }
-
     /// Return the [`Url`] of this log
     pub fn url(&self) -> &Url {
         &self.url
@@ -123,13 +119,16 @@ mod tests {
     use super::*;
     use base64::{Engine, prelude::BASE64_STANDARD};
 
+    // TODO: Move to json
     const ARGON2025H1: &str = "
+        description = \"Google Argon\"
         url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
         mmd = 86400
     ";
 
     const ARGON2025H2: &str = "
+        description = \"Google Argon\"
         version = 1
         url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
         key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"

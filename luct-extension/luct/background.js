@@ -79,7 +79,7 @@ var tabState = new TabState();
 init().then(load_scanner).then(add_listener).then(setup_tab_actions)
 
 function load_scanner() {
-    fetch(browser.runtime.getURL('assets/logs.toml'))
+    fetch(browser.runtime.getURL('assets/log_list.json'))
         .then(res => {
             res.text().then((logs) => {
                 log('parsed log');

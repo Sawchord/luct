@@ -5,10 +5,10 @@ use crate::{
 use clap::Parser;
 use eyre::Context;
 use futures::future;
-use luct_core::{CtLogConfig, v1::SignedCertificateTimestamp};
+use luct_core::{log_list::v3::LogList, v1::SignedCertificateTimestamp};
 use luct_scanner::{LeadResult, Log, Scanner};
 use luct_store::FilesystemStore;
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 
 mod args;
 mod fetch;
@@ -25,7 +25,11 @@ async fn main() -> eyre::Result<()> {
             confpath.to_str().unwrap()
         )
     })?;
-    let log_configs: BTreeMap<String, CtLogConfig> = toml::from_str(&config)?;
+
+    //let log_configs: BTreeMap<String, CtLogConfig> = toml::from_str(&config)?;
+    let log_list: LogList = serde_json::from_str(&config)
+        .with_context(|| "failed to parse log list json file".to_string())?;
+    let logs = log_list.currently_active_logs();
 
     let sct_cache =
         Box::new(FilesystemStore::<[u8; 32], SignedCertificateTimestamp>::new(workdir.join("sct")))
@@ -33,10 +37,12 @@ async fn main() -> eyre::Result<()> {
     let client = luct_client::reqwest::ReqwestClient::new();
     let mut scanner = Scanner::new_with_client(sct_cache, client);
 
-    for (name, config) in log_configs {
+    for log in logs {
+        let name = log.description();
+
         scanner.add_log(
-            Log::new(name.clone(), config)
-                .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name.clone())))
+            Log::new(&log)
+                .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name)))
                 .with_root_key_store(FilesystemStore::new(workdir.join("roots").join(name))),
         );
     }

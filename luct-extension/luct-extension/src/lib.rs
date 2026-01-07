@@ -3,12 +3,12 @@
 use crate::store::BrowserStore;
 use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
-use luct_core::{CertificateChain, CtLogConfig, v1::SignedCertificateTimestamp};
+use luct_core::{CertificateChain, log_list::v3::LogList, v1::SignedCertificateTimestamp};
 use luct_scanner::{
     Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Log,
     Scanner as CtScanner,
 };
-use std::{collections::BTreeMap, sync::Arc};
+use std::sync::Arc;
 use url::Url;
 use wasm_bindgen::prelude::wasm_bindgen;
 
@@ -27,10 +27,10 @@ pub struct Scanner(CtScanner<ReqwestClient>);
 impl Scanner {
     #[wasm_bindgen(constructor)]
     pub fn new(config: String) -> Result<Self, String> {
-        let log_configs: BTreeMap<String, CtLogConfig> =
-            toml::from_str(&config).map_err(|err| format!("{err}"))?;
+        let log_list: LogList = serde_json::from_str(&config).map_err(|err| format!("{err}"))?;
+        let logs = log_list.currently_active_logs();
 
-        let client = luct_client::reqwest::ReqwestClient::new();
+        let client = ReqwestClient::new();
         let sct_cache = Box::new(
             BrowserStore::<[u8; 32], SignedCertificateTimestamp>::new_local_store(
                 "sct".to_string(),
@@ -39,9 +39,10 @@ impl Scanner {
         ) as _;
         let mut scanner = CtScanner::new_with_client(sct_cache, client);
 
-        for (name, config) in log_configs {
+        for log in logs {
+            let name = log.description();
             scanner.add_log(
-                Log::new(name.clone(), config)
+                Log::new(&log)
                     .with_sth_store(
                         BrowserStore::new_local_store(format!("sth/{name}"))
                             .expect("Failed to initialize STH store"),

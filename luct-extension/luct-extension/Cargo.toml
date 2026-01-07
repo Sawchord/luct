@@ -19,7 +19,7 @@ luct-scanner = { path = "../../luct-scanner" }
 luct-client = { path = "../../luct-client" }
 luct-store = { path = "../../luct-store" }
 
-toml = { workspace = true }
+serde_json = { workspace = true }
 url = { workspace = true }
 
 wasm-bindgen = { workspace = true }

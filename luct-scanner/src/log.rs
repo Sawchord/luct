@@ -1,7 +1,7 @@
 use crate::{Conclusion, Scanner, lead::EmbeddedSct};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    Certificate, CtLogConfig,
+    Certificate, CtLog, CtLogConfig,
     store::{Hashable, OrderedStore, Store},
     v1::SignedTreeHead,
 };
@@ -14,10 +14,10 @@ pub struct Log {
 }
 
 impl Log {
-    pub fn new(name: String, config: CtLogConfig) -> Self {
+    pub fn new(log: &CtLog) -> Self {
         Self {
-            name,
-            config,
+            name: log.description().to_string(),
+            config: log.config().clone(),
             sth_store: None,
             root_keys: None,
         }
