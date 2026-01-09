@@ -18,9 +18,6 @@ luct-store = { path = "../luct-store" }
 
 serde_json = { workspace = true }
 
-# TODO: Remove
-toml = { workspace = true }
-
 rustls = { workspace = true }
 rustls-platform-verifier = { workspace = true }
 rustls-rustcrypto = { workspace = true }

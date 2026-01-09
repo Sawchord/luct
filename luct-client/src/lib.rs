@@ -123,11 +123,13 @@ mod tests {
         v1::{SignedTreeHead, responses::GetSthResponse},
     };
 
-    const ARGON2025H2: &str = "
-        version = 1
-        url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
-        key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
-        mmd = 86400
+    const ARGON2025H2: &str = "{
+        \"description\": \"Google Argon\",
+        \"version\": 1,
+        \"url\": \"https://ct.googleapis.com/logs/us1/argon2025h2/\",
+        \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\",
+        \"mmd\": 86400
+        }
     ";
 
     const ARGON2025H2_STH_0506: &str = "{
@@ -166,7 +168,7 @@ mod tests {
     }
 
     fn get_client() -> CtClient<ReqwestClient> {
-        let config: CtLogConfig = toml::from_str(ARGON2025H2).unwrap();
+        let config: CtLogConfig = serde_json::from_str(ARGON2025H2).unwrap();
         let client = ReqwestClient::new();
         CtClient::new(config, client)
     }

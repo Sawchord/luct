@@ -10,7 +10,6 @@ categories = { workspace = true }
 keywords = { workspace = true }
 license = { workspace = true }
 
-
 [dependencies]
 luct-core = { path = "../luct-core" }
 
@@ -25,7 +24,6 @@ thiserror = { workspace = true }
 base64 = { workspace = true }
 
 [dev-dependencies]
-toml = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]

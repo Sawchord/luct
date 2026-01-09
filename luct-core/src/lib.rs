@@ -119,20 +119,21 @@ mod tests {
     use super::*;
     use base64::{Engine, prelude::BASE64_STANDARD};
 
-    // TODO: Move to json
-    const ARGON2025H1: &str = "
-        description = \"Google Argon\"
-        url = \"https://ct.googleapis.com/logs/us1/argon2025h1/\"
-        key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\"
-        mmd = 86400
+    const ARGON2025H1: &str = "{
+        \"description\": \"Google Argon\",
+        \"url\": \"https://ct.googleapis.com/logs/us1/argon2025h1/\",
+        \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEIIKh+WdoqOTblJji4WiH5AltIDUzODyvFKrXCBjw/Rab0/98J4LUh7dOJEY7+66+yCNSICuqRAX+VPnV8R1Fmg==\",
+        \"mmd\": 86400
+        }
     ";
 
-    const ARGON2025H2: &str = "
-        description = \"Google Argon\"
-        version = 1
-        url = \"https://ct.googleapis.com/logs/us1/argon2025h2/\"
-        key = \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\"
-        mmd = 86400
+    const ARGON2025H2: &str = "{
+        \"description\": \"Google Argon\",
+        \"version\": 1,
+        \"url\": \"https://ct.googleapis.com/logs/us1/argon2025h2/\",
+        \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEr+TzlCzfpie1/rJhgxnIITojqKk9VK+8MZoc08HjtsLzD8e5yjsdeWVhIiWCVk6Y6KomKTYeKGBv6xVu93zQug==\",
+        \"mmd\": 86400
+        }
     ";
 
     pub(crate) const ARGON2025H1_STH2806: &str = "{
@@ -160,12 +161,12 @@ mod tests {
         include_str!("../../testdata/google-precert-audit-proof.json");
 
     pub(crate) fn get_log_argon2025h1() -> CtLog {
-        let config = toml::from_str(ARGON2025H1).unwrap();
+        let config = serde_json::from_str(ARGON2025H1).unwrap();
         CtLog::new(config)
     }
 
     pub(crate) fn get_log_argon2025h2() -> CtLog {
-        let config = toml::from_str(ARGON2025H2).unwrap();
+        let config = serde_json::from_str(ARGON2025H2).unwrap();
         CtLog::new(config)
     }
 
