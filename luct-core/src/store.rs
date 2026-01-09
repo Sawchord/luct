@@ -122,5 +122,3 @@ impl<V: Clone> IndexedStore<V> for MemoryStore<u64, V> {
         len
     }
 }
-
-// TODO: CertificateChainStore that uses a CertificateStore (Fingerprint -> Certificate) underneath

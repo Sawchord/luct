@@ -191,9 +191,15 @@ mod tests {
 
         let log_list: LogList = serde_json::from_str(ALL_LOG_LIST).unwrap();
         let all_logs = log_list.all_logs();
-        assert_eq!(all_logs.len(), 247);
+
+        assert_eq!(all_logs.len(), 187);
+        // NOTE: This is the length including tiled logs
+        //assert_eq!(all_logs.len(), 247);
 
         let active_logs = log_list.active_logs(time);
-        assert_eq!(active_logs.len(), 71);
+
+        assert_eq!(active_logs.len(), 45);
+        // NOTE: This is the length including tiled logs
+        //assert_eq!(active_logs.len(), 71);
     }
 }
