@@ -11,6 +11,7 @@ mod errors;
 pub mod log_list;
 pub(crate) mod signature;
 pub mod store;
+pub mod tiling;
 pub mod tree;
 pub(crate) mod utils;
 pub mod v1;
