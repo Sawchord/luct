@@ -288,8 +288,8 @@ pub struct TreeHead {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 
 pub struct NodeKey {
-    start: u64,
-    end: u64,
+    pub(crate) start: u64,
+    pub(crate) end: u64,
 }
 
 impl NodeKey {
@@ -304,9 +304,13 @@ impl NodeKey {
         Self { start: 0, end }
     }
 
-    fn split_idx(&self) -> u64 {
-        let diff = self.end - self.start;
-        diff.next_power_of_two() >> 1
+    pub(crate) fn size(&self) -> u64 {
+        self.end - self.start
+    }
+
+    pub(crate) fn split_idx(&self) -> u64 {
+        let size = self.size();
+        size.next_power_of_two() >> 1
     }
 
     fn split(&self) -> (Self, Self) {
