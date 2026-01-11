@@ -62,11 +62,29 @@ pub struct Tile {
 mod tests {
     use super::*;
 
+    // TODO: Test to URL function
+
     #[test]
     fn into_tile_id() {
+        assert_eq!(tile_id_from_node_key(4, 5, 70000), tile_id(0, 0, None));
+        assert_eq!(tile_id_from_node_key(270, 271, 70000), tile_id(0, 1, None));
+
+        assert_eq!(tile_id_from_node_key(0, 128, 70000), tile_id(0, 0, None));
+        assert_eq!(tile_id_from_node_key(0, 256, 70000), tile_id(1, 0, None));
+
+        assert_eq!(
+            tile_id_from_node_key(69950, 69951, 70000),
+            tile_id(0, 273, Some(112))
+        );
+
         assert_eq!(
             tile_id_from_node_key(1 << 16, 70000, 70000),
             tile_id(1, 1, Some(17)),
+        );
+
+        assert_eq!(
+            tile_id_from_node_key(0, 70000, 70000),
+            tile_id(2, 0, Some(1)),
         );
     }
 
