@@ -9,19 +9,29 @@ pub struct TileId {
 }
 
 impl TileId {
+    /// Returns the [`TileId`] of the tile, which contains the [`NodeKey`].
+    ///
+    /// The `tree_height` is used to calculate, wether the tile in question should be partial or not.
     pub fn from_node_key(key: &NodeKey, tree_height: u64) -> Option<Self> {
-        let level: u8 = (key.size().next_power_of_two() / 8).try_into().unwrap();
+        // Compute from the size of the node key, what level of tiles we expect the
+        let level = key.size().next_power_of_two().ilog2() / 8;
+        let level: u8 = (level).try_into().unwrap();
 
-        let steps: u64 = (level as u64).pow(8 * level as u32);
+        // Compute the size of the base node keys of the tile, i.e. the nodes that are actually contained in the tiles.
+        let steps: u64 = 2u64.pow(8 * level as u32);
+        let tile_width = 256 * steps;
 
-        let index = key.start / steps;
+        // Compute the index of the tile, that should contain the node
+        let index = key.start / tile_width;
 
-        let tile_end = (index + 1) * steps;
-
+        // Check if we need to fetch a partial tile, and if so, compute it's size
+        let tile_end = (index + 1) * tile_width;
         let partial = if tile_end < tree_height {
             None
         } else {
-            let partial: u8 = ((tree_height % steps) >> (8 * level)).try_into().unwrap();
+            let partial = tree_height % tile_width;
+            let partial: u8 = (partial >> (8 * level)).try_into().unwrap();
+
             Some(NonZeroU8::new(partial).unwrap())
         };
 
@@ -55,19 +65,20 @@ mod tests {
     #[test]
     fn into_tile_id() {
         assert_eq!(
-            TileId::from_node_key(
-                &NodeKey {
-                    start: 1 << 16,
-                    end: 70000
-                },
-                70000
-            )
-            .unwrap(),
-            TileId {
-                level: 1,
-                index: 1,
-                partial: Some(NonZeroU8::new(17).unwrap())
-            }
+            tile_id_from_node_key(1 << 16, 70000, 70000),
+            tile_id(1, 1, Some(17)),
         );
+    }
+
+    fn tile_id_from_node_key(start: u64, end: u64, size: u64) -> TileId {
+        TileId::from_node_key(&NodeKey { start, end }, size).unwrap()
+    }
+
+    fn tile_id(level: u8, index: u64, partial: Option<u8>) -> TileId {
+        TileId {
+            level,
+            index,
+            partial: partial.map(|partial| NonZeroU8::new(partial).unwrap()),
+        }
     }
 }
