@@ -62,7 +62,18 @@ pub struct Tile {
 mod tests {
     use super::*;
 
-    // TODO: Test to URL function
+    #[test]
+    fn as_url() {
+        assert_eq!(&tile_id(0, 1, None).as_url(), "/tile/0/001");
+        assert_eq!(
+            &tile_id(1, 10987654321, None).as_url(),
+            "/tile/1/x010/x987/x654/321"
+        );
+        assert_eq!(
+            &tile_id(3, 1234, Some(128)).as_url(),
+            "/tile/3/x001/234.p/128"
+        );
+    }
 
     #[test]
     fn into_tile_id() {

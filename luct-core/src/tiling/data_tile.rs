@@ -1,6 +1,5 @@
-use std::num::NonZeroU8;
-
 use crate::tiling::index_to_url;
+use std::num::NonZeroU8;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct DataTileId {
@@ -23,4 +22,29 @@ impl DataTileId {
 pub struct DataTile {
     id: DataTileId,
     data: Vec<u8>,
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn as_url() {
+        assert_eq!(&data_tile_id(1, None).as_url(), "/tile/data/001");
+        assert_eq!(
+            &data_tile_id(10987654321, None).as_url(),
+            "/tile/data/x010/x987/x654/321"
+        );
+        assert_eq!(
+            &data_tile_id(1234, Some(128)).as_url(),
+            "/tile/data/x001/234.p/128"
+        );
+    }
+
+    fn data_tile_id(index: u64, partial: Option<u8>) -> DataTileId {
+        DataTileId {
+            index,
+            partial: partial.map(|partial| NonZeroU8::new(partial).unwrap()),
+        }
+    }
 }
