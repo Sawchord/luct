@@ -70,6 +70,7 @@ impl LogList {
                         //LogUrl::TiledLog { submission_url, .. } => submission_url.clone(),
                         LogUrl::TiledLog { .. } => return None,
                     },
+                    tile_url: None,
                     key: log.key.clone(),
                     mmd: log.mmd,
                 };

@@ -76,6 +76,9 @@ pub struct CtLogConfig {
 
     /// Maximum merge delay
     mmd: u64,
+
+    /// The [`Url`], used by tiling logs to fetch tiles
+    tile_url: Option<Url>,
 }
 
 impl CtLogConfig {
@@ -87,6 +90,11 @@ impl CtLogConfig {
     /// Return the fetch [`Url`] for this log
     pub fn fetch_url(&self) -> &Url {
         self.url()
+    }
+
+    /// Return the tile [`Url`] for this log
+    pub fn tile_url(&self) -> &Option<Url> {
+        &self.tile_url
     }
 
     /// Return the [`Version`] of this log
