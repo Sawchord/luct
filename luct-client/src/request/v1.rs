@@ -133,7 +133,7 @@ impl<C: Client> CtClient<C> {
         base_url.join("ct/v1/").unwrap()
     }
 
-    fn assert_v1(&self) -> Result<(), ClientError> {
+    pub(crate) fn assert_v1(&self) -> Result<(), ClientError> {
         match self.log().config().version() {
             Version::V1 => Ok(()),
             #[allow(unreachable_patterns)]

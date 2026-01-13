@@ -39,6 +39,12 @@ pub trait Client {
         params: &[(&str, &str)],
     ) -> impl Future<Output = Result<(u16, String), ClientError>>;
 
+    fn get_bin(
+        &self,
+        url: &Url,
+        params: &[(&str, &str)],
+    ) -> impl Future<Output = Result<(u16, Vec<u8>), ClientError>>;
+
     // TODO(Submission support): Post calls for submission support
 }
 
@@ -46,6 +52,9 @@ pub trait Client {
 pub enum ClientError {
     #[error("The version of the log is not supported by this client")]
     UnsupportedVersion,
+
+    #[error("Can not fetch tiles from non tiling log")]
+    NonTilingLog,
 
     #[error("Failed to parse JSON: line: {line}, column: {column}")]
     JsonError { line: usize, column: usize },
@@ -82,6 +91,7 @@ impl CheckSeverity for ClientError {
     fn severity(&self) -> Severity {
         match self {
             ClientError::UnsupportedVersion => Severity::Inconclusive,
+            ClientError::NonTilingLog => Severity::Inconclusive,
             ClientError::JsonError { .. } => Severity::Unsafe,
             ClientError::CertificateError(err) => err.severity(),
             ClientError::SignatureValidationFailed(_, err) => err.severity(),

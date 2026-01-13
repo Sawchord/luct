@@ -18,4 +18,13 @@ impl<C> CtClient<C> {
 
         Ok(())
     }
+
+    pub(crate) fn check_status_binary(
+        &self,
+        url: &Url,
+        status: u16,
+        response: &[u8],
+    ) -> Result<(), ClientError> {
+        self.check_status(url, status, &String::from_utf8_lossy(response))
+    }
 }
