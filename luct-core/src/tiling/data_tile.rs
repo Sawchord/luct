@@ -8,6 +8,27 @@ pub struct DataTileId {
 }
 
 impl DataTileId {
+    /// Returns the [`DataTileId`] of the tile, which contains the `index`.
+    ///
+    /// The `tree_height` is used to calculate, wether the tile in question should be partial or not.
+    pub fn from_index(index: u64, tree_height: u64) -> Option<Self> {
+        let tile_width = 256;
+
+        // Compute the index of the tile, that should contain the node
+        let index = index / tile_width;
+
+        // Check if we need to fetch a partial tile, and if so, compute it's size
+        let tile_end = (index + 1) * tile_width;
+        let partial = if tile_end < tree_height {
+            None
+        } else {
+            let partial: u8 = (tree_height % tile_width).try_into().unwrap();
+            Some(NonZeroU8::new(partial).unwrap())
+        };
+
+        Some(Self { index, partial })
+    }
+
     pub fn as_url(&self) -> String {
         let index_url = index_to_url(self.index);
 
@@ -38,6 +59,22 @@ mod test {
         assert_eq!(
             &data_tile_id(1234, Some(128)).as_url(),
             "/tile/data/x001/234.p/128"
+        );
+    }
+
+    #[test]
+    fn into_data_tile_id() {
+        assert_eq!(
+            DataTileId::from_index(4, 70000).unwrap(),
+            data_tile_id(0, None)
+        );
+        assert_eq!(
+            DataTileId::from_index(270, 70000).unwrap(),
+            data_tile_id(1, None)
+        );
+        assert_eq!(
+            DataTileId::from_index(69950, 70000).unwrap(),
+            data_tile_id(273, Some(112))
         );
     }
 
