@@ -50,12 +50,31 @@ impl TileId {
             None => format!("/tile/{}/{}", self.level, index_url),
         }
     }
+
+    pub fn with_data(self, data: Vec<u8>) -> Tile {
+        Tile { id: self, data }
+    }
+
+    pub fn is_partial(&self) -> bool {
+        self.partial.is_some()
+    }
+
+    pub fn into_unpartial(mut self) -> Self {
+        self.partial = None;
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tile {
     id: TileId,
     data: Vec<u8>,
+}
+
+impl Tile {
+    pub fn id(&self) -> &TileId {
+        &self.id
+    }
 }
 
 #[cfg(test)]
