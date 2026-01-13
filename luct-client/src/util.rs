@@ -1,21 +1,7 @@
 use crate::{ClientError, CtClient};
-use luct_core::Version;
 use url::Url;
 
 impl<C> CtClient<C> {
-    pub(crate) fn get_full_v1_url(&self) -> Url {
-        let base_url = self.log().config().fetch_url();
-        base_url.join("ct/v1/").unwrap()
-    }
-
-    pub(crate) fn assert_v1(&self) -> Result<(), ClientError> {
-        match self.log().config().version() {
-            Version::V1 => Ok(()),
-            #[allow(unreachable_patterns)]
-            _ => Err(ClientError::UnsupportedVersion),
-        }
-    }
-
     pub(crate) fn check_status(
         &self,
         url: &Url,
