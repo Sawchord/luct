@@ -328,7 +328,7 @@ impl NodeKey {
         )
     }
 
-    fn merge(&self, other: &Self) -> Option<Self> {
+    pub(crate) fn merge(&self, other: &Self) -> Option<Self> {
         if self.end == other.start {
             Some(Self {
                 start: self.start,
@@ -366,9 +366,9 @@ impl Ord for NodeKey {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct Node {
-    left: HashOutput,
-    right: HashOutput,
+pub(crate) struct Node {
+    pub(crate) left: HashOutput,
+    pub(crate) right: HashOutput,
 }
 
 impl Hashable for Node {

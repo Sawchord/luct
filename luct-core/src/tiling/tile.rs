@@ -1,6 +1,9 @@
+use itertools::Itertools;
+
 use crate::{
+    store::Hashable,
     tiling::index_to_url,
-    tree::{HashOutput, NodeKey},
+    tree::{HashOutput, Node, NodeKey},
 };
 use std::num::NonZeroU8;
 
@@ -95,6 +98,66 @@ impl Tile {
     /// Return the [`TileId`] of this [`Tile`]
     pub fn id(&self) -> &TileId {
         &self.id
+    }
+
+    /// Recomputes the [`NodeKeys`](NodeKey) contained within this tile
+    pub fn recompute_node_keys(&self) -> Vec<(NodeKey, HashOutput)> {
+        // Get the initial Node keys
+        let steps = 2u64.pow(8 * self.id.level as u32);
+        let tile_width = 256 * steps;
+        let tile_start = self.id.index * tile_width;
+
+        let mut nodes: Vec<(NodeKey, HashOutput)> = vec![];
+        let mut result: Vec<(NodeKey, HashOutput)> = vec![];
+
+        // Add the base nodes to the output
+        for idx in 0..self.data.len() / 32 {
+            nodes.push((
+                NodeKey {
+                    start: tile_start + (idx as u64) * tile_width,
+                    end: tile_start + ((idx as u64) + 1) * tile_width,
+                },
+                self.data[32 * idx..32 * (idx + 1)].try_into().unwrap(),
+            ));
+        }
+
+        // TODO: Recompute higher nodes
+        let mut nodes_added = nodes.len();
+
+        // If we added only one node to the output, we are done
+        while nodes_added > 1 {
+            nodes_added = 0;
+
+            let end_node = if nodes.len() % 2 == 1 {
+                Some(nodes.pop().unwrap())
+            } else {
+                None
+            };
+
+            let new_nodes: Vec<(NodeKey, HashOutput)> = nodes
+                .drain(..)
+                .chunks(2)
+                .into_iter()
+                .map(|mut nodes| {
+                    let left = nodes.next().unwrap();
+                    let right = nodes.next().unwrap();
+
+                    let new_key = left.0.merge(&right.0).unwrap();
+                    let new_hash = Node {
+                        left: left.1,
+                        right: right.1,
+                    }
+                    .hash();
+
+                    result.push(left);
+                    result.push(right);
+
+                    (new_key, new_hash)
+                })
+                .collect();
+        }
+
+        todo!()
     }
 }
 
