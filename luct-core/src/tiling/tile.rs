@@ -1,5 +1,3 @@
-use itertools::Itertools;
-
 use crate::{
     store::Hashable,
     tiling::index_to_url,
@@ -71,6 +69,9 @@ impl TileId {
             return None;
         }
 
+        // TODO: Check that length actually matches the partial value
+        // TODO: Introduce an error type for this
+
         Some(Tile { id: self, data })
     }
 
@@ -108,7 +109,6 @@ impl Tile {
         let tile_start = self.id.index * tile_width;
 
         let mut nodes: Vec<(NodeKey, HashOutput)> = vec![];
-        let mut result: Vec<(NodeKey, HashOutput)> = vec![];
 
         // Add the base nodes to the output
         for idx in 0..self.data.len() / 32 {
@@ -121,43 +121,36 @@ impl Tile {
             ));
         }
 
-        // TODO: Recompute higher nodes
-        let mut nodes_added = nodes.len();
-
-        // If we added only one node to the output, we are done
-        while nodes_added > 1 {
-            nodes_added = 0;
-
+        let mut start_idx = 0;
+        while start_idx < nodes.len() - 1 {
             let end_node = if nodes.len() % 2 == 1 {
                 Some(nodes.pop().unwrap())
             } else {
                 None
             };
 
-            let new_nodes: Vec<(NodeKey, HashOutput)> = nodes
-                .drain(..)
-                .chunks(2)
-                .into_iter()
-                .map(|mut nodes| {
-                    let left = nodes.next().unwrap();
-                    let right = nodes.next().unwrap();
+            for idx in (start_idx..nodes.len()).step_by(2) {
+                let left = &nodes[idx];
+                let right = &nodes[idx + 1];
 
-                    let new_key = left.0.merge(&right.0).unwrap();
-                    let new_hash = Node {
+                nodes.push((
+                    left.0.merge(&right.0).unwrap(),
+                    Node {
                         left: left.1,
                         right: right.1,
                     }
-                    .hash();
+                    .hash(),
+                ));
 
-                    result.push(left);
-                    result.push(right);
+                start_idx += 2;
+            }
 
-                    (new_key, new_hash)
-                })
-                .collect();
+            if let Some(node) = end_node {
+                nodes.push(node)
+            }
         }
 
-        todo!()
+        nodes
     }
 }
 
