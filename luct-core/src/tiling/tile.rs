@@ -114,8 +114,8 @@ impl Tile {
         for idx in 0..self.data.len() / 32 {
             nodes.push((
                 NodeKey {
-                    start: tile_start + (idx as u64) * tile_width,
-                    end: tile_start + ((idx as u64) + 1) * tile_width,
+                    start: tile_start + (idx as u64) * steps,
+                    end: tile_start + ((idx as u64) + 1) * steps,
                 },
                 self.data[32 * idx..32 * (idx + 1)].try_into().unwrap(),
             ));
@@ -157,6 +157,7 @@ impl Tile {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{Rng, rng};
 
     #[test]
     fn as_url() {
@@ -195,6 +196,26 @@ mod tests {
         );
     }
 
+    #[test]
+    fn recompute_node_keys_small_examples() {
+        let tile = tile_id(0, 0, Some(1))
+            .with_data(random_tile_data(1))
+            .unwrap();
+        let node_keys = tile.recompute_node_keys();
+        assert_node_keys(&node_keys, &[nk(0, 1)]);
+
+        let tile = tile_id(0, 0, Some(3))
+            .with_data(random_tile_data(3))
+            .unwrap();
+        let node_keys = tile.recompute_node_keys();
+        assert_node_keys(
+            &node_keys,
+            &[nk(0, 1), nk(1, 2), nk(0, 2), nk(2, 3), nk(0, 3)],
+        );
+    }
+
+    // TODO: recompute_node_keys_sizes
+
     fn tile_id_from_node_key(start: u64, end: u64, size: u64) -> TileId {
         TileId::from_node_key(&NodeKey { start, end }, size).unwrap()
     }
@@ -205,5 +226,23 @@ mod tests {
             index,
             partial: partial.map(|partial| NonZeroU8::new(partial).unwrap()),
         }
+    }
+
+    fn nk(start: u64, end: u64) -> NodeKey {
+        NodeKey { start, end }
+    }
+
+    fn random_tile_data(size: u8) -> Vec<u8> {
+        rng().random_iter().take(size as usize * 32).collect()
+    }
+
+    fn assert_node_keys(node_keys: &[(NodeKey, HashOutput)], test_keys: &[NodeKey]) {
+        assert_eq!(node_keys.len(), test_keys.len());
+
+        node_keys
+            .iter()
+            .map(|key| &key.0)
+            .zip(test_keys)
+            .for_each(|(key, test_key)| assert_eq!(key, test_key));
     }
 }
