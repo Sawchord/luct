@@ -33,8 +33,8 @@ impl DataTileId {
         let index_url = index_to_url(self.index);
 
         match self.partial {
-            Some(partial) => format!("/tile/data/{}.p/{}", index_url, partial),
-            None => format!("/tile/data/{}", index_url),
+            Some(partial) => format!("tile/data/{}.p/{}", index_url, partial),
+            None => format!("tile/data/{}", index_url),
         }
     }
 }
@@ -51,14 +51,14 @@ mod test {
 
     #[test]
     fn as_url() {
-        assert_eq!(&data_tile_id(1, None).as_url(), "/tile/data/001");
+        assert_eq!(&data_tile_id(1, None).as_url(), "tile/data/001");
         assert_eq!(
             &data_tile_id(10987654321, None).as_url(),
-            "/tile/data/x010/x987/x654/321"
+            "tile/data/x010/x987/x654/321"
         );
         assert_eq!(
             &data_tile_id(1234, Some(128)).as_url(),
-            "/tile/data/x001/234.p/128"
+            "tile/data/x001/234.p/128"
         );
     }
 
