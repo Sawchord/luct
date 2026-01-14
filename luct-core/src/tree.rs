@@ -293,7 +293,7 @@ pub struct NodeKey {
 }
 
 impl NodeKey {
-    fn leaf(idx: u64) -> Self {
+    pub fn leaf(idx: u64) -> Self {
         Self {
             start: idx,
             end: idx + 1,

@@ -28,3 +28,5 @@ impl<C> CtClient<C> {
         self.check_status(url, status, &String::from_utf8_lossy(response))
     }
 }
+
+// TODO: RequestDeduplicationClient
