@@ -76,6 +76,9 @@ pub enum ClientError {
 
     #[error("Request to {url} returned error: {code}: {msg}")]
     ResponseError { url: String, code: u16, msg: String },
+
+    #[error("The tile that was returned by the log is malformed")]
+    MalformedTile,
 }
 
 impl From<serde_json::Error> for ClientError {
@@ -99,6 +102,7 @@ impl CheckSeverity for ClientError {
             ClientError::AuditProofError => Severity::Unsafe,
             ClientError::ConnectionError(_) => Severity::Inconclusive,
             ClientError::ResponseError { .. } => Severity::Inconclusive,
+            ClientError::MalformedTile => Severity::Unsafe,
         }
     }
 }

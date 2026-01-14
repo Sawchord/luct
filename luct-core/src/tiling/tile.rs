@@ -1,4 +1,7 @@
-use crate::{tiling::index_to_url, tree::NodeKey};
+use crate::{
+    tiling::index_to_url,
+    tree::{HashOutput, NodeKey},
+};
 use std::num::NonZeroU8;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,6 +45,9 @@ impl TileId {
         })
     }
 
+    /// Returns the [`Url`](url::Url) path, at which this tile should be found
+    ///
+    /// Append this path to the `tile_url`, to get the full path.
     pub fn as_url(&self) -> String {
         let index_url = index_to_url(self.index);
 
@@ -51,14 +57,28 @@ impl TileId {
         }
     }
 
-    pub fn with_data(self, data: Vec<u8>) -> Tile {
-        Tile { id: self, data }
+    /// Create a [`Tile`], by adding the data to this [`TileId`]
+    ///
+    /// # Returns:
+    ///
+    /// - `None`: If the length of the data is not a multiple if 32
+    /// - `Some(Tile)` otherwise
+    pub fn with_data(self, data: Vec<u8>) -> Option<Tile> {
+        if !data.len().is_multiple_of(32) {
+            return None;
+        }
+
+        Some(Tile { id: self, data })
     }
 
+    /// Returns `true`, if this [`TileId`] is partial, `false` otherwise
     pub fn is_partial(&self) -> bool {
         self.partial.is_some()
     }
 
+    /// Turn a partial [`TileId`] into one that is not partial
+    ///
+    /// Does nothing if [`TileId`] is already partial.
     pub fn into_unpartial(mut self) -> Self {
         self.partial = None;
         self
@@ -72,6 +92,7 @@ pub struct Tile {
 }
 
 impl Tile {
+    /// Return the [`TileId`] of this [`Tile`]
     pub fn id(&self) -> &TileId {
         &self.id
     }
