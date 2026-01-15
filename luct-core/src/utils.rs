@@ -1,5 +1,6 @@
 use itertools::Itertools;
 
+pub(crate) mod append_vec;
 pub(crate) mod base64;
 pub(crate) mod codec;
 pub(crate) mod codec_vec;

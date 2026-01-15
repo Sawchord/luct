@@ -4,15 +4,15 @@ use crate::{
     store::Hashable,
     tree::HashOutput,
     utils::{
+        append_vec::AppendVec,
         codec::{CodecError, Decode, Encode},
         codec_vec::CodecVec,
-        metered::MeteredRead,
     },
     v1::{LogEntry, LogId, SignatureType},
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
+use std::io::{Cursor, Read, Write};
 
 impl CtLog {
     pub fn validate_sct_v1(
@@ -37,81 +37,29 @@ impl CtLog {
 
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SctList(Vec<SignedCertificateTimestamp>);
+//pub(crate) struct SctList(Vec<SignedCertificateTimestamp>);
+pub(crate) struct SctList(AppendVec<SignedCertificateTimestamp>);
 
 impl SctList {
     #[allow(dead_code)]
     pub fn new(scts: Vec<SignedCertificateTimestamp>) -> Self {
-        Self(scts)
+        Self(AppendVec::from(scts))
     }
 
     pub fn into_inner(self) -> Vec<SignedCertificateTimestamp> {
-        self.0
+        self.0.into()
     }
 }
 
 impl Encode for SctList {
-    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        let mut bytes = 0;
-        let mut encoded_scts = vec![];
-        for sct in &self.0 {
-            let mut buf = Cursor::new(vec![0, 0]);
-            buf.set_position(2);
-
-            sct.encode(&mut buf)?;
-            let mut buf = buf.into_inner();
-
-            // Encode the length of the field
-            let len = ((buf.len() - 2) as u16).to_be_bytes();
-            buf[0] = len[0];
-            buf[1] = len[1];
-
-            // Add to byte counter for field size
-            bytes += buf.len();
-            encoded_scts.push(buf);
-        }
-        let mut slices = encoded_scts
-            .iter()
-            .map(|buf| IoSlice::new(buf))
-            .collect::<Vec<_>>();
-
-        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::VectorTooLong {
-            received: bytes,
-            max: u16::MAX as usize,
-        })?;
-
-        bytes.encode(&mut writer)?;
-
-        let mut slices: &mut [IoSlice] = &mut slices;
-        while !slices.is_empty() {
-            match writer.write_vectored(slices) {
-                Ok(0) => {
-                    return Err(CodecError::IoError(std::io::ErrorKind::WriteZero));
-                }
-                Ok(n) => IoSlice::advance_slices(&mut slices, n),
-                Err(e) if e.kind() == ErrorKind::Interrupted => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
-
-        Ok(())
+    fn encode(&self, writer: impl Write) -> Result<(), CodecError> {
+        self.0.encode(writer)
     }
 }
 
 impl Decode for SctList {
-    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
-        let length = u16::decode(&mut reader)?.into();
-        let mut scts = vec![];
-
-        let mut reader = MeteredRead::new(reader);
-
-        while reader.get_meter() < length {
-            let _len = u16::decode(&mut reader)?;
-            let sct = SignedCertificateTimestamp::decode(&mut reader)?;
-            scts.push(sct);
-        }
-
-        Ok(Self(scts))
+    fn decode(reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self(AppendVec::decode(reader)?))
     }
 }
 

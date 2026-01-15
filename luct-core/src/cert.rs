@@ -190,7 +190,7 @@ mod tests {
     const CERT_GEOMYS_ORG: &str = include_str!("../../testdata/geomys-org.pem");
 
     #[test]
-    fn sct_list_codec_rountrip() {
+    fn sct_list_codec_roundtrip() {
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
         cert.verify_chain().unwrap();
         let scts = cert.cert().extract_scts_v1().unwrap();
