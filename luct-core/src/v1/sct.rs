@@ -4,7 +4,7 @@ use crate::{
     store::Hashable,
     tree::HashOutput,
     utils::{
-        append_vec::AppendVec,
+        append_vec::LimitedAppendVec,
         codec::{CodecError, Decode, Encode},
         codec_vec::CodecVec,
     },
@@ -37,13 +37,12 @@ impl CtLog {
 
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-//pub(crate) struct SctList(Vec<SignedCertificateTimestamp>);
-pub(crate) struct SctList(AppendVec<SignedCertificateTimestamp>);
+pub(crate) struct SctList(LimitedAppendVec<SignedCertificateTimestamp>);
 
 impl SctList {
     #[allow(dead_code)]
     pub fn new(scts: Vec<SignedCertificateTimestamp>) -> Self {
-        Self(AppendVec::from(scts))
+        Self(LimitedAppendVec::from(scts))
     }
 
     pub fn into_inner(self) -> Vec<SignedCertificateTimestamp> {
@@ -59,7 +58,7 @@ impl Encode for SctList {
 
 impl Decode for SctList {
     fn decode(reader: impl Read) -> Result<Self, CodecError> {
-        Ok(Self(AppendVec::decode(reader)?))
+        Ok(Self(LimitedAppendVec::decode(reader)?))
     }
 }
 

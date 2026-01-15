@@ -4,6 +4,8 @@ use crate::utils::{
 };
 use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
+// TODO: Split the functionality into a length delimited version and an unlimited version
+
 /// A vector that works by appending multiple length delimited structures
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct AppendVec<I>(Vec<I>);
@@ -51,9 +53,9 @@ impl<I: Encode> Encode for AppendVec<I> {
             .map(|buf| IoSlice::new(buf))
             .collect::<Vec<_>>();
 
-        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::VectorTooLong {
-            received: bytes,
-            max: u16::MAX as usize,
+        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::UnexpectedSize {
+            read: bytes,
+            expected: u16::MAX as usize,
         })?;
 
         bytes.encode(&mut writer)?;
@@ -76,18 +78,63 @@ impl<I: Encode> Encode for AppendVec<I> {
 
 impl<I: Decode> Decode for AppendVec<I> {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
-        let length = u16::decode(&mut reader)?.into();
-        let mut scts = vec![];
+        let mut items = vec![];
 
-        let mut reader = MeteredRead::new(reader);
+        loop {
+            let len = match u16::decode(&mut reader) {
+                Ok(len) => len,
+                Err(CodecError::IoError(ErrorKind::UnexpectedEof)) => break,
+                Err(err) => return Err(err),
+            };
 
-        while reader.get_meter() < length {
-            // TODO: Check parsed length and encoded length
-            let _len = u16::decode(&mut reader)?;
+            let mut reader = MeteredRead::new(&mut reader);
+
             let sct = I::decode(&mut reader)?;
-            scts.push(sct);
+            items.push(sct);
+
+            let read = reader.get_meter();
+            let expected = len.into();
+            if read != expected {
+                return Err(CodecError::UnexpectedSize { read, expected });
+            }
         }
 
-        Ok(Self(scts))
+        Ok(Self(items))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub(crate) struct LimitedAppendVec<I>(AppendVec<I>);
+
+impl<I> AsRef<[I]> for LimitedAppendVec<I> {
+    fn as_ref(&self) -> &[I] {
+        self.0.as_ref()
+    }
+}
+
+impl<I> From<Vec<I>> for LimitedAppendVec<I> {
+    fn from(value: Vec<I>) -> Self {
+        Self(value.into())
+    }
+}
+
+impl<I> From<LimitedAppendVec<I>> for Vec<I> {
+    fn from(value: LimitedAppendVec<I>) -> Self {
+        value.0.into()
+    }
+}
+
+impl<I: Encode> Encode for LimitedAppendVec<I> {
+    fn encode(&self, writer: impl Write) -> Result<(), CodecError> {
+        self.0.encode(writer)
+    }
+}
+
+impl<I: Decode> Decode for LimitedAppendVec<I> {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let length: u16 = u16::decode(&mut reader)?;
+        let reader = reader.take(length.into());
+
+        Ok(Self(AppendVec::decode(reader)?))
     }
 }
