@@ -29,50 +29,9 @@ impl<I> From<AppendVec<I>> for Vec<I> {
 }
 
 impl<I: Encode> Encode for AppendVec<I> {
-    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        let mut bytes = 0;
-        let mut encoded_scts = vec![];
-        for item in &self.0 {
-            let mut buf = Cursor::new(vec![0, 0]);
-            buf.set_position(2);
-
-            item.encode(&mut buf)?;
-            let mut buf = buf.into_inner();
-
-            // Encode the length of the field
-            let len = ((buf.len() - 2) as u16).to_be_bytes();
-            buf[0] = len[0];
-            buf[1] = len[1];
-
-            // Add to byte counter for field size
-            bytes += buf.len();
-            encoded_scts.push(buf);
-        }
-        let mut slices = encoded_scts
-            .iter()
-            .map(|buf| IoSlice::new(buf))
-            .collect::<Vec<_>>();
-
-        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::UnexpectedSize {
-            read: bytes,
-            expected: u16::MAX as usize,
-        })?;
-
-        bytes.encode(&mut writer)?;
-
-        let mut slices: &mut [IoSlice] = &mut slices;
-        while !slices.is_empty() {
-            match writer.write_vectored(slices) {
-                Ok(0) => {
-                    return Err(CodecError::IoError(std::io::ErrorKind::WriteZero));
-                }
-                Ok(n) => IoSlice::advance_slices(&mut slices, n),
-                Err(e) if e.kind() == ErrorKind::Interrupted => {}
-                Err(e) => return Err(e.into()),
-            }
-        }
-
-        Ok(())
+    fn encode(&self, writer: impl Write) -> Result<(), CodecError> {
+        let (_, encoded_scts) = encode_to_io_slice(self)?;
+        write_all_vec(writer, &encoded_scts)
     }
 }
 
@@ -118,8 +77,16 @@ impl<I> From<LimitedAppendVec<I>> for Vec<I> {
 }
 
 impl<I: Encode> Encode for LimitedAppendVec<I> {
-    fn encode(&self, writer: impl Write) -> Result<(), CodecError> {
-        self.0.encode(writer)
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let (bytes, encoded_scts) = encode_to_io_slice(&self.0)?;
+
+        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::UnexpectedSize {
+            read: bytes,
+            expected: u16::MAX as usize,
+        })?;
+        bytes.encode(&mut writer)?;
+
+        write_all_vec(writer, &encoded_scts)
     }
 }
 
@@ -130,4 +97,51 @@ impl<I: Decode> Decode for LimitedAppendVec<I> {
 
         Ok(Self(AppendVec::decode(reader)?))
     }
+}
+
+fn encode_to_io_slice<I: Encode>(
+    items: &AppendVec<I>,
+) -> Result<(usize, VecDeque<Vec<u8>>), CodecError> {
+    let mut bytes = 0;
+    let mut slices = VecDeque::new();
+
+    for item in &items.0 {
+        let mut buf = Cursor::new(vec![0, 0]);
+        buf.set_position(2);
+
+        item.encode(&mut buf)?;
+        let mut buf = buf.into_inner();
+
+        // Encode the length of the field
+        let len = ((buf.len() - 2) as u16).to_be_bytes();
+        buf[0] = len[0];
+        buf[1] = len[1];
+
+        // Add to byte counter for field size
+        bytes += buf.len();
+        slices.push_back(buf);
+    }
+
+    Ok((bytes, slices))
+}
+
+fn write_all_vec(mut writer: impl Write, items: &VecDeque<Vec<u8>>) -> Result<(), CodecError> {
+    let mut slices = items
+        .iter()
+        .map(|buf| IoSlice::new(buf))
+        .collect::<Vec<_>>();
+
+    let mut slices: &mut [IoSlice] = &mut slices;
+    while !slices.is_empty() {
+        match writer.write_vectored(slices) {
+            Ok(0) => {
+                return Err(CodecError::IoError(std::io::ErrorKind::WriteZero));
+            }
+            Ok(n) => IoSlice::advance_slices(&mut slices, n),
+            Err(e) if e.kind() == ErrorKind::Interrupted => {}
+            Err(e) => return Err(e.into()),
+        }
+    }
+
+    Ok(())
 }
