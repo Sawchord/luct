@@ -178,10 +178,12 @@ mod tests {
     use super::*;
     use crate::{
         CertificateChain,
-        tests::{CERT_CHAIN_GOOGLE_COM, CERT_GOOGLE_COM, PRE_CERT_GOOGLE_COM, get_log_argon2025h2},
+        tests::{CERT_CHAIN_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
     };
 
+    const CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-cert.pem");
+    const PRE_CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-precert.pem");
     const GOOGLE_COM_FINGERPRINT: &str = "4B:4F:46:F8:E1:78:B4:08:F9:A7:AF:2B:CE:31:0A:6A:9F:BD:59:37:BD:F8:5B:C5:9B:45:D6:3C:81:61:73:67";
 
     #[test]

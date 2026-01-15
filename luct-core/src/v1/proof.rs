@@ -60,11 +60,15 @@ mod tests {
     use crate::{
         CertificateChain,
         tests::{
-            ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, GOOGLE_AUDIT_PROOF,
-            GOOGLE_STH_CONSISTENCY_PROOF, get_log_argon2025h2,
+            ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, get_log_argon2025h2,
         },
         v1::responses::{GetProofByHashResponse, GetSthResponse},
     };
+
+    const GOOGLE_AUDIT_PROOF: &str =
+        include_str!("../../../testdata/google-precert-audit-proof.json");
+    const GOOGLE_STH_CONSISTENCY_PROOF: &str =
+        include_str!("../../../testdata/sth-consistency-proof.json");
 
     const ARGON2025H2_STH_0506: &str = "{
         \"tree_size\":1329315675,

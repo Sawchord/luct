@@ -105,10 +105,10 @@ impl Decode for TimestampedEntry {
 mod tests {
     use super::*;
     use crate::{
-        CertificateChain,
-        tests::{CERT_CHAIN_GOOGLE_COM, GOOGLE_GET_ENTRY},
-        v1::responses::GetEntriesResponse,
+        CertificateChain, tests::CERT_CHAIN_GOOGLE_COM, v1::responses::GetEntriesResponse,
     };
+
+    const GOOGLE_GET_ENTRY: &str = include_str!("../../../testdata/google-entry.json");
 
     #[test]
     fn parse_get_entry_response() {
