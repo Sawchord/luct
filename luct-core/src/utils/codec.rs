@@ -21,10 +21,8 @@ pub enum CodecError {
     #[error("The variant used here is invalid")]
     UnexpectedVariant,
 
-    #[error("A field contained {received} bytes (maximum is {max} bytes)")]
-    VectorTooLong { received: usize, max: usize },
-    // #[error("A field contained {received} bytes (expected {expected} bytes)")]
-    // VectorTooShort { received: usize, expected: usize },
+    #[error("A field contained {read} bytes (expected {expected} bytes)")]
+    UnexpectedSize { read: usize, expected: usize },
 }
 
 impl CheckSeverity for CodecError {
@@ -34,7 +32,7 @@ impl CheckSeverity for CodecError {
             CodecError::DerError(_) => Severity::Unsafe,
             CodecError::UnknownVariant(_, _) => Severity::Unsafe,
             CodecError::UnexpectedVariant => Severity::Unsafe,
-            CodecError::VectorTooLong { .. } => Severity::Unsafe,
+            CodecError::UnexpectedSize { .. } => Severity::Unsafe,
         }
     }
 }

@@ -58,9 +58,9 @@ impl<L: CodecVecLen> Encode for CodecVec<L> {
             .0
             .len()
             .try_into()
-            .map_err(|_| CodecError::VectorTooLong {
-                received: len,
-                max: L::MAX,
+            .map_err(|_| CodecError::UnexpectedSize {
+                read: len,
+                expected: L::MAX,
             })?;
         len.encode(&mut writer)?;
 
@@ -73,9 +73,9 @@ impl<L: CodecVecLen> Encode for CodecVec<L> {
 impl<L: CodecVecLen> Decode for CodecVec<L> {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
         let len = L::decode(&mut reader)?;
-        let len: usize = len.try_into().map_err(|_| CodecError::VectorTooLong {
-            received: 0,
-            max: L::MAX,
+        let len: usize = len.try_into().map_err(|_| CodecError::UnexpectedSize {
+            read: 0,
+            expected: L::MAX,
         })?;
 
         let mut buf = vec![0u8; len];
