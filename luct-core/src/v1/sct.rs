@@ -5,8 +5,8 @@ use crate::{
     tree::HashOutput,
     utils::{
         codec::{CodecError, Decode, Encode},
+        codec_vec::CodecVec,
         metered::MeteredRead,
-        vec::CodecVec,
     },
     v1::{LogEntry, LogId, SignatureType},
 };

@@ -1,6 +1,6 @@
 use crate::utils::{
     codec::{CodecError, Decode, Encode},
-    vec::CodecVecLen,
+    codec_vec::CodecVecLen,
 };
 use std::{
     io::{Read, Write},

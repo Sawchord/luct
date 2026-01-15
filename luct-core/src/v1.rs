@@ -1,8 +1,8 @@
 use crate::utils::{
     codec::{CodecError, Decode, Encode},
+    codec_vec::CodecVec,
     hex_with_colons,
     u24::U24,
-    vec::CodecVec,
 };
 pub(crate) use sct::SctList;
 use serde::{Deserialize, Serialize};

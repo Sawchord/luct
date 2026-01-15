@@ -3,7 +3,7 @@ use crate::{
     store::Hashable,
     utils::{
         codec::{CodecError, Decode, Encode},
-        vec::CodecVec,
+        codec_vec::CodecVec,
     },
     v1::LogEntry,
 };

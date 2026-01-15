@@ -2,7 +2,7 @@ use crate::{
     CheckSeverity, Severity,
     utils::{
         codec::{CodecError, Decode, Encode},
-        vec::CodecVec,
+        codec_vec::CodecVec,
     },
 };
 use p256::{
