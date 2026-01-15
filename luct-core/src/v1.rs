@@ -15,6 +15,7 @@ use x509_cert::{
     der::{Decode as DerDecode, Encode as DerEncode},
 };
 
+pub(crate) mod extension;
 pub(crate) mod proof;
 pub mod responses;
 pub(crate) mod roots;

@@ -186,6 +186,9 @@ mod tests {
     const PRE_CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-precert.pem");
     const GOOGLE_COM_FINGERPRINT: &str = "4B:4F:46:F8:E1:78:B4:08:F9:A7:AF:2B:CE:31:0A:6A:9F:BD:59:37:BD:F8:5B:C5:9B:45:D6:3C:81:61:73:67";
 
+    // This certificate contains an sct with leaf index
+    const CERT_GEOMYS_ORG: &str = include_str!("../../testdata/geomys-org.pem");
+
     #[test]
     fn sct_list_codec_rountrip() {
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
@@ -231,5 +234,15 @@ mod tests {
         let cert = Certificate::from_pem(CERT_GOOGLE_COM).unwrap();
         let fp = cert.fingerprint_sha256();
         assert_eq!(format!("{fp}"), GOOGLE_COM_FINGERPRINT);
+    }
+
+    #[test]
+    fn leaf_index() {
+        let cert = Certificate::from_pem(CERT_GEOMYS_ORG).unwrap();
+        let scts = cert.extract_scts_v1().unwrap();
+
+        assert_eq!(scts.len(), 2);
+        assert_eq!(scts[0].extensions.len_bytes(), 0);
+        assert_ne!(scts[1].extensions.len_bytes(), 0);
     }
 }
