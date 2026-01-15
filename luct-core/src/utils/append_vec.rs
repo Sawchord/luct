@@ -1,8 +1,8 @@
-use crate::utils::{
-    codec::{CodecError, Decode, Encode},
-    metered::MeteredRead,
+use crate::utils::codec::{CodecError, Decode, Encode};
+use std::{
+    collections::VecDeque,
+    io::{Cursor, ErrorKind, IoSlice, Read, Write},
 };
-use std::io::{Cursor, ErrorKind, IoSlice, Read, Write};
 
 // TODO: Split the functionality into a length delimited version and an unlimited version
 
@@ -87,16 +87,9 @@ impl<I: Decode> Decode for AppendVec<I> {
                 Err(err) => return Err(err),
             };
 
-            let mut reader = MeteredRead::new(&mut reader);
-
+            let mut reader = (&mut reader).take(len.into());
             let sct = I::decode(&mut reader)?;
             items.push(sct);
-
-            let read = reader.get_meter();
-            let expected = len.into();
-            if read != expected {
-                return Err(CodecError::UnexpectedSize { read, expected });
-            }
         }
 
         Ok(Self(items))

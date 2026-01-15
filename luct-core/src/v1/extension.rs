@@ -1,16 +1,37 @@
 use crate::utils::{
+    append_vec::AppendVec,
     codec::{CodecError, Decode, Encode},
-    codec_vec::CodecVec,
 };
 use std::io::{Read, Write};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CtExtensions(Vec<CtExtension>);
+pub struct CtExtensions(AppendVec<CtExtension>);
+
+impl CtExtensions {
+    pub fn get_leaf_index(&self) -> Option<LeafIndex> {
+        self.0.as_ref().iter().find_map(|ext| match ext {
+            CtExtension::LeafIndex(leaf_index) => Some(leaf_index.clone()),
+            _ => None,
+        })
+    }
+}
+
+impl Encode for CtExtensions {
+    fn encode(&self, writer: impl Write) -> Result<(), CodecError> {
+        self.0.encode(writer)
+    }
+}
+
+impl Decode for CtExtensions {
+    fn decode(reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self(AppendVec::decode(reader)?))
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum CtExtension {
     LeafIndex(LeafIndex),
-    Unknown(u8, CodecVec<u8>),
+    Unknown(u8, Vec<u8>),
 }
 
 impl Encode for CtExtension {
@@ -22,7 +43,7 @@ impl Encode for CtExtension {
             }
             CtExtension::Unknown(discriminant, bytes) => {
                 writer.write_all(&[*discriminant])?;
-                bytes.encode(writer)?
+                writer.write_all(bytes)?
             }
         }
 
@@ -41,7 +62,8 @@ impl Decode for CtExtension {
                 Ok(Self::LeafIndex(leaf_index))
             }
             discriminant => {
-                let bytes = CodecVec::decode(reader)?;
+                let mut bytes = vec![];
+                reader.read_to_end(&mut bytes)?;
                 Ok(Self::Unknown(discriminant, bytes))
             }
         }
@@ -64,5 +86,26 @@ impl Decode for LeafIndex {
         let mut bytes: [u8; 8] = [0; 8];
         reader.read_exact(&mut bytes[3..8])?;
         Ok(Self(u64::from_be_bytes(bytes)))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use rand::{Rng, rng};
+    use std::io::Cursor;
+
+    #[test]
+    fn ct_unknown_extensions_round_trip() {
+        let mut vec: Vec<u8> = vec![];
+        for i in 1..=10 {
+            let size = i * 10;
+            vec.extend_from_slice(&(size as u16).to_be_bytes());
+            vec.extend(rng().random_iter::<u8>().take(size));
+        }
+
+        let mut reader = Cursor::new(vec);
+        let extensions = CtExtensions::decode(&mut reader).unwrap();
+        assert_eq!(extensions.0.as_ref().len(), 10);
     }
 }

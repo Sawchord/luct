@@ -4,7 +4,6 @@ pub(crate) mod append_vec;
 pub(crate) mod base64;
 pub(crate) mod codec;
 pub(crate) mod codec_vec;
-pub(crate) mod metered;
 pub(crate) mod u24;
 
 pub(crate) fn hex_with_colons(data: &[u8]) -> String {
