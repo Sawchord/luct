@@ -96,7 +96,7 @@ mod tests {
     use std::io::Cursor;
 
     #[test]
-    fn ct_unknown_extensions_round_trip() {
+    fn ct_unknown_extensions_roundtrip() {
         let mut vec: Vec<u8> = vec![];
         for i in 1..=10 {
             let size = i * 10;
@@ -104,8 +104,41 @@ mod tests {
             vec.extend(rng().random_iter::<u8>().take(size));
         }
 
-        let mut reader = Cursor::new(vec);
+        let mut reader = Cursor::new(&vec);
         let extensions = CtExtensions::decode(&mut reader).unwrap();
         assert_eq!(extensions.0.as_ref().len(), 10);
+
+        let mut writer = Cursor::new(vec![]);
+        extensions.encode(&mut writer).unwrap();
+
+        assert_eq!(writer.into_inner(), vec);
+    }
+
+    #[test]
+    fn parse_leaf_index_extension() {
+        let mut vec: Vec<u8> = vec![];
+        for i in 1..5 {
+            let size = i * 10;
+            vec.extend_from_slice(&(size as u16).to_be_bytes());
+            vec.extend(rng().random_iter::<u8>().take(size));
+        }
+
+        vec.extend_from_slice(&[0, 6, 0, 0, 0, 0, 1, 1]);
+
+        for i in 5..=10 {
+            let size = i * 10;
+            vec.extend_from_slice(&(size as u16).to_be_bytes());
+            vec.extend(rng().random_iter::<u8>().take(size));
+        }
+
+        let mut reader = Cursor::new(&vec);
+        let extensions = CtExtensions::decode(&mut reader).unwrap();
+        assert_eq!(extensions.0.as_ref().len(), 11);
+        assert_eq!(extensions.get_leaf_index(), Some(LeafIndex(257)));
+
+        let mut writer = Cursor::new(vec![]);
+        extensions.encode(&mut writer).unwrap();
+
+        assert_eq!(writer.into_inner(), vec);
     }
 }
