@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::VecDeque,
     io::{Cursor, ErrorKind, IoSlice, Read, Write},
-    ops::{Deref, DerefMut},
 };
 
 /// A vector that works by appending multiple length delimited structures
@@ -11,7 +10,6 @@ use std::{
 /// Note that this will continue reading until EOF, so it needs to be at the end of
 /// a reader of the reader needs to be limited by [`Read::take`].
 ///
-/// See also [`SizedAppendVec`].
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct AppendVec<I>(Vec<I>);
 
@@ -63,56 +61,6 @@ impl<I: Decode> Decode for AppendVec<I> {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub(crate) struct SizedVal<I>(I);
-
-impl<I> Deref for SizedVal<I> {
-    type Target = I;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<I> DerefMut for SizedVal<I> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl<I> From<I> for SizedVal<I> {
-    fn from(value: I) -> Self {
-        Self(value)
-    }
-}
-
-impl<I: Encode> Encode for SizedVal<I> {
-    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        let mut bytes = Cursor::new(vec![0, 0]);
-        bytes.set_position(2);
-        self.0.encode(&mut bytes)?;
-        let mut bytes = bytes.into_inner();
-
-        let len = bytes.len() - 2;
-        let len = len.to_be_bytes();
-        bytes[0] = len[0];
-        bytes[1] = len[1];
-
-        Ok(writer.write_all(&bytes)?)
-    }
-}
-
-impl<I: Decode> Decode for SizedVal<I> {
-    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
-        let len = u16::decode(&mut reader)?;
-
-        let mut reader = (&mut reader).take(len.into());
-        let item = I::decode(&mut reader)?;
-
-        Ok(Self(item))
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct SizedAppendVec<I>(AppendVec<I>);
 
 impl<I> AsRef<[I]> for SizedAppendVec<I> {
@@ -141,13 +89,13 @@ impl<I> Default for SizedAppendVec<I> {
 
 impl<I: Encode> Encode for SizedAppendVec<I> {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
-        let (bytes, encoded_scts) = encode_to_io_slice(&self.0)?;
+        let (length, encoded_scts) = encode_to_io_slice(&self.0)?;
 
-        let bytes: u16 = bytes.try_into().map_err(|_| CodecError::UnexpectedSize {
-            read: bytes,
+        let length: u16 = length.try_into().map_err(|_| CodecError::UnexpectedSize {
+            read: length,
             expected: u16::MAX as usize,
         })?;
-        bytes.encode(&mut writer)?;
+        length.encode(&mut writer)?;
 
         write_all_vec(writer, &encoded_scts)
     }
@@ -155,12 +103,7 @@ impl<I: Encode> Encode for SizedAppendVec<I> {
 
 impl<I: Decode> Decode for SizedAppendVec<I> {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
-        let len = match u16::decode(&mut reader) {
-            Ok(len) => len,
-            Err(CodecError::IoError(ErrorKind::UnexpectedEof)) => return Ok(Self::default()),
-            Err(err) => return Err(err),
-        };
-
+        let len = u16::decode(&mut reader)?;
         let reader = reader.take(len.into());
         let vec = AppendVec::decode(reader)?;
 
@@ -168,6 +111,7 @@ impl<I: Decode> Decode for SizedAppendVec<I> {
     }
 }
 
+// TODO: Could be written into one flat vector actually
 fn encode_to_io_slice<I: Encode>(
     items: &AppendVec<I>,
 ) -> Result<(usize, VecDeque<Vec<u8>>), CodecError> {
@@ -175,16 +119,10 @@ fn encode_to_io_slice<I: Encode>(
     let mut slices = VecDeque::new();
 
     for item in &items.0 {
-        let mut buf = Cursor::new(vec![0, 0]);
-        buf.set_position(2);
+        let mut buf = Cursor::new(vec![]);
 
         item.encode(&mut buf)?;
-        let mut buf = buf.into_inner();
-
-        // Encode the length of the field
-        let len = ((buf.len() - 2) as u16).to_be_bytes();
-        buf[0] = len[0];
-        buf[1] = len[1];
+        let buf = buf.into_inner();
 
         // Add to byte counter for field size
         bytes += buf.len();
