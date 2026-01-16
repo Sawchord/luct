@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use std::{
     collections::VecDeque,
     io::{Cursor, ErrorKind, IoSlice, Read, Write},
+    ops::{Deref, DerefMut},
 };
 
 /// A vector that works by appending multiple length delimited structures
@@ -50,18 +51,64 @@ impl<I: Decode> Decode for AppendVec<I> {
         let mut items = vec![];
 
         loop {
-            let len = match u16::decode(&mut reader) {
-                Ok(len) => len,
+            match I::decode(&mut reader) {
+                Ok(item) => items.push(item),
                 Err(CodecError::IoError(ErrorKind::UnexpectedEof)) => break,
                 Err(err) => return Err(err),
-            };
-
-            let mut reader = (&mut reader).take(len.into());
-            let sct = I::decode(&mut reader)?;
-            items.push(sct);
+            }
         }
 
         Ok(Self(items))
+    }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct SizedVal<I>(I);
+
+impl<I> Deref for SizedVal<I> {
+    type Target = I;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<I> DerefMut for SizedVal<I> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.0
+    }
+}
+
+impl<I> From<I> for SizedVal<I> {
+    fn from(value: I) -> Self {
+        Self(value)
+    }
+}
+
+impl<I: Encode> Encode for SizedVal<I> {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        let mut bytes = Cursor::new(vec![0, 0]);
+        bytes.set_position(2);
+        self.0.encode(&mut bytes)?;
+        let mut bytes = bytes.into_inner();
+
+        let len = bytes.len() - 2;
+        let len = len.to_be_bytes();
+        bytes[0] = len[0];
+        bytes[1] = len[1];
+
+        Ok(writer.write_all(&bytes)?)
+    }
+}
+
+impl<I: Decode> Decode for SizedVal<I> {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        let len = u16::decode(&mut reader)?;
+
+        let mut reader = (&mut reader).take(len.into());
+        let item = I::decode(&mut reader)?;
+
+        Ok(Self(item))
     }
 }
 

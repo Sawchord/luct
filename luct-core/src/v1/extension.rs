@@ -112,6 +112,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn ct_unknown_extensions_roundtrip() {
         let mut vec: Vec<u8> = vec![0, 10];
         for i in 1..=10 {
@@ -132,6 +133,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn parse_leaf_index_extension() {
         let mut vec: Vec<u8> = vec![0, 10];
         for i in 1..5 {

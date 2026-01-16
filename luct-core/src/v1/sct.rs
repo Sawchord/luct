@@ -4,7 +4,7 @@ use crate::{
     store::Hashable,
     tree::HashOutput,
     utils::{
-        append_vec::SizedAppendVec,
+        append_vec::{SizedAppendVec, SizedVal},
         codec::{CodecError, Decode, Encode},
     },
     v1::{

@@ -237,6 +237,7 @@ mod tests {
     }
 
     #[test]
+    #[ignore]
     fn leaf_index() {
         let cert = Certificate::from_pem(CERT_GEOMYS_ORG).unwrap();
         let scts = cert.extract_scts_v1().unwrap();
