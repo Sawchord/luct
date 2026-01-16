@@ -4,11 +4,13 @@ use crate::{
     store::Hashable,
     tree::HashOutput,
     utils::{
-        append_vec::LimitedAppendVec,
+        append_vec::SizedAppendVec,
         codec::{CodecError, Decode, Encode},
-        codec_vec::CodecVec,
     },
-    v1::{LogEntry, LogId, SignatureType},
+    v1::{
+        LogEntry, LogId, SignatureType,
+        extension::{CtExtensions, LeafIndex},
+    },
 };
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -37,12 +39,12 @@ impl CtLog {
 
 /// See RFC 6962 3.2
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct SctList(LimitedAppendVec<SignedCertificateTimestamp>);
+pub(crate) struct SctList(SizedAppendVec<SignedCertificateTimestamp>);
 
 impl SctList {
     #[allow(dead_code)]
     pub fn new(scts: Vec<SignedCertificateTimestamp>) -> Self {
-        Self(LimitedAppendVec::from(scts))
+        Self(SizedAppendVec::from(scts))
     }
 
     pub fn into_inner(self) -> Vec<SignedCertificateTimestamp> {
@@ -58,7 +60,7 @@ impl Encode for SctList {
 
 impl Decode for SctList {
     fn decode(reader: impl Read) -> Result<Self, CodecError> {
-        Ok(Self(LimitedAppendVec::decode(reader)?))
+        Ok(Self(SizedAppendVec::decode(reader)?))
     }
 }
 
@@ -70,7 +72,7 @@ pub struct SignedCertificateTimestamp {
     pub(crate) sct_version: Version,
     pub(crate) id: LogId,
     pub(crate) timestamp: u64,
-    pub(crate) extensions: CodecVec<u16>,
+    pub(crate) extensions: CtExtensions,
     pub(crate) signature: Signature<CertificateTimeStamp>,
 }
 
@@ -81,6 +83,10 @@ impl SignedCertificateTimestamp {
 
     pub fn timestamp(&self) -> u64 {
         self.timestamp
+    }
+
+    pub fn leaf_index(&self) -> Option<LeafIndex> {
+        self.extensions.leaf_index()
     }
 }
 
@@ -101,7 +107,7 @@ impl Decode for SignedCertificateTimestamp {
             sct_version: Version::decode(&mut reader)?,
             id: LogId::decode(&mut reader)?,
             timestamp: u64::decode(&mut reader)?,
-            extensions: CodecVec::decode(&mut reader)?,
+            extensions: CtExtensions::decode(&mut reader)?,
             signature: Signature::decode(&mut reader)?,
         })
     }
@@ -122,7 +128,7 @@ pub(crate) struct CertificateTimeStamp {
     // SignatureType signature_type = certificate_timestamp;
     timestamp: u64,
     entry: LogEntry,
-    extensions: CodecVec<u16>,
+    extensions: CtExtensions,
 }
 
 impl Encode for CertificateTimeStamp {
@@ -146,7 +152,7 @@ impl Decode for CertificateTimeStamp {
         }
         let timestamp = u64::decode(&mut reader)?;
         let entry = LogEntry::decode(&mut reader)?;
-        let extensions = CodecVec::decode(&mut reader)?;
+        let extensions = CtExtensions::decode(&mut reader)?;
 
         Ok(Self {
             sct_version,

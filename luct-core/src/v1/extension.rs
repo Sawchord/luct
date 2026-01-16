@@ -1,14 +1,16 @@
 use crate::utils::{
-    append_vec::AppendVec,
+    append_vec::SizedAppendVec,
     codec::{CodecError, Decode, Encode},
+    codec_vec::CodecVec,
 };
+use serde::{Deserialize, Serialize};
 use std::io::{Read, Write};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct CtExtensions(AppendVec<CtExtension>);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct CtExtensions(SizedAppendVec<CtExtension>);
 
 impl CtExtensions {
-    pub fn get_leaf_index(&self) -> Option<LeafIndex> {
+    pub fn leaf_index(&self) -> Option<LeafIndex> {
         self.0.as_ref().iter().find_map(|ext| match ext {
             CtExtension::LeafIndex(leaf_index) => Some(leaf_index.clone()),
             _ => None,
@@ -24,26 +26,26 @@ impl Encode for CtExtensions {
 
 impl Decode for CtExtensions {
     fn decode(reader: impl Read) -> Result<Self, CodecError> {
-        Ok(Self(AppendVec::decode(reader)?))
+        Ok(Self(SizedAppendVec::decode(reader)?))
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum CtExtension {
     LeafIndex(LeafIndex),
-    Unknown(u8, Vec<u8>),
+    Unknown(u8, CodecVec<u8>),
 }
 
 impl Encode for CtExtension {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         match self {
             CtExtension::LeafIndex(leaf_index) => {
-                writer.write_all(&[0])?;
-                leaf_index.encode(writer)?;
+                5u16.encode(&mut writer)?;
+                leaf_index.encode(&mut writer)?;
             }
             CtExtension::Unknown(discriminant, bytes) => {
                 writer.write_all(&[*discriminant])?;
-                writer.write_all(bytes)?
+                bytes.encode(&mut writer)?;
             }
         }
 
@@ -58,19 +60,25 @@ impl Decode for CtExtension {
 
         match byte[0] {
             0 => {
-                let leaf_index = LeafIndex::decode(reader)?;
+                let size = u16::decode(&mut reader)?;
+                if size != 5 {
+                    return Err(CodecError::UnexpectedSize {
+                        read: size as usize,
+                        expected: 5,
+                    });
+                }
+                let leaf_index = LeafIndex::decode(&mut reader)?;
                 Ok(Self::LeafIndex(leaf_index))
             }
             discriminant => {
-                let mut bytes = vec![];
-                reader.read_to_end(&mut bytes)?;
+                let bytes = CodecVec::decode(&mut reader)?;
                 Ok(Self::Unknown(discriminant, bytes))
             }
         }
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LeafIndex(u64);
 
 impl Encode for LeafIndex {
@@ -96,10 +104,19 @@ mod tests {
     use std::io::Cursor;
 
     #[test]
+    fn empty_extension() {
+        let vec = vec![];
+        let mut reader = Cursor::new(&vec);
+        let extensions = CtExtensions::decode(&mut reader).unwrap();
+        assert!(extensions.0.as_ref().is_empty());
+    }
+
+    #[test]
     fn ct_unknown_extensions_roundtrip() {
-        let mut vec: Vec<u8> = vec![];
+        let mut vec: Vec<u8> = vec![0, 10];
         for i in 1..=10 {
             let size = i * 10;
+            vec.push(rng().random_range(1u8..=255));
             vec.extend_from_slice(&(size as u16).to_be_bytes());
             vec.extend(rng().random_iter::<u8>().take(size));
         }
@@ -116,7 +133,7 @@ mod tests {
 
     #[test]
     fn parse_leaf_index_extension() {
-        let mut vec: Vec<u8> = vec![];
+        let mut vec: Vec<u8> = vec![0, 10];
         for i in 1..5 {
             let size = i * 10;
             vec.extend_from_slice(&(size as u16).to_be_bytes());
@@ -134,7 +151,7 @@ mod tests {
         let mut reader = Cursor::new(&vec);
         let extensions = CtExtensions::decode(&mut reader).unwrap();
         assert_eq!(extensions.0.as_ref().len(), 11);
-        assert_eq!(extensions.get_leaf_index(), Some(LeafIndex(257)));
+        assert_eq!(extensions.leaf_index(), Some(LeafIndex(257)));
 
         let mut writer = Cursor::new(vec![]);
         extensions.encode(&mut writer).unwrap();

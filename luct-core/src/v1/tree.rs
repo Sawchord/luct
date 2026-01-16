@@ -1,11 +1,8 @@
 use crate::{
     Version,
     store::Hashable,
-    utils::{
-        codec::{CodecError, Decode, Encode},
-        codec_vec::CodecVec,
-    },
-    v1::LogEntry,
+    utils::codec::{CodecError, Decode, Encode},
+    v1::{LogEntry, extension::CtExtensions},
 };
 use sha2::{Digest, Sha256};
 use std::io::{Cursor, Read, Write};
@@ -79,7 +76,7 @@ impl Decode for Leaf {
 pub(crate) struct TimestampedEntry {
     pub(crate) timestamp: u64,
     pub(crate) log_entry: LogEntry,
-    pub(crate) extensions: CodecVec<u16>,
+    pub(crate) extensions: CtExtensions,
 }
 
 impl Encode for TimestampedEntry {
@@ -96,7 +93,7 @@ impl Decode for TimestampedEntry {
         Ok(Self {
             timestamp: u64::decode(&mut reader)?,
             log_entry: LogEntry::decode(&mut reader)?,
-            extensions: CodecVec::decode(&mut reader)?,
+            extensions: CtExtensions::decode(&mut reader)?,
         })
     }
 }

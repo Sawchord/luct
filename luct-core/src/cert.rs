@@ -242,7 +242,7 @@ mod tests {
         let scts = cert.extract_scts_v1().unwrap();
 
         assert_eq!(scts.len(), 2);
-        assert_eq!(scts[0].extensions.len_bytes(), 0);
-        assert_ne!(scts[1].extensions.len_bytes(), 0);
+        assert!(scts[0].extensions.leaf_index().is_none());
+        assert!(scts[1].extensions.leaf_index().is_some());
     }
 }

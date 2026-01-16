@@ -1,13 +1,17 @@
 use crate::utils::codec::{CodecError, Decode, Encode};
+use serde::{Deserialize, Serialize};
 use std::{
     collections::VecDeque,
     io::{Cursor, ErrorKind, IoSlice, Read, Write},
 };
 
-// TODO: Split the functionality into a length delimited version and an unlimited version
-
 /// A vector that works by appending multiple length delimited structures
-#[derive(Debug, Clone, PartialEq, Eq)]
+///
+/// Note that this will continue reading until EOF, so it needs to be at the end of
+/// a reader of the reader needs to be limited by [`Read::take`].
+///
+/// See also [`SizedAppendVec`].
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub(crate) struct AppendVec<I>(Vec<I>);
 
 impl<I> AsRef<[I]> for AppendVec<I> {
@@ -25,6 +29,12 @@ impl<I> From<Vec<I>> for AppendVec<I> {
 impl<I> From<AppendVec<I>> for Vec<I> {
     fn from(value: AppendVec<I>) -> Self {
         value.0
+    }
+}
+
+impl<I> Default for AppendVec<I> {
+    fn default() -> Self {
+        Self(vec![])
     }
 }
 
@@ -55,28 +65,34 @@ impl<I: Decode> Decode for AppendVec<I> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct LimitedAppendVec<I>(AppendVec<I>);
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub(crate) struct SizedAppendVec<I>(AppendVec<I>);
 
-impl<I> AsRef<[I]> for LimitedAppendVec<I> {
+impl<I> AsRef<[I]> for SizedAppendVec<I> {
     fn as_ref(&self) -> &[I] {
         self.0.as_ref()
     }
 }
 
-impl<I> From<Vec<I>> for LimitedAppendVec<I> {
+impl<I> From<Vec<I>> for SizedAppendVec<I> {
     fn from(value: Vec<I>) -> Self {
         Self(value.into())
     }
 }
 
-impl<I> From<LimitedAppendVec<I>> for Vec<I> {
-    fn from(value: LimitedAppendVec<I>) -> Self {
+impl<I> From<SizedAppendVec<I>> for Vec<I> {
+    fn from(value: SizedAppendVec<I>) -> Self {
         value.0.into()
     }
 }
 
-impl<I: Encode> Encode for LimitedAppendVec<I> {
+impl<I> Default for SizedAppendVec<I> {
+    fn default() -> Self {
+        Self(AppendVec::default())
+    }
+}
+
+impl<I: Encode> Encode for SizedAppendVec<I> {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
         let (bytes, encoded_scts) = encode_to_io_slice(&self.0)?;
 
@@ -90,12 +106,18 @@ impl<I: Encode> Encode for LimitedAppendVec<I> {
     }
 }
 
-impl<I: Decode> Decode for LimitedAppendVec<I> {
+impl<I: Decode> Decode for SizedAppendVec<I> {
     fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
-        let length: u16 = u16::decode(&mut reader)?;
-        let reader = reader.take(length.into());
+        let len = match u16::decode(&mut reader) {
+            Ok(len) => len,
+            Err(CodecError::IoError(ErrorKind::UnexpectedEof)) => return Ok(Self::default()),
+            Err(err) => return Err(err),
+        };
 
-        Ok(Self(AppendVec::decode(reader)?))
+        let reader = reader.take(len.into());
+        let vec = AppendVec::decode(reader)?;
+
+        Ok(Self(vec))
     }
 }
 

@@ -32,13 +32,6 @@ impl CodecVecLen for u64 {
 #[serde_as]
 pub(crate) struct CodecVec<L>(#[serde_as(as = "Bytes")] Vec<u8>, PhantomData<L>);
 
-// TODO: Remove?
-impl<L> CodecVec<L> {
-    pub(crate) fn len_bytes(&self) -> usize {
-        self.0.len()
-    }
-}
-
 impl<L> AsRef<[u8]> for CodecVec<L> {
     fn as_ref(&self) -> &[u8] {
         &self.0
