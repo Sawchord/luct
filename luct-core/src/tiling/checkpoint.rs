@@ -3,7 +3,7 @@ use crate::{
     tree::{HashOutput, TreeHead},
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
-use signed_note::{Note, NoteError, Signature};
+use signed_note::Signature;
 use thiserror::Error;
 
 impl CtLog {
@@ -36,10 +36,15 @@ impl Checkpoint {
     pub fn parse_checkpoint(data: &str) -> Result<Self, ParseCheckpointError> {
         let mut data = data.lines();
 
-        let origin = data.next().ok_or(ParseCheckpointError::MissingField {
-            field_name: "origin",
-        })?;
+        // Parse the origin
+        let origin = data
+            .next()
+            .ok_or(ParseCheckpointError::MissingField {
+                field_name: "origin",
+            })?
+            .to_string();
 
+        // Parse the tree size
         let tree_size = data.next().ok_or(ParseCheckpointError::MissingField {
             field_name: "tree_size",
         })?;
@@ -50,12 +55,10 @@ impl Checkpoint {
                     field_name: "tree_size",
                 })?;
 
-        let root_hash = data
-            .next()
-            //.map(|root_hash| BASE64_STANDARD.decode(root_hash))
-            .ok_or(ParseCheckpointError::MissingField {
-                field_name: "root_hash",
-            })?;
+        // Parse the root hash
+        let root_hash = data.next().ok_or(ParseCheckpointError::MissingField {
+            field_name: "root_hash",
+        })?;
         let root_hash = BASE64_STANDARD.decode(root_hash).map_err(|_| {
             ParseCheckpointError::MalformedField {
                 field_name: "root_hash",
@@ -68,12 +71,33 @@ impl Checkpoint {
                     field_name: "root_hash",
                 })?;
 
-        todo!()
+        // Check that there is an empty line
+        let separator = data.next().ok_or(ParseCheckpointError::NoSignatures)?;
+        if !separator.is_empty() {
+            return Err(ParseCheckpointError::UnexpectedFields);
+        }
+
+        // Parse the signatures
+        let signatures = data
+            .enumerate()
+            .map(|(index, signature)| {
+                Signature::from_bytes(signature.as_bytes())
+                    .map_err(|_| ParseCheckpointError::MalformedSignature { index })
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+        if signatures.is_empty() {
+            return Err(ParseCheckpointError::NoSignatures);
+        }
+
+        Ok(Self {
+            origin,
+            tree_size,
+            root_hash,
+            signatures,
+        })
     }
 
-    pub fn as_string(&self) -> String {
-        todo!()
-    }
+    // TODO: `as_string` function and roundtrip test
 }
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Error)]
@@ -83,6 +107,29 @@ pub enum ParseCheckpointError {
 
     #[error("{field_name} could not be parsed")]
     MalformedField { field_name: &'static str },
+
+    #[error("Unexpected fields appended to the note. We only expect notes with 3 fields")]
+    UnexpectedFields,
+
+    #[error("The note contains no signatures.")]
+    NoSignatures,
+
+    #[error("The signature at index {index} is malformed")]
+    MalformedSignature { index: usize },
 }
 
-// TODO: Test note parsing and validation
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    const ARCHE2026H1_CHECKPOINT: &str =
+        include_str!("../../../testdata/arche2026h1-signed-note.txt");
+
+    #[test]
+    fn parse_and_validate_checkpoint() {
+        let checkpoint = Checkpoint::parse_checkpoint(ARCHE2026H1_CHECKPOINT).unwrap();
+
+        assert_eq!(checkpoint.origin, "arche2026h1.staging.ct.transparency.dev");
+        assert_eq!(checkpoint.tree_size, 1822167730);
+    }
+}
