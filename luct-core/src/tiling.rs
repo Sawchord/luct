@@ -1,3 +1,4 @@
+mod checkpoint;
 mod data_tile;
 mod tile;
 
