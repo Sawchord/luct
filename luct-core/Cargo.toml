@@ -24,6 +24,7 @@ sha2 = { workspace = true }
 x509-cert = { workspace = true }
 x509-verify = { workspace = true }
 const-oid = { workspace = true }
+signed_note = { workspace = true }
 
 thiserror = { workspace = true }
 itertools = { workspace = true }
