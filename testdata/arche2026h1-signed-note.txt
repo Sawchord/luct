@@ -1,0 +1,11 @@
+arche2026h1.staging.ct.transparency.dev
+1822167730
+FqMvvl+opIdNGueAnE7eTPtlV9Ot53hcarJRzvlwgbA=
+
+— arche2026h1.staging.ct.transparency.dev R58dNgAAAZvBezXbBAMARzBFAiEAjjaxYTgL+bln0TP+Fj3P559mvlNzTzhsRgQL6ysiQkMCICdqPxE71N3/cREFAr+eqColQgpcRYVKNBXkrayeLuNB
+— arche2026h1.staging.ct.transparency.dev cG4TZv22ZPMW7rlnAgZXjczMNh/TUUkGCSwBbUuHS2JaVKrg7Cu/S+XYI0aKNGzUiIticf+EZF+m2DAQMgb9U3QaZg0=
+— transparency.dev/DEV:witness-little-garden 2AQqhwAAAABpaNPEpMWiO8FBCB2ApD6QVN//yy6j1EJcTcVdzgBRq8BsW/bIPWBXGuDInC7kKwhVoTPQpMb7n1YvOhtIGgo2L1pgCw==
+— witness.stagemole.eu Z/euoAAAAABpaNPEgKs3/AjKDMOSH2hBswkv70ZzY3pRd3r8KDia2iPwPr6llmV6NCfwOdxDCHszAKbbJ4pWomGMsh9hqHAWez6pDQ==
+— witness1.smartit.nu/witness1 pIyCDwAAAABpaNPEyuM0ft+GaFTuH5ob5bU2OnltU6HqIJbctFkpHlY+jkX5LsXikq6ksIrmXHEJQUzFQeJTrlRnQETgG/97MYJLCQ==
+— rgdd.se/poc-witness 2wNzLgAAAABpaNPE8AxhNbRUv4xJmxzW7Euzu75kxblXOYHaLudJvZLJRLCg+gAYXZEY7/oBtrY/bqCdF+1bSAqCXuT6awv7JiCzBA==
+— remora.n621.de 2net5wAAAABpaNPE5fOgS+BOSq0u6nBMv3XXcRIAgrZLKaRulDGrdh+TXAzRpOWkcjEXsCCqQVCC1JTBjN2fjnpOjemy+YmPOyWQBw==
