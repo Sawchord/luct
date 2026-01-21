@@ -1,9 +1,11 @@
 use crate::{
-    CtLog, SignatureValidationError,
+    CtLog, LogId, SignatureValidationError,
     tree::{HashOutput, TreeHead},
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
+use sha2::{Digest, Sha256};
 use thiserror::Error;
+use url::Url;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd, Error)]
 pub enum ParseCheckpointError {
@@ -28,7 +30,50 @@ impl CtLog {
         &self,
         checkpoint: &Checkpoint,
     ) -> Result<(), SignatureValidationError> {
+        let origin = Self::url_to_origin(self.config().url())
+            .ok_or(SignatureValidationError::MalformedKey)?;
+        if origin != checkpoint.origin {
+            return Err(SignatureValidationError::MalformedKey);
+        }
+
+        // TODO: Precompute id once during initialization, rather than recomputer it here all the time
+        let id = Self::compute_checkpoint_key_id(&origin, self.log_id());
+        let sigs = checkpoint
+            .signatures
+            .iter()
+            .filter(|sig| sig.name == checkpoint.origin)
+            .filter(|sig| sig.id == id)
+            .collect::<Vec<_>>();
+        if sigs.len() != 1 {
+            return Err(SignatureValidationError::MalformedSignature);
+        }
+        let sig = sigs[0];
+
         todo!()
+    }
+
+    fn compute_checkpoint_key_id(origin: &str, log_id: &LogId) -> [u8; 4] {
+        let mut hash = Sha256::new();
+        hash.update(origin);
+        hash.update([0x0A, 0x05]);
+
+        match log_id {
+            LogId::V1(log_id) => hash.update(log_id.0),
+        }
+
+        let hash: [u8; 32] = hash.finalize().into();
+        let id: [u8; 4] = hash[0..4].try_into().unwrap();
+
+        id
+    }
+
+    fn url_to_origin(url: &Url) -> Option<String> {
+        let path = match url.path() {
+            "/" => "",
+            other => other,
+        };
+
+        url.host_str().map(|host| format!("{}{}", host, path))
     }
 }
 
