@@ -2,6 +2,8 @@ mod checkpoint;
 mod data_tile;
 mod tile;
 
+pub use checkpoint::{Checkpoint, ParseCheckpointError};
+
 pub use data_tile::{DataTile, DataTileId};
 use itertools::Itertools;
 pub use tile::{Tile, TileId};

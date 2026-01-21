@@ -12,7 +12,7 @@ use sha2::{Digest, Sha256};
 use thiserror::Error;
 use url::Url;
 
-#[derive(Debug, Clone, PartialEq, PartialOrd, Error)]
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ParseCheckpointError {
     #[error("No {field_name} contained in the note")]
     MissingField { field_name: &'static str },

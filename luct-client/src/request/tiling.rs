@@ -1,9 +1,24 @@
 use crate::{Client, ClientError, CtClient};
-use luct_core::tiling::{Tile, TileId};
+use luct_core::tiling::{Checkpoint, Tile, TileId};
 use url::Url;
 
 impl<C: Client> CtClient<C> {
-    // TODO: Get sth signed note
+    pub async fn get_checkpoint(&self) -> Result<Checkpoint, ClientError> {
+        self.assert_v1()?;
+        let url = self.get_url("checkpoint")?;
+
+        // Fetch and parse checkpoint
+        let (status, response) = self.client.get(&url, &[]).await?;
+        self.check_status(&url, status, &response)?;
+        let checkpoint = Checkpoint::parse_checkpoint(&response)?;
+
+        // Validate checkpoinmt against key
+        self.log
+            .validate_checkpoint(&checkpoint)
+            .map_err(|err| ClientError::SignatureValidationFailed("STH", err))?;
+
+        Ok(checkpoint)
+    }
 
     pub async fn get_tile(&self, mut tile_id: TileId) -> Result<Tile, ClientError> {
         self.assert_v1()?;
@@ -67,6 +82,13 @@ mod tests {
             url.to_string(),
             "https://storage.googleapis.com/static-ct-staging-arche2026h1-bucket/tile/0/000"
         )
+    }
+
+    #[tokio::test]
+    #[ignore = "Makes an HTTP call, for manual testing only"]
+    async fn get_checkpoint() {
+        let client = get_client();
+        let _ = client.get_checkpoint().await.unwrap();
     }
 
     #[tokio::test]

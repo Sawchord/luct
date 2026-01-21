@@ -1,5 +1,6 @@
 use luct_core::{
     CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
+    tiling::ParseCheckpointError,
 };
 use thiserror::Error;
 use url::Url;
@@ -76,6 +77,9 @@ pub enum ClientError {
     #[error("Request to {url} returned error: {code}: {msg}")]
     ResponseError { url: String, code: u16, msg: String },
 
+    #[error("Failed parsing checkpoint: {0}")]
+    Checkpoint(#[from] ParseCheckpointError),
+
     #[error("The tile that was returned by the log is malformed")]
     MalformedTile,
 }
@@ -101,6 +105,7 @@ impl CheckSeverity for ClientError {
             ClientError::AuditProofError => Severity::Unsafe,
             ClientError::ConnectionError(_) => Severity::Inconclusive,
             ClientError::ResponseError { .. } => Severity::Inconclusive,
+            ClientError::Checkpoint(_) => Severity::Unsafe,
             ClientError::MalformedTile => Severity::Unsafe,
         }
     }
