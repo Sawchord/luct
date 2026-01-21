@@ -1,12 +1,12 @@
 use crate::{
-    store::{Hashable, IndexedStore, Store},
+    store::{AsyncStore, Hashable, Store},
     tree::{HashOutput, Node, NodeKey, Tree, TreeHead},
 };
+use futures::future::join_all;
 
 impl<N, L, V> Tree<N, L, V>
 where
     N: Store<NodeKey, HashOutput>,
-    L: IndexedStore<V>,
     V: Hashable,
 {
     /// This follows RFC 9162 2.1.4.1
@@ -19,38 +19,71 @@ where
             return None;
         }
 
-        let tree_size = second.tree_size;
-
-        let mut n = NodeKey::full_range(tree_size);
-        let mut m = first.tree_size;
-        let mut known = true;
-
-        let mut path = vec![];
-
-        while m + n.start != n.end {
-            let (left, right) = n.split();
-            if m <= right.start {
-                let elem = self.nodes.get(&right)?;
-                path.push(elem);
-                n = left;
-            } else {
-                let elem = self.nodes.get(&left)?;
-                path.push(elem);
-
-                known = false;
-                m -= right.start;
-                n = right;
-            }
-        }
-
-        if !known {
-            let elem = self.nodes.get(&n)?;
-            path.push(elem);
-        }
+        let path = get_consistency_proof(first, second, |key| self.nodes.get(&key));
+        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
 
         path.reverse();
         Some(ConsistencyProof { path })
     }
+}
+
+impl<N, L, V> Tree<N, L, V>
+where
+    N: AsyncStore<NodeKey, HashOutput>,
+    V: Hashable,
+{
+    pub async fn get_consistency_proof_async(
+        &self,
+        first: &TreeHead,
+        second: &TreeHead,
+    ) -> Option<ConsistencyProof> {
+        if first.tree_size > second.tree_size {
+            return None;
+        }
+
+        let path = get_consistency_proof(first, second, |key| self.nodes.get(key));
+        let path = join_all(path).await;
+        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
+
+        path.reverse();
+        Some(ConsistencyProof { path })
+    }
+}
+
+fn get_consistency_proof<F, O>(first: &TreeHead, second: &TreeHead, get: F) -> Vec<O>
+where
+    F: Fn(NodeKey) -> O,
+{
+    let tree_size = second.tree_size;
+
+    let mut n = NodeKey::full_range(tree_size);
+    let mut m = first.tree_size;
+    let mut known = true;
+
+    let mut path = vec![];
+
+    while m + n.start != n.end {
+        let (left, right) = n.split();
+        if m <= right.start {
+            let elem = get(right);
+            path.push(elem);
+            n = left;
+        } else {
+            let elem = get(left);
+            path.push(elem);
+
+            known = false;
+            m -= right.start;
+            n = right;
+        }
+    }
+
+    if !known {
+        let elem = get(n);
+        path.push(elem);
+    }
+
+    path
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
