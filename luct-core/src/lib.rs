@@ -97,6 +97,11 @@ impl CtLogConfig {
         &self.tile_url
     }
 
+    /// Return `true`, if the `tile_url` is set, `false` otherwise
+    pub fn is_tiling(&self) -> bool {
+        self.tile_url.is_some()
+    }
+
     /// Return the [`Version`] of this log
     pub fn version(&self) -> &Version {
         &self.version

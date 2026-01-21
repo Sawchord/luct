@@ -5,7 +5,7 @@ use crate::{
     signature::Signature as Signed,
     tree::{HashOutput, TreeHead},
     utils::codec::{CodecError, Decode, Encode},
-    v1::sth::TreeHeadSignature,
+    v1::{SignedTreeHead, sth::TreeHeadSignature},
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
 use sha2::{Digest, Sha256};
@@ -34,7 +34,7 @@ impl CtLog {
     pub fn validate_checkpoint(
         &self,
         checkpoint: &Checkpoint,
-    ) -> Result<(), SignatureValidationError> {
+    ) -> Result<SignedTreeHead, SignatureValidationError> {
         // Check that origin line matches the logs submission url
         let origin = Self::url_to_origin(self.config().url())
             .ok_or(SignatureValidationError::MalformedKey)?;
@@ -70,7 +70,12 @@ impl CtLog {
             .signature
             .validate(&tree_head, &self.config().key)?;
 
-        Ok(())
+        Ok(SignedTreeHead {
+            tree_size: checkpoint.tree_size,
+            timestamp: note_sig.timestamp,
+            sha256_root_hash: checkpoint.root_hash.to_vec(),
+            tree_head_signature: note_sig.signature,
+        })
     }
 
     fn compute_checkpoint_key_id(origin: &str, log_id: &LogId) -> [u8; 4] {

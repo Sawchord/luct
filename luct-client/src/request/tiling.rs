@@ -1,9 +1,12 @@
 use crate::{Client, ClientError, CtClient};
-use luct_core::tiling::{Checkpoint, Tile, TileId};
+use luct_core::{
+    tiling::{Checkpoint, Tile, TileId},
+    v1::SignedTreeHead,
+};
 use url::Url;
 
 impl<C: Client> CtClient<C> {
-    pub async fn get_checkpoint(&self) -> Result<Checkpoint, ClientError> {
+    pub async fn get_checkpoint(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
         let url = self.get_url("checkpoint")?;
 
@@ -13,11 +16,12 @@ impl<C: Client> CtClient<C> {
         let checkpoint = Checkpoint::parse_checkpoint(&response)?;
 
         // Validate checkpoinmt against key
-        self.log
+        let sth = self
+            .log
             .validate_checkpoint(&checkpoint)
             .map_err(|err| ClientError::SignatureValidationFailed("STH", err))?;
 
-        Ok(checkpoint)
+        Ok(sth)
     }
 
     pub async fn get_tile(&self, mut tile_id: TileId) -> Result<Tile, ClientError> {
