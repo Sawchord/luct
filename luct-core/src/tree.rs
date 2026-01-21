@@ -1,7 +1,11 @@
 use crate::store::{Hashable, IndexedStore, Store};
+pub use crate::tree::node::{Node, NodeKey};
 use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use std::{cmp::Ordering, marker::PhantomData};
+use std::marker::PhantomData;
+
+mod consistency;
+mod inclusion;
+mod node;
 
 pub(crate) type HashOutput = [u8; 32];
 
@@ -285,106 +289,11 @@ pub struct TreeHead {
     pub(crate) head: HashOutput,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-
-pub struct NodeKey {
-    pub(crate) start: u64,
-    pub(crate) end: u64,
-}
-
-impl NodeKey {
-    pub fn leaf(idx: u64) -> Self {
-        Self {
-            start: idx,
-            end: idx + 1,
-        }
-    }
-
-    fn full_range(end: u64) -> Self {
-        Self { start: 0, end }
-    }
-
-    pub(crate) fn size(&self) -> u64 {
-        self.end - self.start
-    }
-
-    pub(crate) fn split_idx(&self) -> u64 {
-        let size = self.size();
-        size.next_power_of_two() >> 1
-    }
-
-    fn split(&self) -> (Self, Self) {
-        let split = self.split_idx();
-        let split = self.start + split;
-        (
-            Self {
-                start: self.start,
-                end: split,
-            },
-            Self {
-                start: split,
-                end: self.end,
-            },
-        )
-    }
-
-    pub(crate) fn merge(&self, other: &Self) -> Option<Self> {
-        if self.end == other.start {
-            Some(Self {
-                start: self.start,
-                end: other.end,
-            })
-        } else {
-            None
-        }
-    }
-
-    fn is_balanced(&self) -> bool {
-        let diff = self.end - self.start;
-        diff.is_power_of_two()
-    }
-
-    fn is_leaf(&self) -> bool {
-        self.start + 1 == self.end
-    }
-}
-
-impl PartialOrd for NodeKey {
-    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
-        Some(self.cmp(other))
-    }
-}
-
-impl Ord for NodeKey {
-    fn cmp(&self, other: &Self) -> Ordering {
-        match self.end.cmp(&other.end) {
-            Ordering::Equal => {}
-            ord => return ord,
-        }
-        self.start.cmp(&other.start)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub(crate) struct Node {
-    pub(crate) left: HashOutput,
-    pub(crate) right: HashOutput,
-}
-
-impl Hashable for Node {
-    fn hash(&self) -> HashOutput {
-        let mut hash = Sha256::new();
-        hash.update([1]);
-        hash.update(self.left);
-        hash.update(self.right);
-        hash.finalize().into()
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::store::MemoryStore;
+    use sha2::{Digest, Sha256};
 
     #[test]
     fn compute_inclusion_proofs() {
