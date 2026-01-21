@@ -1,12 +1,13 @@
+use futures::future::join_all;
+
 use crate::{
-    store::{Hashable, IndexedStore, Store},
+    store::{AsyncStore, Hashable, Store},
     tree::{HashOutput, Node, NodeKey, Tree, TreeHead},
 };
 
 impl<N, L, V> Tree<N, L, V>
 where
     N: Store<NodeKey, HashOutput>,
-    L: IndexedStore<V>,
     V: Hashable,
 {
     /// This follows RFC 9162 2.1.3.1
@@ -15,29 +16,58 @@ where
             return None;
         }
 
-        let mut n = NodeKey::full_range(head.tree_size);
-        let m = index;
-
-        let mut path = vec![];
-
-        while !n.is_leaf() {
-            let (left, right) = n.split();
-            if m < right.start {
-                let elem = self.nodes.get(&right)?;
-                path.push(elem);
-
-                n = left;
-            } else {
-                let elem = self.nodes.get(&left)?;
-                path.push(elem);
-
-                n = right;
-            }
-        }
+        let path = get_audit_proof(head, index, |key| self.nodes.get(&key));
+        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
 
         path.reverse();
         Some(AuditProof { index, path })
     }
+}
+
+impl<N, L, V> Tree<N, L, V>
+where
+    N: AsyncStore<NodeKey, HashOutput>,
+    V: Hashable,
+{
+    pub async fn get_audit_proof_async(&self, head: &TreeHead, index: u64) -> Option<AuditProof> {
+        if index >= head.tree_size {
+            return None;
+        }
+
+        let path = get_audit_proof(head, index, |key| self.nodes.get(key));
+        let path = join_all(path).await;
+        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
+
+        path.reverse();
+        Some(AuditProof { index, path })
+    }
+}
+
+fn get_audit_proof<F, O>(head: &TreeHead, index: u64, get: F) -> Vec<O>
+where
+    F: Fn(NodeKey) -> O,
+{
+    let mut n = NodeKey::full_range(head.tree_size);
+    let m = index;
+
+    let mut path = vec![];
+
+    while !n.is_leaf() {
+        let (left, right) = n.split();
+        if m < right.start {
+            let elem = get(right);
+            path.push(elem);
+
+            n = left;
+        } else {
+            let elem = get(left);
+            path.push(elem);
+
+            n = right;
+        }
+    }
+
+    path
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
@@ -82,9 +112,8 @@ impl AuditProof {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::MemoryStore;
-
     use super::*;
+    use crate::store::MemoryStore;
 
     #[test]
     fn compute_audit_proofs() {

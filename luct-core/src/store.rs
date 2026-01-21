@@ -90,7 +90,7 @@ pub trait AsyncStore<K, V> {
     /// # Returns:
     /// - `Some(value)`, if the value exists
     /// - `None` otherwise
-    fn get(&self, key: &K) -> impl Future<Output = Option<V>>;
+    fn get(&self, key: K) -> impl Future<Output = Option<V>>;
 
     /// Returns the number of elements in the [`Store`]
     fn len(&self) -> impl Future<Output = usize>;
@@ -160,8 +160,8 @@ impl<K: Ord, V: Clone> AsyncStore<K, V> for MemoryStore<K, V> {
         self.0.write().unwrap().insert(key, value);
     }
 
-    async fn get(&self, key: &K) -> Option<V> {
-        self.0.read().unwrap().get(key).cloned()
+    async fn get(&self, key: K) -> Option<V> {
+        self.0.read().unwrap().get(&key).cloned()
     }
 
     async fn len(&self) -> usize {
