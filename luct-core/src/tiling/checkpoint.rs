@@ -1,6 +1,11 @@
+use std::io::{Cursor, Read, Write};
+
 use crate::{
-    CtLog, LogId, SignatureValidationError,
+    CtLog, LogId, SignatureValidationError, Version,
+    signature::Signature as Signed,
     tree::{HashOutput, TreeHead},
+    utils::codec::{CodecError, Decode, Encode},
+    v1::sth::TreeHeadSignature,
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
 use sha2::{Digest, Sha256};
@@ -30,12 +35,14 @@ impl CtLog {
         &self,
         checkpoint: &Checkpoint,
     ) -> Result<(), SignatureValidationError> {
+        // Check that origin line matches the logs submission url
         let origin = Self::url_to_origin(self.config().url())
             .ok_or(SignatureValidationError::MalformedKey)?;
         if origin != checkpoint.origin {
             return Err(SignatureValidationError::MalformedKey);
         }
 
+        // Find exactly one matching key in the list of keys
         // TODO: Precompute id once during initialization, rather than recomputer it here all the time
         let id = Self::compute_checkpoint_key_id(&origin, self.log_id());
         let sigs = checkpoint
@@ -49,7 +56,21 @@ impl CtLog {
         }
         let sig = sigs[0];
 
-        todo!()
+        // Parse the key and reconstruct the `TreeHeadSignature`
+        let note_sig = NoteSignature::decode(&mut Cursor::new(&sig.body))?;
+        let tree_head = TreeHeadSignature {
+            version: Version::V1,
+            timestamp: note_sig.timestamp,
+            tree_size: checkpoint.tree_size,
+            sha256_root_hash: checkpoint.root_hash,
+        };
+
+        // Validate the signature
+        note_sig
+            .signature
+            .validate(&tree_head, &self.config().key)?;
+
+        Ok(())
     }
 
     fn compute_checkpoint_key_id(origin: &str, log_id: &LogId) -> [u8; 4] {
@@ -186,6 +207,30 @@ impl Signature {
     }
 
     // TODO: `as_string` function
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct NoteSignature {
+    timestamp: u64,
+    signature: Signed<TreeHeadSignature>,
+}
+
+impl Encode for NoteSignature {
+    fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
+        self.timestamp.encode(&mut writer)?;
+        self.signature.encode(&mut writer)?;
+
+        Ok(())
+    }
+}
+
+impl Decode for NoteSignature {
+    fn decode(mut reader: impl Read) -> Result<Self, CodecError> {
+        Ok(Self {
+            timestamp: u64::decode(&mut reader)?,
+            signature: Signed::decode(&mut reader)?,
+        })
+    }
 }
 
 #[cfg(test)]
