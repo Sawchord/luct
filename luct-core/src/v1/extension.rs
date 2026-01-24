@@ -4,7 +4,10 @@ use crate::utils::{
     codec_vec::CodecVec,
 };
 use serde::{Deserialize, Serialize};
-use std::io::{Read, Write};
+use std::{
+    io::{Read, Write},
+    ops::Deref,
+};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct CtExtensions(SizedAppendVec<CtExtension>);
@@ -80,6 +83,14 @@ impl Decode for CtExtension {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LeafIndex(u64);
+
+impl Deref for LeafIndex {
+    type Target = u64;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
 
 impl Encode for LeafIndex {
     fn encode(&self, mut writer: impl Write) -> Result<(), CodecError> {
