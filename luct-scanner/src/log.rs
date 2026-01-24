@@ -1,11 +1,12 @@
 use std::sync::Arc;
 
-use crate::{Conclusion, Scanner, lead::EmbeddedSct};
+use crate::{Conclusion, Scanner, lead::EmbeddedSct, log::tiling::TileFetchStore};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
     Certificate,
-    store::{Hashable, OrderedStore, Store},
-    v1::SignedTreeHead,
+    store::{Hashable, MemoryStore, OrderedStore, Store},
+    tree::Tree,
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 
 pub(crate) mod builder;
@@ -15,6 +16,13 @@ pub(crate) mod tiling;
 /// clients and stores
 pub(crate) struct ScannerLog<C> {
     log: Arc<ScannerLogInner<C>>,
+    tiles: Option<
+        Tree<
+            TileFetchStore<C>,
+            MemoryStore<u64, SignedCertificateTimestamp>,
+            SignedCertificateTimestamp,
+        >,
+    >,
 }
 
 pub(crate) struct ScannerLogInner<C> {
@@ -72,7 +80,7 @@ impl<C: Client> ScannerLog<C> {
         match self.log.sth_store.last() {
             Some((_, sth)) => Ok(sth),
             None => {
-                let sth = self.log.client.get_sth_v1().await?;
+                let sth = self.get_sth().await?;
                 self.log.sth_store.insert(sth.tree_size(), sth.clone());
                 Ok(sth)
             }
@@ -81,7 +89,7 @@ impl<C: Client> ScannerLog<C> {
 
     /// Updates the log to the newest STH, checks consistency if possible
     pub(crate) async fn update_sth(&self) -> Result<(), ClientError> {
-        let new_sth = self.log.client.get_sth_v1().await?;
+        let new_sth = self.get_sth().await?;
 
         if let Some((_, old_sth)) = self.log.sth_store.last() {
             self.log
@@ -92,6 +100,13 @@ impl<C: Client> ScannerLog<C> {
         self.log.sth_store.insert(new_sth.tree_size(), new_sth);
 
         Ok(())
+    }
+
+    async fn get_sth(&self) -> Result<SignedTreeHead, ClientError> {
+        match &self.tiles {
+            Some(_) => self.log.client.get_checkpoint().await,
+            None => self.log.client.get_sth_v1().await,
+        }
     }
 
     async fn validate_root(&self, root: &Certificate) -> Result<Conclusion, ClientError> {

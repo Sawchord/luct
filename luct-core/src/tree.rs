@@ -20,12 +20,7 @@ pub struct Tree<N, L, V> {
     values: PhantomData<V>,
 }
 
-impl<N, L, V> Tree<N, L, V>
-where
-    N: Store<NodeKey, HashOutput>,
-    L: IndexedStore<V>,
-    V: Hashable,
-{
+impl<N, L, V> Tree<N, L, V> {
     pub fn new(node_store: N, leaf_store: L) -> Self {
         Self {
             nodes: node_store,
@@ -33,7 +28,14 @@ where
             values: PhantomData,
         }
     }
+}
 
+impl<N, L, V> Tree<N, L, V>
+where
+    N: Store<NodeKey, HashOutput>,
+    L: IndexedStore<V>,
+    V: Hashable,
+{
     pub fn insert_entry(&self, entry: V) {
         let entry_hash = entry.hash();
         let idx = self.leafs.insert_indexed(entry);

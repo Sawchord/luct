@@ -7,9 +7,18 @@ use luct_core::{
 };
 use std::sync::Arc;
 
-struct TileFetchStore<C> {
+pub(crate) struct TileFetchStore<C> {
     node_cache: Box<dyn Store<NodeKey, HashOutput>>,
     log: Arc<ScannerLogInner<C>>,
+}
+
+impl<C> TileFetchStore<C> {
+    pub(crate) fn new(
+        log: Arc<ScannerLogInner<C>>,
+        node_cache: Box<dyn Store<NodeKey, HashOutput>>,
+    ) -> Self {
+        Self { node_cache, log }
+    }
 }
 
 impl<C> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C>
