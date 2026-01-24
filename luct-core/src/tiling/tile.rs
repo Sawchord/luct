@@ -69,8 +69,15 @@ impl TileId {
             return None;
         }
 
-        // TODO: Check that length actually matches the partial value
-        // TODO: Introduce an error type for this
+        // Check that length actually matches the partial value
+        let expected_len = match self.partial {
+            Some(val) => usize::from(u8::from(val)),
+            None => 256usize,
+        };
+        if data.len() != expected_len * 32 {
+            // TODO: Introduce an error type for size mismatch
+            return None;
+        }
 
         Some(Tile { id: self, data })
     }
@@ -228,6 +235,12 @@ mod tests {
 
         let tile = id.with_data(random_tile_data(243)).unwrap();
         let node_keys = tile.recompute_node_keys();
+
+        let deb = node_keys
+            .iter()
+            .map(|(key, _)| (key.clone(), key.size()))
+            .collect::<Vec<_>>();
+        dbg!(deb);
 
         assert!(node_keys.iter().any(|(key, _)| key == &node_key));
     }
