@@ -66,11 +66,13 @@ impl LogList {
                     version: Version::V1,
                     url: match &log.url {
                         LogUrl::Log { url } => url.clone(),
-                        // TODO: Once tiled logs are supported, we should include them here
-                        //LogUrl::TiledLog { submission_url, .. } => submission_url.clone(),
-                        LogUrl::TiledLog { .. } => return None,
+
+                        LogUrl::TiledLog { submission_url, .. } => submission_url.clone(),
                     },
-                    tile_url: None,
+                    tile_url: match &log.url {
+                        LogUrl::Log { .. } => None,
+                        LogUrl::TiledLog { monitoring_url, .. } => Some(monitoring_url.clone()),
+                    },
                     key: log.key.clone(),
                     mmd: log.mmd,
                 };
