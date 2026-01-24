@@ -1,10 +1,8 @@
 use crate::{lead::EmbeddedSct, log::ScannerLog};
 use futures::future;
-use luct_client::{Client, ClientError, CtClient};
+use luct_client::{Client, ClientError};
 use luct_core::{
-    CertificateChain, CtLog, CtLogConfig, LogId,
-    store::{MemoryStore, Store},
-    v1::SignedCertificateTimestamp,
+    CertificateChain, CtLog, CtLogConfig, LogId, store::Store, v1::SignedCertificateTimestamp,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -45,18 +43,8 @@ impl<C: Client + Clone> Scanner<C> {
     }
 
     pub fn add_log(&mut self, log: Log) -> &mut Self {
-        let client = CtClient::new(log.config, self.client.clone());
-        let log_id = client.log().log_id().clone();
-        let scanner_log = ScannerLog {
-            name: log.name,
-            client,
-            sth_store: log
-                .sth_store
-                .unwrap_or_else(|| Box::new(MemoryStore::default())),
-            root_keys: log
-                .root_keys
-                .unwrap_or_else(|| Box::new(MemoryStore::default())),
-        };
+        let scanner_log = log.build(&self.client);
+        let log_id = scanner_log.client.log().log_id().clone();
 
         self.logs.insert(log_id, scanner_log);
         self
