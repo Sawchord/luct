@@ -38,7 +38,15 @@ where
         // If not available, calculate which tile should have the value and fetch it
         let tree_size = self.log.sth_store.last()?.1.tree_size();
         let tile_id = TileId::from_node_key(&key, tree_size)?;
-        let tile = self.log.client.get_tile(tile_id).await.ok()?;
+
+        println!("Fetching tile: {:?}", tile_id);
+        let tile = self.log.client.get_tile(tile_id.clone()).await;
+
+        if tile.is_err() {
+            println!("Error: {:?}", tile)
+        }
+
+        let tile = tile.ok()?;
         let nodes = tile.recompute_node_keys();
 
         // Pick the result from the recomputed nodes
@@ -51,6 +59,10 @@ where
         nodes
             .into_iter()
             .for_each(|(key, hash)| self.node_cache.insert(key, hash));
+
+        if result.is_none() {
+            println!("Bug: key {:?} was not contained in tile {:?}", key, tile_id);
+        }
 
         result
     }

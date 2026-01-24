@@ -3,9 +3,9 @@ use std::sync::Arc;
 use crate::{Conclusion, Scanner, lead::EmbeddedSct, log::tiling::TileFetchStore};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    Certificate,
+    Certificate, CertificateChain, CertificateError,
     store::{Hashable, MemoryStore, OrderedStore, Store},
-    tree::Tree,
+    tree::{Tree, TreeHead},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 
@@ -16,6 +16,7 @@ pub(crate) mod tiling;
 /// clients and stores
 pub(crate) struct ScannerLog<C> {
     log: Arc<ScannerLogInner<C>>,
+    // TODO: Wrap this in a type
     tiles: Option<
         Tree<
             TileFetchStore<C>,
@@ -51,15 +52,7 @@ impl<C: Client> ScannerLog<C> {
             )));
         }
 
-        if sct.timestamp() > self.latest_sth().await?.timestamp() {
-            self.update_sth().await?;
-        }
-        let sth = self.latest_sth().await?;
-
-        self.log
-            .client
-            .check_embedded_sct_inclusion_v1(sct, &sth, chain)
-            .await?;
+        self.check_embedded_sct_inclusion(sct, chain).await?;
 
         // Check that the roots certificate is included in the list of allowed roots
         let root_validation = self.validate_root(chain.root()).await?;
@@ -73,6 +66,52 @@ impl<C: Client> ScannerLog<C> {
             "\"{}\" returned a valid audit proof",
             self.log.name
         )))
+    }
+
+    async fn check_embedded_sct_inclusion(
+        &self,
+        sct: &SignedCertificateTimestamp,
+        chain: &Arc<CertificateChain>,
+    ) -> Result<(), ClientError> {
+        if sct.timestamp() > self.latest_sth().await?.timestamp() {
+            self.update_sth().await?;
+        }
+        let sth = self.latest_sth().await?;
+
+        match &self.tiles {
+            Some(tiles) => {
+                // TODO: Factor this into a method of Tree<..> in tiling.rs
+                let Some(leaf_index) = sct.leaf_index() else {
+                    // TODO: Better error type
+                    return Err(ClientError::AuditProofError);
+                };
+
+                println!("Leaf index: {:?}", leaf_index);
+
+                let tree_head =
+                    TreeHead::try_from(&sth).map_err(|_| ClientError::AuditProofError)?;
+                let audit_proof = tiles
+                    .get_audit_proof_async(&tree_head, *leaf_index)
+                    .await
+                    // TODO: Better error
+                    .ok_or(ClientError::AuditProofError)?;
+
+                let leaf = chain.as_leaf_v1(sct, true).map_err(|err| {
+                    ClientError::CertificateError(CertificateError::CodecError(err))
+                })?;
+                if !audit_proof.validate(&tree_head, &leaf) {
+                    return Err(ClientError::AuditProofError);
+                }
+
+                Ok(())
+            }
+            None => {
+                self.log
+                    .client
+                    .check_embedded_sct_inclusion_v1(sct, &sth, chain)
+                    .await
+            }
+        }
     }
 
     /// Returns the latests STH, if it exists, fetches it otherwise
