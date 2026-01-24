@@ -1,5 +1,5 @@
 use clap::Parser;
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "luct", version, about, long_about = None)]
@@ -39,8 +39,6 @@ pub(crate) fn get_workdir(args: &Args) -> PathBuf {
     })
 }
 
-pub(crate) fn get_confpath(args: &Args, workdir: &Path) -> PathBuf {
-    args.confdir
-        .clone()
-        .unwrap_or_else(|| workdir.join("logs.toml"))
+pub(crate) fn log_list_path(args: &Args) -> Option<PathBuf> {
+    args.confdir.clone()
 }
