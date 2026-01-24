@@ -1,11 +1,11 @@
+use crate::log::{ScannerLog, ScannerLogInner};
 use luct_client::{Client, CtClient};
 use luct_core::{
     CtLog, CtLogConfig,
     store::{MemoryStore, OrderedStore, Store},
     v1::SignedTreeHead,
 };
-
-use crate::log::ScannerLog;
+use std::sync::Arc;
 
 pub struct LogBuilder {
     name: String,
@@ -40,14 +40,16 @@ impl LogBuilder {
     pub(crate) fn build<C: Client + Clone>(self, client: &C) -> ScannerLog<C> {
         let client = CtClient::new(self.config, client.clone());
         ScannerLog {
-            name: self.name,
-            client,
-            sth_store: self
-                .sth_store
-                .unwrap_or_else(|| Box::new(MemoryStore::default())),
-            root_keys: self
-                .root_keys
-                .unwrap_or_else(|| Box::new(MemoryStore::default())),
+            log: Arc::new(ScannerLogInner {
+                name: self.name,
+                client,
+                sth_store: self
+                    .sth_store
+                    .unwrap_or_else(|| Box::new(MemoryStore::default())),
+                root_keys: self
+                    .root_keys
+                    .unwrap_or_else(|| Box::new(MemoryStore::default())),
+            }),
         }
     }
 }

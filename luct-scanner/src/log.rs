@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::{Conclusion, Scanner, lead::EmbeddedSct};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
@@ -6,16 +8,27 @@ use luct_core::{
     v1::SignedTreeHead,
 };
 
+pub(crate) mod builder;
+pub(crate) mod tiling;
+
 /// Internal structure holding references to per log
 /// clients and stores
 pub(crate) struct ScannerLog<C> {
-    pub(crate) name: String,
-    pub(crate) client: CtClient<C>,
-    pub(crate) sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
-    pub(crate) root_keys: Box<dyn Store<Vec<u8>, ()>>,
+    log: Arc<ScannerLogInner<C>>,
+}
+
+pub(crate) struct ScannerLogInner<C> {
+    name: String,
+    client: CtClient<C>,
+    sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
+    root_keys: Box<dyn Store<Vec<u8>, ()>>,
 }
 
 impl<C: Client> ScannerLog<C> {
+    pub(crate) fn client(&self) -> &CtClient<C> {
+        &self.log.client
+    }
+
     pub(crate) async fn investigate_embedded_sct(
         &self,
         sct: &EmbeddedSct,
@@ -26,7 +39,7 @@ impl<C: Client> ScannerLog<C> {
         if scanner.sct_cache.get(&sct.hash()).is_some() {
             return Ok(Conclusion::Safe(format!(
                 "cache returned valid SCT of \"{}\"",
-                self.name
+                self.log.name
             )));
         }
 
@@ -35,7 +48,8 @@ impl<C: Client> ScannerLog<C> {
         }
         let sth = self.latest_sth().await?;
 
-        self.client
+        self.log
+            .client
             .check_embedded_sct_inclusion_v1(sct, &sth, chain)
             .await?;
 
@@ -49,17 +63,17 @@ impl<C: Client> ScannerLog<C> {
 
         Ok(Conclusion::Safe(format!(
             "\"{}\" returned a valid audit proof",
-            self.name
+            self.log.name
         )))
     }
 
     /// Returns the latests STH, if it exists, fetches it otherwise
     async fn latest_sth(&self) -> Result<SignedTreeHead, ClientError> {
-        match self.sth_store.last() {
+        match self.log.sth_store.last() {
             Some((_, sth)) => Ok(sth),
             None => {
-                let sth = self.client.get_sth_v1().await?;
-                self.sth_store.insert(sth.tree_size(), sth.clone());
+                let sth = self.log.client.get_sth_v1().await?;
+                self.log.sth_store.insert(sth.tree_size(), sth.clone());
                 Ok(sth)
             }
         }
@@ -67,12 +81,15 @@ impl<C: Client> ScannerLog<C> {
 
     /// Updates the log to the newest STH, checks consistency if possible
     pub(crate) async fn update_sth(&self) -> Result<(), ClientError> {
-        let new_sth = self.client.get_sth_v1().await?;
+        let new_sth = self.log.client.get_sth_v1().await?;
 
-        if let Some((_, old_sth)) = self.sth_store.last() {
-            self.client.check_consistency_v1(&old_sth, &new_sth).await?;
+        if let Some((_, old_sth)) = self.log.sth_store.last() {
+            self.log
+                .client
+                .check_consistency_v1(&old_sth, &new_sth)
+                .await?;
         };
-        self.sth_store.insert(new_sth.tree_size(), new_sth);
+        self.log.sth_store.insert(new_sth.tree_size(), new_sth);
 
         Ok(())
     }
@@ -87,7 +104,7 @@ impl<C: Client> ScannerLog<C> {
             ));
         };
 
-        if self.root_keys.get(&key_id).is_some() {
+        if self.log.root_keys.get(&key_id).is_some() {
             return Ok(Conclusion::Safe(
                 "Fingerprint matches allowed roots".to_string(),
             ));
@@ -95,20 +112,20 @@ impl<C: Client> ScannerLog<C> {
 
         self.update_roots().await?;
 
-        match self.root_keys.get(&key_id) {
+        match self.log.root_keys.get(&key_id) {
             Some(()) => Ok(Conclusion::Safe("Root matches allowed roots".to_string())),
             None => Ok(Conclusion::Unsafe(format!(
                 "Root is not included in the list of allowed roots of log {}",
-                self.name
+                self.log.name
             ))),
         }
     }
 
     async fn update_roots(&self) -> Result<(), ClientError> {
-        let certs = self.client.get_roots_v1().await?;
+        let certs = self.log.client.get_roots_v1().await?;
         for cert in certs {
             if let Some(key_id) = cert.get_subject_key_info() {
-                self.root_keys.insert(key_id, ());
+                self.log.root_keys.insert(key_id, ());
             }
         }
 

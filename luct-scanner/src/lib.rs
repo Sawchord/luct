@@ -7,16 +7,14 @@ use luct_core::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 pub use {
-    builder::LogBuilder,
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
+    log::builder::LogBuilder,
 };
 
 type HashOutput = [u8; 32];
 
-mod builder;
 mod lead;
 mod log;
-mod tiling;
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
@@ -29,7 +27,7 @@ pub struct Scanner<C> {
 #[allow(clippy::type_complexity)]
 impl<C: Client + Clone> Scanner<C> {
     pub fn logs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CtLog> + 'a> {
-        Box::new(self.logs.values().map(|val| val.client.log()))
+        Box::new(self.logs.values().map(|val| val.client().log()))
     }
 
     pub fn new_with_client(
@@ -45,7 +43,7 @@ impl<C: Client + Clone> Scanner<C> {
 
     pub fn add_log(&mut self, log: LogBuilder) -> &mut Self {
         let scanner_log = log.build(&self.client);
-        let log_id = scanner_log.client.log().log_id().clone();
+        let log_id = scanner_log.client().log().log_id().clone();
 
         self.logs.insert(log_id, scanner_log);
         self

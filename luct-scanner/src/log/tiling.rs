@@ -1,4 +1,4 @@
-use crate::{HashOutput, log::ScannerLog};
+use crate::{HashOutput, log::ScannerLogInner};
 use luct_client::Client;
 use luct_core::{
     store::{AsyncStore, Store},
@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 struct TileFetchStore<C> {
     node_cache: Box<dyn Store<NodeKey, HashOutput>>,
-    log: Arc<ScannerLog<C>>,
+    log: Arc<ScannerLogInner<C>>,
 }
 
 impl<C> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C>
