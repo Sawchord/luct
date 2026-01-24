@@ -94,11 +94,7 @@ impl CtLog {
     }
 
     fn url_to_origin(url: &Url) -> Option<String> {
-        let path = match url.path() {
-            "/" => "",
-            other => other,
-        };
-
+        let path = url.path().strip_suffix("/")?;
         url.host_str().map(|host| format!("{}{}", host, path))
     }
 }
@@ -248,7 +244,6 @@ mod tests {
     const ARCHE2026H1: &str = "
     {
           \"description\": \"Google 'Arche2026h1' log\",
-          \"log_id\": \"J+sqNJffaHpkC2Q4TkhW/Nyj6H+NzWbzTtbxvkKB7fw=\",
           \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZ+3YKoZTMruov4cmlImbk4MckBNzEdCyMuHlwGgJ8BUrzFLlR5U0619xDDXIXespkpBgCNVQAkhMTTXakM6KMg==\",
           \"url\": \"https://arche2026h1.staging.ct.transparency.dev/\",
           \"tile_url\": \"https://storage.googleapis.com/static-ct-staging-arche2026h1-bucket/\",
@@ -256,14 +251,39 @@ mod tests {
         }
     ";
 
+    const SYCAMORE2026H1_CHECKPOINT: &str =
+        include_str!("../../../testdata/sycamore2026h1-signed-note.txt");
+
+    const SYCAMORE2026H1: &str = "{
+            \"description\": \"Let's Encrypt 'Sycamore2026h1'\",
+            \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEfEEe0JZknA91/c6eNl1aexgeKzuGQUMvRCXPXg9L227O5I4Pi++Abcpq6qxlVUKPYafAJelAnMfGzv3lHCc8gA==\",
+            \"url\": \"https://log.sycamore.ct.letsencrypt.org/2026h1/\",
+            \"tile_url\": \"https://mon.sycamore.ct.letsencrypt.org/2026h1/\",
+            \"mmd\": 60
+        }
+    ";
+
     #[test]
-    fn parse_and_validate_checkpoint() {
+    fn parse_and_validate_checkpoint_arche2026h1() {
         let checkpoint = Checkpoint::parse_checkpoint(ARCHE2026H1_CHECKPOINT).unwrap();
 
         assert_eq!(checkpoint.origin, "arche2026h1.staging.ct.transparency.dev");
         assert_eq!(checkpoint.tree_size, 1822167730);
 
         let config = serde_json::from_str(ARCHE2026H1).unwrap();
+        let log = CtLog::new(config);
+
+        log.validate_checkpoint(&checkpoint).unwrap();
+    }
+
+    #[test]
+    fn parse_and_validate_checkpoint_sycamore2026h1() {
+        let checkpoint = Checkpoint::parse_checkpoint(SYCAMORE2026H1_CHECKPOINT).unwrap();
+
+        assert_eq!(checkpoint.origin, "log.sycamore.ct.letsencrypt.org/2026h1");
+        assert_eq!(checkpoint.tree_size, 804475391);
+
+        let config = serde_json::from_str(SYCAMORE2026H1).unwrap();
         let log = CtLog::new(config);
 
         log.validate_checkpoint(&checkpoint).unwrap();

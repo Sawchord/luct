@@ -15,11 +15,11 @@ impl<C: Client> CtClient<C> {
         self.check_status(&url, status, &response)?;
         let checkpoint = Checkpoint::parse_checkpoint(&response)?;
 
-        // Validate checkpoinmt against key
+        // Validate checkpoint against key
         let sth = self
             .log
             .validate_checkpoint(&checkpoint)
-            .map_err(|err| ClientError::SignatureValidationFailed("STH", err))?;
+            .map_err(|err| ClientError::SignatureValidationFailed("checkpoint STH", err))?;
 
         Ok(sth)
     }
