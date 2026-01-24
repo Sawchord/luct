@@ -13,12 +13,15 @@ pub use {
     log::Log,
 };
 
+type HashOutput = [u8; 32];
+
 mod lead;
 mod log;
+mod tiling;
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
-    sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
+    sct_cache: Box<dyn Store<HashOutput, SignedCertificateTimestamp>>,
     client: C,
     // TODO: CertificateChainStore
     // TODO: Roots denylist
@@ -31,7 +34,7 @@ impl<C: Client + Clone> Scanner<C> {
     }
 
     pub fn new_with_client(
-        sct_cache: Box<dyn Store<[u8; 32], SignedCertificateTimestamp>>,
+        sct_cache: Box<dyn Store<HashOutput, SignedCertificateTimestamp>>,
         client: C,
     ) -> Self {
         Self {
