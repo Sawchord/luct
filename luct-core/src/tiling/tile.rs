@@ -216,6 +216,22 @@ mod tests {
 
     // TODO: recompute_node_keys_sizes
 
+    #[test]
+    fn fetch_node_keys() {
+        let node_key = NodeKey {
+            start: 801112064,
+            end: 804490383,
+        };
+
+        let id = TileId::from_node_key(&node_key, 804490383).unwrap();
+        assert_eq!(id, tile_id(2, 47, Some(243)));
+
+        let tile = id.with_data(random_tile_data(243)).unwrap();
+        let node_keys = tile.recompute_node_keys();
+
+        assert!(node_keys.iter().any(|(key, _)| key == &node_key));
+    }
+
     fn tile_id_from_node_key(start: u64, end: u64, size: u64) -> TileId {
         TileId::from_node_key(&NodeKey { start, end }, size).unwrap()
     }
