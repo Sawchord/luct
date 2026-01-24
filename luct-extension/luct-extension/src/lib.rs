@@ -5,7 +5,7 @@ use js_sys::{Array, Uint8Array};
 use luct_client::reqwest::ReqwestClient;
 use luct_core::{CertificateChain, log_list::v3::LogList, v1::SignedCertificateTimestamp};
 use luct_scanner::{
-    Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, Log,
+    Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, LogBuilder,
     Scanner as CtScanner,
 };
 use std::sync::Arc;
@@ -42,7 +42,7 @@ impl Scanner {
         for log in logs {
             let name = log.description();
             scanner.add_log(
-                Log::new(&log)
+                LogBuilder::new(&log)
                     .with_sth_store(
                         BrowserStore::new_local_store(format!("sth/{name}"))
                             .expect("Failed to initialize STH store"),

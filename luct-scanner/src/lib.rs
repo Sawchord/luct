@@ -7,12 +7,13 @@ use luct_core::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 pub use {
+    builder::LogBuilder,
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
-    log::Log,
 };
 
 type HashOutput = [u8; 32];
 
+mod builder;
 mod lead;
 mod log;
 mod tiling;
@@ -42,7 +43,7 @@ impl<C: Client + Clone> Scanner<C> {
         }
     }
 
-    pub fn add_log(&mut self, log: Log) -> &mut Self {
+    pub fn add_log(&mut self, log: LogBuilder) -> &mut Self {
         let scanner_log = log.build(&self.client);
         let log_id = scanner_log.client.log().log_id().clone();
 

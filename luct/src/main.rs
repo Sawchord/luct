@@ -7,7 +7,7 @@ use eyre::Context;
 use futures::future;
 use luct_client::reqwest::ReqwestClient;
 use luct_core::{log_list::v3::LogList, v1::SignedCertificateTimestamp};
-use luct_scanner::{LeadResult, Log, Scanner};
+use luct_scanner::{LeadResult, LogBuilder, Scanner};
 use luct_store::FilesystemStore;
 use std::sync::Arc;
 
@@ -49,7 +49,7 @@ async fn main() -> eyre::Result<()> {
         let name = log.description();
 
         scanner.add_log(
-            Log::new(&log)
+            LogBuilder::new(&log)
                 .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name)))
                 .with_root_key_store(FilesystemStore::new(workdir.join("roots").join(name))),
         );
