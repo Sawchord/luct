@@ -20,13 +20,17 @@ pub(crate) struct Args {
     #[arg(short, long, action = clap::ArgAction::Count)]
     pub(crate) debug: u8,
 
-    /// If set, reads certificate chain from a file, otherwise fetches the certificate from the URL
+    /// Reads certificate chain from a file, otherwise fetches the certificate from the URL
     #[arg(short, long)]
     pub(crate) file: bool,
 
-    /// If set, updates all logs signed tree heads to the latest version, before checking log inclusions
+    /// Update all logs to the latest signed tree head before checking log inclusions
     #[arg(short, long)]
     pub(crate) update_sths: bool,
+
+    /// Do not use the SCT cache when validating
+    #[arg(long)]
+    pub(crate) no_cache: bool,
 }
 
 pub(crate) fn get_workdir(args: &Args) -> PathBuf {
