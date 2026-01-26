@@ -1,9 +1,8 @@
-use crate::log::{ScannerLog, ScannerLogInner, tiling::TileFetchStore};
+use crate::log::{ScannerLog, ScannerLogInner, tiling::TileFetcher};
 use luct_client::{Client, CtClient};
 use luct_core::{
     CtLog, CtLogConfig,
     store::{MemoryStore, OrderedStore, Store},
-    tree::Tree,
     v1::SignedTreeHead,
 };
 use std::sync::Arc;
@@ -52,18 +51,12 @@ impl LogBuilder {
                 .unwrap_or_else(|| Box::new(MemoryStore::default())),
         });
 
-        let tiles = log.client.log().config().is_tiling().then(|| {
-            Tree::new(
-                TileFetchStore::new(
-                    log.clone(),
-                    Box::new(
-                        // TODO: Use an LRU cache
-                        MemoryStore::default(),
-                    ) as _,
-                ),
-                MemoryStore::default(),
-            )
-        });
+        let tiles = log
+            .client
+            .log()
+            .config()
+            .is_tiling()
+            .then(|| TileFetcher::new(&log));
 
         ScannerLog { log, tiles }
     }

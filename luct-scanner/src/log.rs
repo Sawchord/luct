@@ -1,13 +1,11 @@
-use std::sync::Arc;
-
-use crate::{Conclusion, Scanner, lead::EmbeddedSct, log::tiling::TileFetchStore};
+use crate::{Conclusion, Scanner, lead::EmbeddedSct, log::tiling::TileFetcher};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    Certificate, CertificateChain, CertificateError,
-    store::{Hashable, MemoryStore, OrderedStore, Store},
-    tree::{Tree, TreeHead},
+    Certificate, CertificateChain,
+    store::{Hashable, OrderedStore, Store},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
+use std::sync::Arc;
 
 pub(crate) mod builder;
 pub(crate) mod tiling;
@@ -16,14 +14,7 @@ pub(crate) mod tiling;
 /// clients and stores
 pub(crate) struct ScannerLog<C> {
     log: Arc<ScannerLogInner<C>>,
-    // TODO: Wrap this in a type
-    tiles: Option<
-        Tree<
-            TileFetchStore<C>,
-            MemoryStore<u64, SignedCertificateTimestamp>,
-            SignedCertificateTimestamp,
-        >,
-    >,
+    tiles: Option<TileFetcher<C>>,
 }
 
 pub(crate) struct ScannerLogInner<C> {
@@ -79,32 +70,7 @@ impl<C: Client> ScannerLog<C> {
         let sth = self.latest_sth().await?;
 
         match &self.tiles {
-            Some(tiles) => {
-                // TODO: Factor this into a method of Tree<..> in tiling.rs
-                let Some(leaf_index) = sct.leaf_index() else {
-                    // TODO: Better error type
-                    return Err(ClientError::AuditProofError);
-                };
-
-                println!("Leaf index: {:?}", leaf_index);
-
-                let tree_head =
-                    TreeHead::try_from(&sth).map_err(|_| ClientError::AuditProofError)?;
-                let audit_proof = tiles
-                    .get_audit_proof_async(&tree_head, *leaf_index)
-                    .await
-                    // TODO: Better error
-                    .ok_or(ClientError::AuditProofError)?;
-
-                let leaf = chain.as_leaf_v1(sct, true).map_err(|err| {
-                    ClientError::CertificateError(CertificateError::CodecError(err))
-                })?;
-                if !audit_proof.validate(&tree_head, &leaf) {
-                    return Err(ClientError::AuditProofError);
-                }
-
-                Ok(())
-            }
+            Some(tiles) => tiles.check_embdedded_sct_inclusion(sct, &sth, chain).await,
             None => {
                 self.log
                     .client

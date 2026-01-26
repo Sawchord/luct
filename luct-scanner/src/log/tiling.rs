@@ -1,11 +1,69 @@
 use crate::{HashOutput, log::ScannerLogInner};
-use luct_client::Client;
+use luct_client::{Client, ClientError};
 use luct_core::{
-    store::{AsyncStore, Store},
+    CertificateChain, CertificateError,
+    store::{AsyncStore, MemoryStore, Store},
     tiling::TileId,
-    tree::NodeKey,
+    tree::{NodeKey, Tree, TreeHead},
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::sync::Arc;
+
+pub(crate) struct TileFetcher<C>(
+    Tree<
+        TileFetchStore<C>,
+        MemoryStore<u64, SignedCertificateTimestamp>,
+        SignedCertificateTimestamp,
+    >,
+);
+
+impl<C> TileFetcher<C> {
+    pub(crate) fn new(log: &Arc<ScannerLogInner<C>>) -> Self {
+        Self(Tree::new(
+            TileFetchStore::new(
+                log.clone(),
+                Box::new(
+                    // TODO: Use an LRU cache
+                    MemoryStore::default(),
+                ) as _,
+            ),
+            MemoryStore::default(),
+        ))
+    }
+}
+
+impl<C: Client> TileFetcher<C> {
+    pub(crate) async fn check_embdedded_sct_inclusion(
+        &self,
+        sct: &SignedCertificateTimestamp,
+        sth: &SignedTreeHead,
+        chain: &CertificateChain,
+    ) -> Result<(), ClientError> {
+        let Some(leaf_index) = sct.leaf_index() else {
+            // TODO: Better error type
+            return Err(ClientError::AuditProofError);
+        };
+
+        println!("Leaf index: {:?}", leaf_index);
+
+        let tree_head = TreeHead::try_from(sth).map_err(|_| ClientError::AuditProofError)?;
+        let audit_proof = self
+            .0
+            .get_audit_proof_async(&tree_head, *leaf_index)
+            .await
+            // TODO: Better error
+            .ok_or(ClientError::AuditProofError)?;
+
+        let leaf = chain
+            .as_leaf_v1(sct, true)
+            .map_err(|err| ClientError::CertificateError(CertificateError::CodecError(err)))?;
+        if !audit_proof.validate(&tree_head, &leaf) {
+            return Err(ClientError::AuditProofError);
+        }
+
+        Ok(())
+    }
+}
 
 pub(crate) struct TileFetchStore<C> {
     node_cache: Box<dyn Store<NodeKey, HashOutput>>,
