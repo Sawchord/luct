@@ -1,9 +1,8 @@
 //! Implementation of the [`Client`] trait using [`reqwest`]
 
-use std::sync::Arc;
-
 use crate::{Client, ClientError};
 use reqwest::Response;
+use std::sync::Arc;
 use url::Url;
 
 #[derive(Debug, Clone, Default)]
