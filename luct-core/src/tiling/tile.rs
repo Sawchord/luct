@@ -3,7 +3,7 @@ use crate::{
     tiling::index_to_url,
     tree::{HashOutput, Node, NodeKey},
 };
-use std::num::NonZeroU8;
+use std::{num::NonZeroU8, sync::Arc};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TileId {
@@ -64,7 +64,7 @@ impl TileId {
     ///
     /// - `None`: If the length of the data is not a multiple if 32
     /// - `Some(Tile)` otherwise
-    pub fn with_data(self, data: Vec<u8>) -> Option<Tile> {
+    pub fn with_data(self, data: Arc<Vec<u8>>) -> Option<Tile> {
         if !data.len().is_multiple_of(32) {
             return None;
         }
@@ -99,7 +99,7 @@ impl TileId {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Tile {
     id: TileId,
-    data: Vec<u8>,
+    data: Arc<Vec<u8>>,
 }
 
 impl Tile {
@@ -261,8 +261,8 @@ mod tests {
         NodeKey { start, end }
     }
 
-    fn random_tile_data(size: u8) -> Vec<u8> {
-        rng().random_iter().take(size as usize * 32).collect()
+    fn random_tile_data(size: u8) -> Arc<Vec<u8>> {
+        Arc::new(rng().random_iter().take(size as usize * 32).collect())
     }
 
     fn assert_node_keys(node_keys: &[(NodeKey, HashOutput)], test_keys: &[NodeKey]) {

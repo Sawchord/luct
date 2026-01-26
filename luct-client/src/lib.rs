@@ -2,6 +2,7 @@ use luct_core::{
     CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
     tiling::ParseCheckpointError,
 };
+use std::sync::Arc;
 use thiserror::Error;
 use url::Url;
 
@@ -37,13 +38,13 @@ pub trait Client {
         &self,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> impl Future<Output = Result<(u16, String), ClientError>>;
+    ) -> impl Future<Output = Result<(u16, Arc<String>), ClientError>>;
 
     fn get_bin(
         &self,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> impl Future<Output = Result<(u16, Vec<u8>), ClientError>>;
+    ) -> impl Future<Output = Result<(u16, Arc<Vec<u8>>), ClientError>>;
 
     // TODO(Submission support): Post calls for submission support
 }
