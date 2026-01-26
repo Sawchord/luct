@@ -2,7 +2,7 @@
 
 use crate::store::BrowserStore;
 use js_sys::{Array, Uint8Array};
-use luct_client::reqwest::ReqwestClient;
+use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
 use luct_core::{CertificateChain, log_list::v3::LogList, v1::SignedCertificateTimestamp};
 use luct_scanner::{
     Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, LogBuilder,
@@ -21,7 +21,7 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub struct Scanner(CtScanner<ReqwestClient>);
+pub struct Scanner(CtScanner<RequestDeduplicationClient<ReqwestClient>>);
 
 #[wasm_bindgen]
 impl Scanner {
@@ -30,7 +30,7 @@ impl Scanner {
         let log_list: LogList = serde_json::from_str(&config).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
-        let client = ReqwestClient::new();
+        let client = RequestDeduplicationClient::new(ReqwestClient::new());
         let sct_cache = Box::new(
             BrowserStore::<[u8; 32], SignedCertificateTimestamp>::new_local_store(
                 "sct".to_string(),

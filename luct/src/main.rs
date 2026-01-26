@@ -5,7 +5,7 @@ use crate::{
 use clap::Parser;
 use eyre::Context;
 use futures::future;
-use luct_client::reqwest::ReqwestClient;
+use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
 use luct_core::{log_list::v3::LogList, store::MemoryStore};
 use luct_scanner::{LeadResult, LogBuilder, Scanner};
 use luct_store::FilesystemStore;
@@ -45,7 +45,7 @@ async fn main() -> eyre::Result<()> {
         Box::new(FilesystemStore::new(workdir.join("sct"))) as _
     };
 
-    let client = ReqwestClient::new();
+    let client = RequestDeduplicationClient::new(ReqwestClient::new());
     let mut scanner = Scanner::new_with_client(sct_cache, client);
 
     for log in logs {
