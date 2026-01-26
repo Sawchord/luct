@@ -16,6 +16,8 @@ luct-core = { path = "../luct-core" }
 reqwest = { workspace = true, optional = true }
 url = { workspace = true }
 
+async-oneshot = { workspace = true }
+
 serde = { workspace = true }
 serde_json = { workspace = true }
 

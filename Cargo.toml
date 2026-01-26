@@ -59,6 +59,7 @@ eyre = { version = "0.6" }
 thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.9" }
+async-oneshot = { version = "0.5" }
 
 log = { version = "0.4" }
 env_logger = { version = "0.11" }
