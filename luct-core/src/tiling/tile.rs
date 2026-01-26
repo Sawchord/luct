@@ -10,13 +10,14 @@ pub struct TileId {
     level: u8,
     index: u64,
     partial: Option<NonZeroU8>,
+    tree_size: u64,
 }
 
 impl TileId {
     /// Returns the [`TileId`] of the tile, which contains the [`NodeKey`].
     ///
     /// The `tree_height` is used to calculate, wether the tile in question should be partial or not.
-    pub fn from_node_key(key: &NodeKey, tree_height: u64) -> Option<Self> {
+    pub fn from_node_key(key: &NodeKey, tree_size: u64) -> Option<Self> {
         // Compute from the size of the node key, what level of tiles we expect the
         let level = key.size().next_power_of_two().ilog2() / 8;
         let level: u8 = (level).try_into().unwrap();
@@ -30,10 +31,10 @@ impl TileId {
 
         // Check if we need to fetch a partial tile, and if so, compute it's size
         let tile_end = (index + 1) * tile_width;
-        let partial = if tile_end < tree_height {
+        let partial = if tile_end < tree_size {
             None
         } else {
-            let partial = tree_height % tile_width;
+            let partial = tree_size % tile_width;
             let partial: u8 = (partial >> (8 * level)).try_into().unwrap();
 
             Some(NonZeroU8::new(partial).unwrap())
@@ -43,6 +44,7 @@ impl TileId {
             level,
             index,
             partial,
+            tree_size,
         })
     }
 
@@ -168,50 +170,62 @@ mod tests {
 
     #[test]
     fn as_url() {
-        assert_eq!(&tile_id(0, 1, None).as_url(), "tile/0/001");
+        assert_eq!(&tile_id(0, 1, None, 0).as_url(), "tile/0/001");
         assert_eq!(
-            &tile_id(1, 10987654321, None).as_url(),
+            &tile_id(1, 10987654321, None, 0).as_url(),
             "tile/1/x010/x987/x654/321"
         );
         assert_eq!(
-            &tile_id(3, 1234, Some(128)).as_url(),
+            &tile_id(3, 1234, Some(128), 0).as_url(),
             "tile/3/x001/234.p/128"
         );
     }
 
     #[test]
     fn into_tile_id() {
-        assert_eq!(tile_id_from_node_key(4, 5, 70000), tile_id(0, 0, None));
-        assert_eq!(tile_id_from_node_key(270, 271, 70000), tile_id(0, 1, None));
+        assert_eq!(
+            tile_id_from_node_key(4, 5, 70000),
+            tile_id(0, 0, None, 70000),
+        );
+        assert_eq!(
+            tile_id_from_node_key(270, 271, 70000),
+            tile_id(0, 1, None, 70000),
+        );
 
-        assert_eq!(tile_id_from_node_key(0, 128, 70000), tile_id(0, 0, None));
-        assert_eq!(tile_id_from_node_key(0, 256, 70000), tile_id(1, 0, None));
+        assert_eq!(
+            tile_id_from_node_key(0, 128, 70000),
+            tile_id(0, 0, None, 70000),
+        );
+        assert_eq!(
+            tile_id_from_node_key(0, 256, 70000),
+            tile_id(1, 0, None, 70000),
+        );
 
         assert_eq!(
             tile_id_from_node_key(69950, 69951, 70000),
-            tile_id(0, 273, Some(112))
+            tile_id(0, 273, Some(112), 70000)
         );
 
         assert_eq!(
             tile_id_from_node_key(1 << 16, 70000, 70000),
-            tile_id(1, 1, Some(17)),
+            tile_id(1, 1, Some(17), 70000),
         );
 
         assert_eq!(
             tile_id_from_node_key(0, 70000, 70000),
-            tile_id(2, 0, Some(1)),
+            tile_id(2, 0, Some(1), 70000),
         );
     }
 
     #[test]
     fn recompute_node_keys_small_examples() {
-        let tile = tile_id(0, 0, Some(1))
+        let tile = tile_id(0, 0, Some(1), 0)
             .with_data(random_tile_data(1))
             .unwrap();
         let node_keys = tile.recompute_node_keys();
         assert_node_keys(&node_keys, &[nk(0, 1)]);
 
-        let tile = tile_id(0, 0, Some(3))
+        let tile = tile_id(0, 0, Some(3), 0)
             .with_data(random_tile_data(3))
             .unwrap();
         let node_keys = tile.recompute_node_keys();
@@ -231,9 +245,9 @@ mod tests {
         };
 
         let id = TileId::from_node_key(&node_key, 804490383).unwrap();
-        assert_eq!(id, tile_id(2, 47, Some(243)));
+        assert_eq!(id, tile_id(2, 47, Some(244), 804490383));
 
-        let tile = id.with_data(random_tile_data(243)).unwrap();
+        let tile = id.with_data(random_tile_data(244)).unwrap();
         let node_keys = tile.recompute_node_keys();
 
         let deb = node_keys
@@ -249,11 +263,12 @@ mod tests {
         TileId::from_node_key(&NodeKey { start, end }, size).unwrap()
     }
 
-    fn tile_id(level: u8, index: u64, partial: Option<u8>) -> TileId {
+    fn tile_id(level: u8, index: u64, partial: Option<u8>, tree_size: u64) -> TileId {
         TileId {
             level,
             index,
             partial: partial.map(|partial| NonZeroU8::new(partial).unwrap()),
+            tree_size,
         }
     }
 
