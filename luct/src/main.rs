@@ -6,7 +6,7 @@ use clap::Parser;
 use eyre::Context;
 use futures::future;
 use luct_client::reqwest::ReqwestClient;
-use luct_core::{log_list::v3::LogList, v1::SignedCertificateTimestamp};
+use luct_core::{log_list::v3::LogList, store::MemoryStore};
 use luct_scanner::{LeadResult, LogBuilder, Scanner};
 use luct_store::FilesystemStore;
 use std::sync::Arc;
@@ -39,9 +39,12 @@ async fn main() -> eyre::Result<()> {
         .with_context(|| "failed to parse log list json file".to_string())?;
     let logs = log_list.currently_active_logs();
 
-    let sct_cache =
-        Box::new(FilesystemStore::<[u8; 32], SignedCertificateTimestamp>::new(workdir.join("sct")))
-            as _;
+    let sct_cache = if args.no_cache {
+        Box::new(MemoryStore::default()) as _
+    } else {
+        Box::new(FilesystemStore::new(workdir.join("sct"))) as _
+    };
+
     let client = ReqwestClient::new();
     let mut scanner = Scanner::new_with_client(sct_cache, client);
 
@@ -75,7 +78,7 @@ async fn main() -> eyre::Result<()> {
             .iter()
             .map(async |lead| {
                 let result = scanner.investigate_lead(lead).await;
-                match scanner.investigate_lead(lead).await {
+                match &result {
                     LeadResult::Conclusion(conclusion) => {
                         println!("Conclusion: {conclusion}")
                     }
