@@ -6,9 +6,10 @@ use std::sync::Arc;
 use thiserror::Error;
 use url::Url;
 
+pub use impls::*;
+
+mod impls;
 mod request;
-#[cfg(feature = "reqwest")]
-pub mod reqwest;
 mod util;
 
 // TODO: Fetch entries API
