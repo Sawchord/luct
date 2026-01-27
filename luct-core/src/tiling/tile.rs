@@ -18,6 +18,13 @@ impl TileId {
     ///
     /// The `tree_height` is used to calculate, wether the tile in question should be partial or not.
     pub fn from_node_key(key: &NodeKey, tree_size: u64) -> Option<Self> {
+        if !key.is_balanced() {
+            panic!(
+                "Tried to build unbalanced node key {:?}. This is a bug",
+                key
+            );
+        }
+
         // Compute from the size of the node key, what level of tiles we expect the
         let level = key.size().next_power_of_two().ilog2();
         let level: u8 = (level / 8).try_into().unwrap();
@@ -238,28 +245,6 @@ mod tests {
     }
 
     // TODO: recompute_node_keys_sizes
-
-    #[test]
-    fn fetch_node_keys() {
-        let node_key = NodeKey {
-            start: 801112064,
-            end: 804490383,
-        };
-
-        let id = TileId::from_node_key(&node_key, 804490383).unwrap();
-        assert_eq!(id, tile_id(2, 47, Some(244), 804490383));
-
-        let tile = id.with_data(random_tile_data(244)).unwrap();
-        let node_keys = tile.recompute_node_keys();
-
-        let deb = node_keys
-            .iter()
-            .map(|(key, _)| (key.clone(), key.size()))
-            .collect::<Vec<_>>();
-        dbg!(deb);
-
-        assert!(node_keys.iter().any(|(key, _)| key == &node_key));
-    }
 
     fn tile_id_from_node_key(start: u64, end: u64, size: u64) -> TileId {
         TileId::from_node_key(&NodeKey { start, end }, size).unwrap()

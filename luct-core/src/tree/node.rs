@@ -31,7 +31,7 @@ impl NodeKey {
         size.next_power_of_two() >> 1
     }
 
-    pub(crate) fn split(&self) -> (Self, Self) {
+    pub fn split(&self) -> (Self, Self) {
         let split = self.split_idx();
         let split = self.start + split;
         (
@@ -57,7 +57,7 @@ impl NodeKey {
         }
     }
 
-    pub(crate) fn is_balanced(&self) -> bool {
+    pub fn is_balanced(&self) -> bool {
         let diff = self.end - self.start;
         diff.is_power_of_two()
     }
@@ -85,8 +85,8 @@ impl Ord for NodeKey {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Node {
-    pub(crate) left: HashOutput,
-    pub(crate) right: HashOutput,
+    pub left: HashOutput,
+    pub right: HashOutput,
 }
 
 impl Hashable for Node {
