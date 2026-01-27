@@ -98,3 +98,21 @@ impl Hashable for Node {
         hash.finalize().into()
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn node_key_split() {
+        let node_key = NodeKey { start: 0, end: 6 };
+        let (left, right) = node_key.split();
+        assert_eq!(left, NodeKey { start: 0, end: 4 });
+        assert_eq!(right, NodeKey { start: 4, end: 6 });
+
+        let node_key = NodeKey { start: 0, end: 8 };
+        let (left, right) = node_key.split();
+        assert_eq!(left, NodeKey { start: 0, end: 4 });
+        assert_eq!(right, NodeKey { start: 4, end: 8 });
+    }
+}
