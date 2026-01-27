@@ -97,7 +97,6 @@ where
         let tree_size = self.log.sth_store.last()?.1.tree_size();
         let tile_id = TileId::from_node_key(&key, tree_size)?;
 
-        println!("Fetching tile: {:?}", tile_id);
         let tile = self.log.client.get_tile(tile_id.clone()).await;
 
         if tile.is_err() {

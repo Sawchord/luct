@@ -93,17 +93,25 @@ impl<C: Client> RequestDeduplicationClient<C> {
             let (tx, rx) = oneshot::<Response>();
             match requests.get_mut(&key) {
                 Some(ongoing_requests) => {
+                    println!("Dedup request to {}", url);
                     ongoing_requests.push(tx);
 
                     (rx, None)
                 }
                 None => {
+                    println!("New request to {}", url);
+
                     requests.insert(key.clone(), vec![tx]);
 
                     let request = async move {
                         let response = getter.await;
                         let mut requests = self.requests.lock().unwrap();
 
+                        println!(
+                            "Sending response of {} to {} requesters",
+                            url,
+                            requests.len()
+                        );
                         for mut tx in requests
                             .remove(&key)
                             .expect("Key no longer exist. This is a bug")
