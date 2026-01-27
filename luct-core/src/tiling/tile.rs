@@ -216,12 +216,12 @@ mod tests {
         );
 
         assert_eq!(
-            tile_id_from_node_key(1 << 16, 70000, 70000),
+            tile_id_from_node_key(1 << 16, (1 << 16) + 512, 70000),
             tile_id(1, 1, Some(17), 70000),
         );
 
         assert_eq!(
-            tile_id_from_node_key(0, 70000, 70000),
+            tile_id_from_node_key(0, 1 << 16, 70000),
             tile_id(2, 0, Some(1), 70000),
         );
     }
