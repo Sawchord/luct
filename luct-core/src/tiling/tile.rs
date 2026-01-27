@@ -19,8 +19,8 @@ impl TileId {
     /// The `tree_height` is used to calculate, wether the tile in question should be partial or not.
     pub fn from_node_key(key: &NodeKey, tree_size: u64) -> Option<Self> {
         // Compute from the size of the node key, what level of tiles we expect the
-        let level = key.size().next_power_of_two().ilog2() / 8;
-        let level: u8 = (level).try_into().unwrap();
+        let level = key.size().next_power_of_two().ilog2();
+        let level: u8 = (level / 8).try_into().unwrap();
 
         // Compute the size of the base node keys of the tile, i.e. the nodes that are actually contained in the tiles.
         let steps: u64 = 2u64.pow(8 * level as u32);
@@ -121,13 +121,15 @@ impl Tile {
 
         // Add the base nodes to the output
         for idx in 0..self.data.len() / 32 {
-            nodes.push((
+            let node = (
                 NodeKey {
                     start: tile_start + (idx as u64) * steps,
                     end: tile_start + ((idx as u64) + 1) * steps,
                 },
                 self.data[32 * idx..32 * (idx + 1)].try_into().unwrap(),
-            ));
+            );
+
+            nodes.push(node);
         }
 
         let mut start_idx = 0;
