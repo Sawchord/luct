@@ -95,10 +95,11 @@ impl CertificateChain {
             return Ok(v1::LogEntry::X509(self.cert().0.clone()));
         }
 
-        let mut subject_public_key_bytes = vec![];
-        let mut tbs_certificate = self.cert().0.tbs_certificate.clone();
-
         // Get the hash of the issuers subject public key info
+        let mut subject_public_key_bytes = vec![];
+        // TODO: Support precert signing certificate
+        // If the parrent of the precert is a precert signing certificate,
+        // the issuer should be the subject public key info of that certificates parent
         self.0[1]
             .0
             .tbs_certificate
@@ -107,8 +108,7 @@ impl CertificateChain {
             .map_err(CodecError::DerError)?;
         let issuer_key_hash: [u8; 32] = Sha256::digest(&subject_public_key_bytes).into();
 
-        // TODO: Change the issuer, if a special precert signing certificate is being used
-
+        let mut tbs_certificate = self.cert().0.tbs_certificate.clone();
         tbs_certificate.extensions = tbs_certificate.extensions.map(|extensions| {
             extensions
                 .into_iter()
