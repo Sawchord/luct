@@ -2,7 +2,7 @@ use luct_core::{
     CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
     tiling::ParseCheckpointError,
 };
-use std::sync::Arc;
+use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
 use url::Url;
 
@@ -34,7 +34,7 @@ impl<C> CtClient<C> {
     }
 }
 
-pub trait Client {
+pub trait Client: Debug {
     fn get(
         &self,
         url: &Url,
