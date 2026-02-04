@@ -87,10 +87,7 @@ impl CertificateChain {
         self.0.last().unwrap()
     }
 
-    pub(crate) fn as_log_entry_v1(
-        &self,
-        as_precert: bool,
-    ) -> Result<v1::LogEntry, CertificateError> {
+    pub(crate) fn as_log_entry_v1(&self, as_precert: bool) -> Result<v1::LogEntry, CodecError> {
         if !as_precert {
             return Ok(v1::LogEntry::X509(self.cert().0.clone()));
         }
@@ -142,10 +139,7 @@ impl CertificateChain {
             version: sct.sct_version.clone(),
             leaf: v1::tree::Leaf::TimestampedEntry(v1::tree::TimestampedEntry {
                 timestamp: sct.timestamp,
-                log_entry: self.as_log_entry_v1(as_precert).map_err(|err| match err {
-                    CertificateError::CodecError(err) => err,
-                    _ => unreachable!(),
-                })?,
+                log_entry: self.as_log_entry_v1(as_precert)?,
                 extensions: sct.extensions.clone(),
             }),
         })

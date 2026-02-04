@@ -1,5 +1,5 @@
 use crate::{
-    CertificateChain, CertificateError, CtLog, Version,
+    CertificateChain, CtLog, Version,
     signature::{Signature, SignatureValidationError},
     store::Hashable,
     tree::HashOutput,
@@ -23,10 +23,9 @@ impl CtLog {
         let timestamp = CertificateTimeStamp {
             sct_version: Version::V1,
             timestamp: sct.timestamp,
-            entry: cert.as_log_entry_v1(as_precert).map_err(|err| match err {
-                CertificateError::CodecError(err) => SignatureValidationError::CodecError(err),
-                _ => unreachable!(),
-            })?,
+            entry: cert
+                .as_log_entry_v1(as_precert)
+                .map_err(SignatureValidationError::CodecError)?,
             extensions: sct.extensions.clone(),
         };
 
