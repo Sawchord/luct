@@ -10,6 +10,7 @@ use luct_core::{log_list::v3::LogList, store::MemoryStore};
 use luct_scanner::{LeadResult, LogBuilder, Scanner};
 use luct_store::FilesystemStore;
 use std::sync::Arc;
+use tracing_subscriber::EnvFilter;
 
 mod args;
 mod fetch;
@@ -19,6 +20,14 @@ const LOG_LIST: &str = include_str!("../../luct-extension/luct/assets/log_list.j
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
     let args = Args::parse();
+
+    if let Ok(env_filter) = EnvFilter::try_from_default_env() {
+        tracing_subscriber::fmt()
+            .compact()
+            .with_env_filter(env_filter)
+            .init();
+    }
+
     let workdir = get_workdir(&args);
     let log_list_path = log_list_path(&args);
 
@@ -38,6 +47,7 @@ async fn main() -> eyre::Result<()> {
     let log_list: LogList = serde_json::from_str(&log_list)
         .with_context(|| "failed to parse log list json file".to_string())?;
     let logs = log_list.currently_active_logs();
+    tracing::info!("Imported {} logs", logs.len());
 
     let sct_cache = if args.no_cache {
         Box::new(MemoryStore::default()) as _
@@ -47,6 +57,7 @@ async fn main() -> eyre::Result<()> {
 
     let client = RequestDeduplicationClient::new(ReqwestClient::new());
     let mut scanner = Scanner::new_with_client(sct_cache, client);
+    tracing::info!("Initialized scanner");
 
     for log in logs {
         let name = log.description();

@@ -34,7 +34,7 @@ pub(crate) fn fetch_cert_chain(url: &str) -> eyre::Result<CertificateChain> {
         r#"GET / HTTP/1.1
 Host: {url}
 Connection: close
-User-Agent: inspect-cert-chain/{}
+User-Agent: luct-cli/{}
 Accept-Encoding: identity
 
 "#,
