@@ -110,6 +110,12 @@ pub struct TreeHead {
     pub(crate) head: HashOutput,
 }
 
+impl TreeHead {
+    pub fn tree_size(&self) -> u64 {
+        self.tree_size
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

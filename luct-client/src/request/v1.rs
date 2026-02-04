@@ -22,6 +22,7 @@ use url::Url;
 // TODO: Introduce logging / tracing
 
 impl<C: Client> CtClient<C> {
+    #[tracing::instrument(level = "trace")]
     pub async fn get_sth_v1(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
         let url = self.get_full_v1_url().join("get-sth").unwrap();
@@ -37,16 +38,19 @@ impl<C: Client> CtClient<C> {
             .validate_sth_v1(&response)
             .map_err(|err| ClientError::SignatureValidationFailed("STH", err))?;
 
+        tracing::debug!("fetched and validated STH {:?} from url {}", response, url);
+
         Ok(response)
     }
 
+    #[tracing::instrument(level = "trace")]
     pub async fn update_sth_v1(
         &self,
         old_sth: Option<&SignedTreeHead>,
     ) -> Result<SignedTreeHead, ClientError> {
         let new_sth = self.get_sth_v1().await?;
 
-        // If we have no old seth, simply return the new one
+        // If we have no old sth, simply return the new one
         let Some(old_sth) = old_sth else {
             return Ok(new_sth);
         };
@@ -56,9 +60,11 @@ impl<C: Client> CtClient<C> {
         }
 
         self.check_consistency_v1(old_sth, &new_sth).await?;
+
         Ok(new_sth)
     }
 
+    #[tracing::instrument(level = "trace")]
     pub async fn check_consistency_v1(
         &self,
         first: &SignedTreeHead,
@@ -96,9 +102,16 @@ impl<C: Client> CtClient<C> {
             return Err(ClientError::ConsistencyProofError);
         }
 
+        tracing::debug!(
+            "fetched and validated consistency proof for tree sizes {} to {}",
+            first.tree_size(),
+            second.tree_size()
+        );
+
         Ok(())
     }
 
+    #[tracing::instrument(level = "trace")]
     pub async fn check_embedded_sct_inclusion_v1(
         &self,
         sct: &SignedCertificateTimestamp,
@@ -133,9 +146,16 @@ impl<C: Client> CtClient<C> {
             return Err(ClientError::AuditProofError);
         }
 
+        tracing::debug!(
+            "fetched and validated embedded SCT {:?} for tree size {}",
+            sct,
+            sth.tree_size()
+        );
+
         Ok(())
     }
 
+    #[tracing::instrument(level = "trace")]
     pub async fn get_roots_v1(&self) -> Result<Vec<Certificate>, ClientError> {
         self.assert_v1()?;
 
@@ -144,6 +164,9 @@ impl<C: Client> CtClient<C> {
         self.check_status(&url, status, &response)?;
 
         let response: GetRootsResponse = serde_json::from_str(&response)?;
+
+        tracing::debug!("fetched roots from url {}", url);
+
         Ok((&response).into())
     }
 

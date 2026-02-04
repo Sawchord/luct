@@ -1,7 +1,8 @@
 use crate::{ClientError, CtClient};
+use std::fmt::Debug;
 use url::Url;
 
-impl<C> CtClient<C> {
+impl<C: Debug> CtClient<C> {
     pub(crate) fn check_status(
         &self,
         url: &Url,
@@ -9,14 +10,17 @@ impl<C> CtClient<C> {
         response: &str,
     ) -> Result<(), ClientError> {
         if status != 200 {
-            return Err(ClientError::ResponseError {
+            let err = ClientError::ResponseError {
                 url: url.to_string(),
                 code: status,
                 msg: response.to_string(),
-            });
-        }
+            };
+            tracing::error!("Endpoint {} returned and error: {}", url, err);
 
-        Ok(())
+            Err(err)
+        } else {
+            Ok(())
+        }
     }
 
     pub(crate) fn check_status_binary(
@@ -28,5 +32,3 @@ impl<C> CtClient<C> {
         self.check_status(url, status, &String::from_utf8_lossy(response))
     }
 }
-
-// TODO: RequestDeduplicationClient

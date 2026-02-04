@@ -98,7 +98,7 @@ impl<C: Client> RequestDeduplicationClient<C> {
                 Some(ongoing_requests) => {
                     ongoing_requests.push(tx);
 
-                    tracing::debug!(
+                    tracing::trace!(
                         "Deduplicated request to {}. Queue length: {}",
                         key,
                         ongoing_requests.len()

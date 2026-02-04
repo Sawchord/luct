@@ -13,12 +13,14 @@ pub struct ReqwestClient {
 impl ReqwestClient {
     pub fn new() -> Self {
         Self {
+            // TODO: Make the user agent setable
             client: reqwest::Client::new(),
         }
     }
 }
 
 impl Client for ReqwestClient {
+    #[tracing::instrument(level = "trace")]
     async fn get(
         &self,
         url: &Url,
@@ -34,6 +36,7 @@ impl Client for ReqwestClient {
         Ok((status, Arc::new(data)))
     }
 
+    #[tracing::instrument(level = "trace")]
     async fn get_bin(
         &self,
         url: &Url,

@@ -6,6 +6,7 @@ use luct_core::{
 use url::Url;
 
 impl<C: Client> CtClient<C> {
+    #[tracing::instrument(level = "trace")]
     pub async fn get_checkpoint(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
         let url = self.get_url("checkpoint")?;
@@ -21,13 +22,20 @@ impl<C: Client> CtClient<C> {
             .validate_checkpoint(&checkpoint)
             .map_err(|err| ClientError::SignatureValidationFailed("checkpoint STH", err))?;
 
+        tracing::debug!(
+            "fetched and validated checkpoint: {:?} from url {}",
+            sth,
+            url
+        );
+
         Ok(sth)
     }
 
+    #[tracing::instrument(level = "trace")]
     pub async fn get_tile(&self, mut tile_id: TileId) -> Result<Tile, ClientError> {
         self.assert_v1()?;
-
         let url = self.get_url(&tile_id.as_url())?;
+
         let (mut status, mut response) = self.client.get_bin(&url, &[]).await?;
 
         // If the partial tile can't be found, we retry with the full tile
@@ -38,6 +46,8 @@ impl<C: Client> CtClient<C> {
         };
 
         self.check_status_binary(&url, status, &response)?;
+
+        tracing::trace!("fetched tile {:?}, from url: {}", tile_id, url);
 
         tile_id
             .with_data(response)
