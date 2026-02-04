@@ -2,6 +2,7 @@ use crate::{Client, ClientError};
 use async_oneshot::{Sender, oneshot};
 use std::{
     collections::BTreeMap,
+    fmt,
     sync::{Arc, Mutex},
 };
 
@@ -29,13 +30,14 @@ impl<C> RequestDeduplicationClient<C> {
 }
 
 impl<C: Client> Client for RequestDeduplicationClient<C> {
+    #[tracing::instrument(level = "trace")]
     async fn get(
         &self,
         url: &url::Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, std::sync::Arc<String>), ClientError> {
         let response = self
-            .wait_or_try_get(url, params, async {
+            .try_get_or_wait(url, params, async {
                 match self.inner.get(url, params).await {
                     Ok((status, data)) => Response::String(status, data),
                     Err(err) => Response::Error(err),
@@ -50,13 +52,14 @@ impl<C: Client> Client for RequestDeduplicationClient<C> {
         }
     }
 
+    #[tracing::instrument(level = "trace")]
     async fn get_bin(
         &self,
         url: &url::Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, std::sync::Arc<Vec<u8>>), ClientError> {
         let response = self
-            .wait_or_try_get(url, params, async {
+            .try_get_or_wait(url, params, async {
                 match self.inner.get_bin(url, params).await {
                     Ok((status, data)) => Response::Binary(status, data),
                     Err(err) => Response::Error(err),
@@ -73,7 +76,7 @@ impl<C: Client> Client for RequestDeduplicationClient<C> {
 }
 
 impl<C: Client> RequestDeduplicationClient<C> {
-    async fn wait_or_try_get(
+    async fn try_get_or_wait(
         &self,
         url: &url::Url,
         params: &[(&str, &str)],
@@ -93,13 +96,17 @@ impl<C: Client> RequestDeduplicationClient<C> {
             let (tx, rx) = oneshot::<Response>();
             match requests.get_mut(&key) {
                 Some(ongoing_requests) => {
-                    //println!("Dedup request to {}", url);
                     ongoing_requests.push(tx);
 
+                    tracing::debug!(
+                        "Deduplicated request to {}. Queue length: {}",
+                        key,
+                        ongoing_requests.len()
+                    );
                     (rx, None)
                 }
                 None => {
-                    //println!("New request to {}", url);
+                    tracing::debug!("A fresh request to: {}", key);
 
                     requests.insert(key.clone(), vec![tx]);
 
@@ -107,15 +114,17 @@ impl<C: Client> RequestDeduplicationClient<C> {
                         let response = getter.await;
                         let mut requests = self.requests.lock().unwrap();
 
-                        // println!(
-                        //     "Sending response of {} to {} requesters",
-                        //     url,
-                        //     requests.len()
-                        // );
-                        for mut tx in requests
+                        let senders = requests
                             .remove(&key)
-                            .expect("Key no longer exist. This is a bug")
-                        {
+                            .expect("Key no longer exist. This is a bug");
+
+                        tracing::debug!(
+                            "Sending response of {} to {} requesters",
+                            key,
+                            senders.len()
+                        );
+
+                        for mut tx in senders {
                             tx.send(response.clone()).unwrap();
                         }
                     };
@@ -140,6 +149,12 @@ impl<C: Client> RequestDeduplicationClient<C> {
 struct DeduplicationKey {
     url: url::Url,
     params: Vec<(String, String)>,
+}
+
+impl fmt::Display for DeduplicationKey {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "DeduplicationKey: {}:{:?}", self.url, self.params)
+    }
 }
 
 #[derive(Debug, Clone)]
