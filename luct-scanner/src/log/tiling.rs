@@ -7,8 +7,9 @@ use luct_core::{
     tree::{Node, NodeKey, Tree, TreeHead},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
-use std::sync::Arc;
+use std::{fmt, sync::Arc};
 
+#[derive(Debug)]
 pub(crate) struct TileFetcher<C>(
     Tree<
         TileFetchStore<C>,
@@ -33,6 +34,7 @@ impl<C> TileFetcher<C> {
 }
 
 impl<C: Client> TileFetcher<C> {
+    #[tracing::instrument(level = "trace")]
     pub(crate) async fn check_embdedded_sct_inclusion(
         &self,
         sct: &SignedCertificateTimestamp,
@@ -42,8 +44,6 @@ impl<C: Client> TileFetcher<C> {
         let Some(leaf_index) = sct.leaf_index() else {
             return Err(TilingError::LeafIndexMissing.into());
         };
-
-        //println!("Leaf index: {:?}", leaf_index);
 
         let tree_head = TreeHead::from(sth);
         let audit_proof = self
@@ -63,11 +63,19 @@ impl<C: Client> TileFetcher<C> {
 
         Ok(())
     }
+
+    // TODO: Implement check_sth_extension
 }
 
 pub(crate) struct TileFetchStore<C> {
     node_cache: Box<dyn Store<NodeKey, HashOutput>>,
     log: Arc<ScannerLogInner<C>>,
+}
+
+impl<C> fmt::Debug for TileFetchStore<C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("TileFetchStore").finish()
+    }
 }
 
 impl<C> TileFetchStore<C> {
@@ -84,6 +92,7 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
         unimplemented!("It is not possible to insert nodes in a tile fetch store")
     }
 
+    #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // First, try to get the node from the cache
         if let Some(value) = self.node_cache.get(&key) {
@@ -118,6 +127,7 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
 }
 
 impl<C: Client> TileFetchStore<C> {
+    #[tracing::instrument(level = "trace")]
     async fn fetch_unbalanced_keys(
         &self,
         key: &NodeKey,
@@ -131,18 +141,18 @@ impl<C: Client> TileFetchStore<C> {
         let nodes = if key.is_balanced() {
             // If the key is balanced, we know it is contained within exactly one tile.
             // We call `fetch_balanced_tile` to fetch the tile and then recompute the nodes
+            tracing::debug!("Fetching balanced key: {:?}", key);
             self.fetch_balanced_keys(key, tree_size).await?
         } else {
             // If the key is unbalanced, we might need to fetch multiple tiles.
             // We split the key into a balanced left part and an unbalanced right part which we fetch recursively
             let (left, right) = key.split();
+            tracing::debug!("Fetching balanced key: {:?}", left);
+            tracing::debug!("Fetching unbalanced key: {:?}", right);
             let (left_nodes, right_nodes) = futures::join!(
                 self.fetch_balanced_keys(&left, tree_size),
                 Box::pin(self.fetch_unbalanced_keys(&right, tree_size)),
             );
-
-            // let left_nodes = self.fetch_balanced_keys(&left, tree_size).await;
-            // let right_nodes = self.fetch_unbalanced_keys(&right, tree_size).await;
 
             let mut left_nodes = left_nodes?;
             let mut right_nodes = right_nodes?;
@@ -159,18 +169,19 @@ impl<C: Client> TileFetchStore<C> {
             left_nodes.append(&mut right_nodes);
             left_nodes.push((key.clone(), hash));
 
+            tracing::debug!("Fetched unbalanced key: {:?}", key);
             left_nodes
         };
 
         Some(nodes)
     }
 
+    #[tracing::instrument(level = "trace")]
     async fn fetch_balanced_keys(
         &self,
         key: &NodeKey,
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        //println!("Fetching balanced key: {:?}", key);
         if let Some(value) = self.node_cache.get(key) {
             return Some(vec![(key.clone(), value)]);
         }
@@ -178,12 +189,14 @@ impl<C: Client> TileFetchStore<C> {
         let tile_id = TileId::from_node_key(key, tree_size)?;
         let tile = self.log.client.get_tile(tile_id.clone()).await;
 
-        // if tile.is_err() {
-        //     println!("Error: {:?}", tile)
-        // }
+        if tile.is_err() {
+            tracing::error!("Failed to fetch tile {:?}, reason: {:?}", tile_id, tile);
+        }
 
         let tile = tile.ok()?;
         let nodes = tile.recompute_node_keys();
+
+        tracing::debug!("Fetched balanced key: {:?}", key);
         Some(nodes)
     }
 }

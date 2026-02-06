@@ -14,9 +14,10 @@ license = { workspace = true }
 luct-core = { path = "../luct-core" }
 luct-client = { path = "../luct-client" }
 
-
 serde = { workspace = true }
 thiserror = { workspace = true }
+
+tracing = { workspace = true }
 
 futures = { workspace = true }
 
