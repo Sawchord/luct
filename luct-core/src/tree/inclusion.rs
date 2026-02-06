@@ -1,9 +1,9 @@
-use futures::future::join_all;
-
 use crate::{
     store::{AsyncStore, Hashable, Store},
     tree::{HashOutput, Node, NodeKey, Tree, TreeHead},
 };
+use futures::{FutureExt, future::join_all};
+use thiserror::Error;
 
 impl<N, L, V> Tree<N, L, V>
 where
@@ -11,16 +11,29 @@ where
     V: Hashable,
 {
     /// This follows RFC 9162 2.1.3.1
-    pub fn get_audit_proof(&self, head: &TreeHead, index: u64) -> Option<AuditProof> {
+    pub fn get_audit_proof(
+        &self,
+        head: &TreeHead,
+        index: u64,
+    ) -> Result<AuditProof, AuditProofGenerationError> {
         if index >= head.tree_size {
-            return None;
+            return Err(AuditProofGenerationError::InvalidIndex {
+                tree_size: head.tree_size,
+                index,
+            });
         }
 
-        let path = get_audit_proof(head, index, |key| self.nodes.get(&key));
-        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
+        let path = get_audit_proof(head, index, |key| {
+            self.nodes
+                .get(&key)
+                .ok_or(AuditProofGenerationError::KeyNotFound(key))
+        });
+        let mut path = path
+            .into_iter()
+            .collect::<Result<Vec<HashOutput>, AuditProofGenerationError>>()?;
 
         path.reverse();
-        Some(AuditProof { index, path })
+        Ok(AuditProof { index, path })
     }
 }
 
@@ -29,17 +42,30 @@ where
     N: AsyncStore<NodeKey, HashOutput>,
     V: Hashable,
 {
-    pub async fn get_audit_proof_async(&self, head: &TreeHead, index: u64) -> Option<AuditProof> {
+    pub async fn get_audit_proof_async(
+        &self,
+        head: &TreeHead,
+        index: u64,
+    ) -> Result<AuditProof, AuditProofGenerationError> {
         if index >= head.tree_size {
-            return None;
+            return Err(AuditProofGenerationError::InvalidIndex {
+                tree_size: head.tree_size,
+                index,
+            });
         }
 
-        let path = get_audit_proof(head, index, |key| self.nodes.get(key));
+        let path = get_audit_proof(head, index, |key| {
+            self.nodes
+                .get(key.clone())
+                .map(|result| result.ok_or(AuditProofGenerationError::KeyNotFound(key)))
+        });
         let path = join_all(path).await;
-        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
+        let mut path = path
+            .into_iter()
+            .collect::<Result<Vec<HashOutput>, AuditProofGenerationError>>()?;
 
         path.reverse();
-        Some(AuditProof { index, path })
+        Ok(AuditProof { index, path })
     }
 }
 
@@ -108,6 +134,15 @@ impl AuditProof {
 
         r == head.head && s_n == 0
     }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+pub enum AuditProofGenerationError {
+    #[error("Index {index} not found in tree of size {tree_size}")]
+    InvalidIndex { tree_size: u64, index: u64 },
+
+    #[error("Failed to fetch key {0:?} from the store")]
+    KeyNotFound(NodeKey),
 }
 
 #[cfg(test)]

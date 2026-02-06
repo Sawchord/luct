@@ -50,12 +50,13 @@ impl<C: Client> TileFetcher<C> {
             .0
             .get_audit_proof_async(&tree_head, *leaf_index)
             .await
-            // TODO: Better error
-            .ok_or(ClientError::AuditProofError)?;
+            .map_err(TilingError::AuditProofGenerationError)?;
 
         let leaf = chain
             .as_leaf_v1(sct, true)
             .map_err(|err| ClientError::CertificateError(CertificateError::CodecError(err)))?;
+
+        // TODO: Better error
         if !audit_proof.validate(&tree_head, &leaf) {
             return Err(ClientError::AuditProofError);
         }

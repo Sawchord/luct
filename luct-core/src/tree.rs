@@ -1,7 +1,7 @@
 use crate::store::{Hashable, IndexedStore, Store};
 pub use crate::tree::{
     consistency::ConsistencyProof,
-    inclusion::AuditProof,
+    inclusion::{AuditProof, AuditProofGenerationError},
     node::{Node, NodeKey},
 };
 use serde::{Deserialize, Serialize};
