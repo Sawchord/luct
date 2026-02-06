@@ -37,3 +37,6 @@ web-sys = { workspace = true, features = [
 # This needs to be imported here to set the "js" feature,
 # otherwise the crate would not compile to wasm
 getrandom = { version = "0.2", features = ["js"] }
+
+tracing = { workspace = true }
+tracing-wasm = { workspace = true }

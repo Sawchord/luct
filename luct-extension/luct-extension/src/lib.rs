@@ -9,8 +9,10 @@ use luct_scanner::{
     Scanner as CtScanner,
 };
 use std::sync::Arc;
+use tracing::Level;
+use tracing_wasm::WASMLayerConfigBuilder;
 use url::Url;
-use wasm_bindgen::prelude::wasm_bindgen;
+use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 
 mod store;
 
@@ -18,6 +20,17 @@ mod store;
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
     fn log(s: &str);
+}
+
+#[wasm_bindgen(start)]
+pub fn start() -> Result<(), JsValue> {
+    tracing_wasm::set_as_global_default_with_config(
+        WASMLayerConfigBuilder::default()
+            .set_max_level(Level::DEBUG)
+            .build(),
+    );
+
+    Ok(())
 }
 
 #[wasm_bindgen]
@@ -61,11 +74,15 @@ impl Scanner {
     #[wasm_bindgen]
     pub fn collect_leads(&self, url: String, leads: Array) -> Result<Vec<Lead>, String> {
         let url = Url::parse(&url).map_err(|err| format!("{err}"))?;
-        if self
-            .0
-            .logs()
-            .any(|log| log.config().url().domain() == url.domain())
-        {
+        if self.0.logs().any(|log| {
+            log.config().url().domain() == url.domain()
+                || log
+                    .config()
+                    .tile_url()
+                    .as_ref()
+                    .map(|fetch_url| fetch_url.domain())
+                    == Some(url.domain())
+        }) {
             log("Skipping request to log itself to prevent recursion");
             return Ok(vec![]);
         }
