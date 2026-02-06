@@ -31,7 +31,7 @@ impl<C: Client> CtClient<C> {
         let (status, response) = self.client.get(&url, &[]).await?;
         self.check_status(&url, status, &response)?;
         let response: GetSthResponse = serde_json::from_str(&response)?;
-        let response = SignedTreeHead::from(response);
+        let response = SignedTreeHead::try_from(response).map_err(|_| ClientError::SthError)?;
 
         // Validate tree head signature against key
         self.log
@@ -94,8 +94,8 @@ impl<C: Client> CtClient<C> {
         let proof =
             ConsistencyProof::try_from(response).map_err(|_| ClientError::ConsistencyProofError)?;
 
-        let first = TreeHead::try_from(first).map_err(|_| ClientError::ConsistencyProofError)?;
-        let second = TreeHead::try_from(second).map_err(|_| ClientError::ConsistencyProofError)?;
+        let first = TreeHead::from(first);
+        let second = TreeHead::from(second);
 
         // Validate inclusion proof
         if !proof.validate(&first, &second) {
@@ -139,7 +139,7 @@ impl<C: Client> CtClient<C> {
 
         let response: GetProofByHashResponse = serde_json::from_str(&response)?;
         let proof = AuditProof::try_from(response).map_err(|_| ClientError::AuditProofError)?;
-        let tree_head = TreeHead::try_from(sth).map_err(|_| ClientError::AuditProofError)?;
+        let tree_head = TreeHead::from(sth);
 
         // Validate inclusion proof
         if !proof.validate(&tree_head, &leaf) {
@@ -218,7 +218,7 @@ mod tests {
         let client = get_client();
 
         let old_sth: GetSthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
-        let old_sth = SignedTreeHead::from(old_sth);
+        let old_sth = SignedTreeHead::try_from(old_sth).unwrap();
 
         client.update_sth_v1(Some(&old_sth)).await.unwrap();
     }

@@ -3,6 +3,7 @@ use serde::{Deserialize, Serialize};
 use crate::{
     CtLog, Version,
     signature::{Signature, SignatureValidationError},
+    tree::HashOutput,
     utils::codec::{CodecError, Decode, Encode},
     v1::{SignatureType, responses::GetSthResponse},
 };
@@ -10,9 +11,7 @@ use std::io::{Read, Write};
 
 impl CtLog {
     pub fn validate_sth_v1(&self, sth: &SignedTreeHead) -> Result<(), SignatureValidationError> {
-        let tree_head_tbs = TreeHeadSignature::try_from(sth)
-            .map_err(|_| SignatureValidationError::MalformedSignature)?;
-
+        let tree_head_tbs = TreeHeadSignature::from(sth);
         sth.tree_head_signature
             .validate(&tree_head_tbs, &self.config.key)
     }
@@ -25,7 +24,7 @@ impl CtLog {
 pub struct SignedTreeHead {
     pub(crate) tree_size: u64,
     pub(crate) timestamp: u64,
-    pub(crate) sha256_root_hash: Vec<u8>,
+    pub(crate) sha256_root_hash: HashOutput,
     pub(crate) tree_head_signature: Signature<TreeHeadSignature>,
 }
 
@@ -39,14 +38,16 @@ impl SignedTreeHead {
     }
 }
 
-impl From<GetSthResponse> for SignedTreeHead {
-    fn from(value: GetSthResponse) -> Self {
-        Self {
+impl TryFrom<GetSthResponse> for SignedTreeHead {
+    type Error = ();
+
+    fn try_from(value: GetSthResponse) -> Result<Self, Self::Error> {
+        Ok(Self {
             tree_size: value.tree_size,
             timestamp: value.timestamp,
-            sha256_root_hash: value.sha256_root_hash.0,
+            sha256_root_hash: value.sha256_root_hash.0.try_into().map_err(|_| ())?,
             tree_head_signature: value.tree_head_signature.0.0,
-        }
+        })
     }
 }
 
@@ -92,19 +93,14 @@ impl Decode for TreeHeadSignature {
     }
 }
 
-impl TryFrom<&SignedTreeHead> for TreeHeadSignature {
-    type Error = ();
-
-    fn try_from(value: &SignedTreeHead) -> Result<Self, Self::Error> {
-        let sha256_root_hash: [u8; 32] =
-            value.sha256_root_hash.clone().try_into().map_err(|_| ())?;
-
-        Ok(Self {
+impl From<&SignedTreeHead> for TreeHeadSignature {
+    fn from(value: &SignedTreeHead) -> Self {
+        Self {
             version: Version::V1,
             timestamp: value.timestamp,
             tree_size: value.tree_size,
-            sha256_root_hash,
-        })
+            sha256_root_hash: value.sha256_root_hash,
+        }
     }
 }
 
@@ -125,6 +121,6 @@ mod test {
     fn validate_sth() {
         let log = get_log_argon2025h1();
         let sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
-        log.validate_sth_v1(&sth.into()).unwrap();
+        log.validate_sth_v1(&sth.try_into().unwrap()).unwrap();
     }
 }

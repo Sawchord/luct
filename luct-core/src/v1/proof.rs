@@ -29,12 +29,10 @@ impl From<TreeHeadSignature> for TreeHead {
     }
 }
 
-impl TryFrom<&SignedTreeHead> for TreeHead {
-    type Error = ();
-
-    fn try_from(value: &SignedTreeHead) -> Result<Self, Self::Error> {
-        let sth = TreeHeadSignature::try_from(value)?;
-        Ok(sth.into())
+impl From<&SignedTreeHead> for TreeHead {
+    fn from(value: &SignedTreeHead) -> Self {
+        let sth = TreeHeadSignature::from(value);
+        sth.into()
     }
 }
 
@@ -80,7 +78,7 @@ mod tests {
     #[test]
     fn validate_sth_consistency() {
         let old_sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
-        let old_tree_head = TreeHead::try_from(&old_sth.into()).unwrap();
+        let old_tree_head = TreeHead::from(&old_sth.try_into().unwrap());
 
         let new_sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2906).unwrap();
         let proof: GetSthConsistencyResponse =
@@ -89,7 +87,7 @@ mod tests {
 
         assert!(proof.validate(
             &old_tree_head,
-            &TreeHead::try_from(&new_sth.into()).unwrap()
+            &TreeHead::from(&new_sth.try_into().unwrap())
         ))
     }
 
@@ -105,7 +103,7 @@ mod tests {
         let leaf = cert.as_leaf_v1(&scts[0], true).unwrap();
 
         let sth: GetSthResponse = serde_json::from_str(ARGON2025H2_STH_0506).unwrap();
-        let tree_head = TreeHead::try_from(&sth.into()).unwrap();
+        let tree_head = TreeHead::from(&sth.try_into().unwrap());
 
         let audit_proof: GetProofByHashResponse = serde_json::from_str(GOOGLE_AUDIT_PROOF).unwrap();
         let proof = AuditProof::try_from(audit_proof).unwrap();

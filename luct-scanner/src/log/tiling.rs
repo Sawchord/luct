@@ -46,7 +46,7 @@ impl<C: Client> TileFetcher<C> {
 
         //println!("Leaf index: {:?}", leaf_index);
 
-        let tree_head = TreeHead::try_from(sth).map_err(|_| ClientError::AuditProofError)?;
+        let tree_head = TreeHead::from(sth);
         let audit_proof = self
             .0
             .get_audit_proof_async(&tree_head, *leaf_index)

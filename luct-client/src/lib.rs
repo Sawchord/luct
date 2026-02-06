@@ -84,6 +84,9 @@ pub enum ClientError {
 
     #[error("The tile that was returned by the log is malformed")]
     MalformedTile,
+
+    #[error("The STH could not be parsed")]
+    SthError,
 }
 
 impl From<serde_json::Error> for ClientError {
@@ -109,6 +112,7 @@ impl CheckSeverity for ClientError {
             ClientError::ResponseError { .. } => Severity::Inconclusive,
             ClientError::Checkpoint(_) => Severity::Unsafe,
             ClientError::MalformedTile => Severity::Unsafe,
+            ClientError::SthError => Severity::Unsafe,
         }
     }
 }

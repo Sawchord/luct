@@ -73,7 +73,7 @@ impl CtLog {
         Ok(SignedTreeHead {
             tree_size: checkpoint.tree_size,
             timestamp: note_sig.timestamp,
-            sha256_root_hash: checkpoint.root_hash.to_vec(),
+            sha256_root_hash: checkpoint.root_hash,
             tree_head_signature: note_sig.signature,
         })
     }
