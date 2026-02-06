@@ -1,8 +1,8 @@
 use crate::{
     store::{AsyncStore, Hashable, Store},
-    tree::{HashOutput, Node, NodeKey, Tree, TreeHead},
+    tree::{HashOutput, Node, NodeKey, ProofGenerationError, Tree, TreeHead},
 };
-use futures::future::join_all;
+use futures::{FutureExt, future::join_all};
 
 impl<N, L, V> Tree<N, L, V>
 where
@@ -14,16 +14,25 @@ where
         &self,
         first: &TreeHead,
         second: &TreeHead,
-    ) -> Option<ConsistencyProof> {
+    ) -> Result<ConsistencyProof, ProofGenerationError> {
         if first.tree_size > second.tree_size {
-            return None;
+            return Err(ProofGenerationError::InvalidTreeSize {
+                small_tree_size: second.tree_size,
+                large_tree_size: first.tree_size,
+            });
         }
 
-        let path = get_consistency_proof(first, second, |key| self.nodes.get(&key));
-        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
+        let path = get_consistency_proof(first, second, |key| {
+            self.nodes
+                .get(&key)
+                .ok_or(ProofGenerationError::KeyNotFound(key))
+        });
+        let mut path = path
+            .into_iter()
+            .collect::<Result<Vec<HashOutput>, ProofGenerationError>>()?;
 
         path.reverse();
-        Some(ConsistencyProof { path })
+        Ok(ConsistencyProof { path })
     }
 }
 
@@ -36,17 +45,26 @@ where
         &self,
         first: &TreeHead,
         second: &TreeHead,
-    ) -> Option<ConsistencyProof> {
+    ) -> Result<ConsistencyProof, ProofGenerationError> {
         if first.tree_size > second.tree_size {
-            return None;
+            return Err(ProofGenerationError::InvalidTreeSize {
+                small_tree_size: second.tree_size,
+                large_tree_size: first.tree_size,
+            });
         }
 
-        let path = get_consistency_proof(first, second, |key| self.nodes.get(key));
+        let path = get_consistency_proof(first, second, |key| {
+            self.nodes
+                .get(key.clone())
+                .map(|result| result.ok_or(ProofGenerationError::KeyNotFound(key)))
+        });
         let path = join_all(path).await;
-        let mut path = path.into_iter().collect::<Option<Vec<_>>>()?;
+        let mut path = path
+            .into_iter()
+            .collect::<Result<Vec<HashOutput>, ProofGenerationError>>()?;
 
         path.reverse();
-        Some(ConsistencyProof { path })
+        Ok(ConsistencyProof { path })
     }
 }
 

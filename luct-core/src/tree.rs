@@ -1,17 +1,33 @@
 use crate::store::{Hashable, IndexedStore, Store};
 pub use crate::tree::{
     consistency::ConsistencyProof,
-    inclusion::{AuditProof, AuditProofGenerationError},
+    inclusion::AuditProof,
     node::{Node, NodeKey},
 };
 use serde::{Deserialize, Serialize};
 use std::marker::PhantomData;
+use thiserror::Error;
 
 mod consistency;
 mod inclusion;
 mod node;
 
 pub(crate) type HashOutput = [u8; 32];
+
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+pub enum ProofGenerationError {
+    #[error("Index {index} not found in tree of size {tree_size}")]
+    InvalidIndex { tree_size: u64, index: u64 },
+
+    #[error("Tree of size {small_tree_size} is smaller than {large_tree_size}")]
+    InvalidTreeSize {
+        small_tree_size: u64,
+        large_tree_size: u64,
+    },
+
+    #[error("Failed to fetch key {0:?} from the store")]
+    KeyNotFound(NodeKey),
+}
 
 #[derive(Debug, Clone)]
 pub struct Tree<N, L, V> {

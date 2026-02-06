@@ -2,7 +2,7 @@ mod checkpoint;
 mod data_tile;
 mod tile;
 
-use crate::tree::AuditProofGenerationError;
+use crate::tree::ProofGenerationError;
 pub use checkpoint::{Checkpoint, ParseCheckpointError};
 pub use data_tile::{DataTile, DataTileId};
 use itertools::Itertools;
@@ -21,7 +21,7 @@ pub enum TilingError {
     LeafIndexMissing,
 
     #[error("Failed to generate audit proof: {0}")]
-    AuditProofGenerationError(#[from] AuditProofGenerationError),
+    AuditProofGenerationError(#[from] ProofGenerationError),
 }
 
 /// Turn an index into a url as specified in the tiling spec, i.e. "1234067" to "x001/x234/067"
