@@ -3,10 +3,22 @@ mod data_tile;
 mod tile;
 
 pub use checkpoint::{Checkpoint, ParseCheckpointError};
-
 pub use data_tile::{DataTile, DataTileId};
 use itertools::Itertools;
+use thiserror::Error;
 pub use tile::{Tile, TileId};
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum TilingError {
+    #[error("Can not fetch tiles from non tiling log")]
+    NonTilingLog,
+
+    #[error("The tile that was returned by the log is malformed")]
+    MalformedTile,
+
+    #[error("The SCT has no leaf index")]
+    LeafIndexMissing,
+}
 
 /// Turn an index into a url as specified in the tiling spec, i.e. "1234067" to "x001/x234/067"
 fn index_to_url(idx: u64) -> String {

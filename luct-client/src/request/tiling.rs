@@ -1,6 +1,6 @@
 use crate::{Client, ClientError, CtClient};
 use luct_core::{
-    tiling::{Checkpoint, Tile, TileId},
+    tiling::{Checkpoint, Tile, TileId, TilingError},
     v1::SignedTreeHead,
 };
 use url::Url;
@@ -49,22 +49,20 @@ impl<C: Client> CtClient<C> {
 
         tracing::trace!("fetched tile {:?}, from url: {}", tile_id, url);
 
-        tile_id
-            .with_data(response)
-            .ok_or(ClientError::MalformedTile)
+        Ok(tile_id.with_data(response)?)
     }
 
     // TODO: Get Data tile
     // TODO: Get issuer
 
     fn get_url(&self, path: &str) -> Result<Url, ClientError> {
-        self.log
+        let url = self
+            .log
             .config()
             .tile_url()
             .as_ref()
-            .map(|url| url.join(path).map_err(|_| ClientError::NonTilingLog))
-            .ok_or(ClientError::NonTilingLog)
-            .flatten()
+            .ok_or(TilingError::NonTilingLog)?;
+        Ok(url.join(path).map_err(|_| TilingError::NonTilingLog)?)
     }
 }
 #[cfg(all(test, feature = "reqwest"))]

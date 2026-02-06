@@ -1,6 +1,6 @@
 use luct_core::{
     CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
-    tiling::ParseCheckpointError,
+    tiling::{ParseCheckpointError, TilingError},
 };
 use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
@@ -55,9 +55,6 @@ pub enum ClientError {
     #[error("The version of the log is not supported by this client")]
     UnsupportedVersion,
 
-    #[error("Can not fetch tiles from non tiling log")]
-    NonTilingLog,
-
     #[error("Failed to parse JSON: line: {line}, column: {column}")]
     JsonError { line: usize, column: usize },
 
@@ -82,8 +79,8 @@ pub enum ClientError {
     #[error("Failed parsing checkpoint: {0}")]
     Checkpoint(#[from] ParseCheckpointError),
 
-    #[error("The tile that was returned by the log is malformed")]
-    MalformedTile,
+    #[error("Tiling error: {0}")]
+    TilingError(#[from] TilingError),
 
     #[error("The STH could not be parsed")]
     SthError,
@@ -102,7 +99,6 @@ impl CheckSeverity for ClientError {
     fn severity(&self) -> Severity {
         match self {
             ClientError::UnsupportedVersion => Severity::Inconclusive,
-            ClientError::NonTilingLog => Severity::Inconclusive,
             ClientError::JsonError { .. } => Severity::Unsafe,
             ClientError::CertificateError(err) => err.severity(),
             ClientError::SignatureValidationFailed(_, err) => err.severity(),
@@ -111,7 +107,7 @@ impl CheckSeverity for ClientError {
             ClientError::ConnectionError(_) => Severity::Inconclusive,
             ClientError::ResponseError { .. } => Severity::Inconclusive,
             ClientError::Checkpoint(_) => Severity::Unsafe,
-            ClientError::MalformedTile => Severity::Unsafe,
+            ClientError::TilingError(_) => Severity::Unsafe,
             ClientError::SthError => Severity::Unsafe,
         }
     }

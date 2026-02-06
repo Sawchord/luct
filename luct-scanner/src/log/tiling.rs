@@ -3,7 +3,7 @@ use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError,
     store::{AsyncStore, Hashable, MemoryStore, Store},
-    tiling::TileId,
+    tiling::{TileId, TilingError},
     tree::{Node, NodeKey, Tree, TreeHead},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
@@ -40,8 +40,7 @@ impl<C: Client> TileFetcher<C> {
         chain: &CertificateChain,
     ) -> Result<(), ClientError> {
         let Some(leaf_index) = sct.leaf_index() else {
-            // TODO: Better error type
-            return Err(ClientError::AuditProofError);
+            return Err(TilingError::LeafIndexMissing.into());
         };
 
         //println!("Leaf index: {:?}", leaf_index);

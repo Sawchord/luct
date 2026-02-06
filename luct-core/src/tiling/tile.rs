@@ -1,6 +1,6 @@
 use crate::{
     store::Hashable,
-    tiling::index_to_url,
+    tiling::{TilingError, index_to_url},
     tree::{HashOutput, Node, NodeKey},
 };
 use std::{num::NonZeroU8, sync::Arc};
@@ -73,9 +73,9 @@ impl TileId {
     ///
     /// - `None`: If the length of the data is not a multiple if 32
     /// - `Some(Tile)` otherwise
-    pub fn with_data(self, data: Arc<Vec<u8>>) -> Option<Tile> {
+    pub fn with_data(self, data: Arc<Vec<u8>>) -> Result<Tile, TilingError> {
         if !data.len().is_multiple_of(32) {
-            return None;
+            return Err(TilingError::MalformedTile);
         }
 
         // Check that length actually matches the partial value
@@ -85,10 +85,10 @@ impl TileId {
         };
         if data.len() != expected_len * 32 {
             // TODO: Introduce an error type for size mismatch
-            return None;
+            return Err(TilingError::MalformedTile);
         }
 
-        Some(Tile { id: self, data })
+        Ok(Tile { id: self, data })
     }
 
     /// Returns `true`, if this [`TileId`] is partial, `false` otherwise
