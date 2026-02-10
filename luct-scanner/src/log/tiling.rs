@@ -46,6 +46,13 @@ impl<C: Client> TileFetcher<C> {
         };
 
         let tree_head = TreeHead::from(sth);
+
+        tracing::debug!(
+            "Fetching audit proof for leaf index {:?} for tree size {}",
+            leaf_index,
+            tree_head.tree_size()
+        );
+
         let audit_proof = self
             .0
             .get_audit_proof_async(&tree_head, *leaf_index)
@@ -100,21 +107,34 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
         }
 
         // If not available, calculate which tile should have the value and fetch it
-        let tree_size = self.log.sth_store.last()?.1.tree_size();
+
+        let tree_size = match self.log.sth_store.last() {
+            Some(sth) => sth.1.tree_size(),
+            None => {
+                tracing::error!(
+                    "Failed to retrieve STH for log {}. Initialize log before checking inclusions",
+                    self.log.name
+                );
+                return None;
+            }
+        };
+
+        tracing::debug!("Fetching key {:?} against tree size {}", key, tree_size);
         let nodes = self.fetch_unbalanced_keys(&key, tree_size).await?;
 
         // Pick the result from the recomputed nodes
         let result = nodes
             .iter()
             .find(|(nk, _)| nk == &key)
-            .map(|(_, hash)| *hash);
+            .map(|(_, hash)| *hash)
+            .expect("Node was not included in result. This is a bug");
 
-        // Put the rest of the nodes into the cache
+        // Put the nodes into the cache
         nodes
             .into_iter()
             .for_each(|(key, hash)| self.node_cache.insert(key, hash));
 
-        result
+        Some(result)
     }
 
     async fn len(&self) -> usize {
@@ -133,7 +153,6 @@ impl<C: Client> TileFetchStore<C> {
         key: &NodeKey,
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        //println!("Fetching unbalanced key: {:?}", key);
         if let Some(value) = self.node_cache.get(key) {
             return Some(vec![(key.clone(), value)]);
         }
@@ -173,6 +192,7 @@ impl<C: Client> TileFetchStore<C> {
             left_nodes
         };
 
+        tracing::debug!("Fetched {} nodes", nodes.len());
         Some(nodes)
     }
 
