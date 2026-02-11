@@ -6,11 +6,11 @@
 use crate::{Client, ClientError, CtClient};
 use base64::{Engine, prelude::BASE64_STANDARD};
 use luct_core::{
-    Certificate, CertificateChain, CertificateError, Version,
+    Certificate, Version,
     store::Hashable,
     tree::{AuditProof, ConsistencyProof, TreeHead},
     v1::{
-        SignedCertificateTimestamp, SignedTreeHead,
+        MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead,
         responses::{
             GetProofByHashResponse, GetRootsResponse, GetSthConsistencyResponse, GetSthResponse,
         },
@@ -112,18 +112,14 @@ impl<C: Client> CtClient<C> {
     }
 
     #[tracing::instrument(level = "trace")]
-    pub async fn check_embedded_sct_inclusion_v1(
+    pub async fn check_sct_inclusion_v1(
         &self,
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,
-        certificate_chain: &CertificateChain,
+        leaf: &MerkleTreeLeaf,
     ) -> Result<(), ClientError> {
         self.assert_v1()?;
 
-        // Compute tree leaf hash
-        let leaf = certificate_chain
-            .as_leaf_v1(sct, true)
-            .map_err(CertificateError::from)?;
         let leaf_hash = leaf.hash();
         let leaf_hash: String = BASE64_STANDARD.encode(leaf_hash);
 
@@ -142,7 +138,7 @@ impl<C: Client> CtClient<C> {
         let tree_head = TreeHead::from(sth);
 
         // Validate inclusion proof
-        if !proof.validate(&tree_head, &leaf) {
+        if !proof.validate(&tree_head, leaf) {
             return Err(ClientError::AuditProofError);
         }
 
@@ -234,7 +230,7 @@ mod tests {
 
         let sth = client.get_sth_v1().await.unwrap();
         client
-            .check_embedded_sct_inclusion_v1(&scts[0], &sth, &cert)
+            .check_sct_inclusion_v1(&scts[0], &sth, &cert.as_leaf_v1(&scts[0], true).unwrap())
             .await
             .unwrap();
     }

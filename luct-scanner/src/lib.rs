@@ -2,10 +2,12 @@ use crate::{lead::EmbeddedSct, log::ScannerLog};
 use futures::future;
 use luct_client::{Client, ClientError};
 use luct_core::{
-    CertificateChain, CtLog, CtLogConfig, LogId, store::Store, v1::SignedCertificateTimestamp,
+    CertificateChain, CertificateError, CheckSeverity, CtLog, CtLogConfig, LogId, Severity,
+    store::Store, tiling::TilingError, v1::SignedCertificateTimestamp,
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
+use thiserror::Error;
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
@@ -51,7 +53,7 @@ impl<C: Client + Clone> Scanner<C> {
 }
 
 impl<C: Client> Scanner<C> {
-    pub async fn update_sths(&self) -> Result<(), ClientError> {
+    pub async fn update_sths(&self) -> Result<(), ScannerError> {
         let updates = self
             .logs
             .values()
@@ -63,13 +65,13 @@ impl<C: Client> Scanner<C> {
         Ok(())
     }
 
-    pub async fn update_sth(&self, log_name: &str) -> Result<(), ClientError> {
+    pub async fn update_sth(&self, log_name: &str) -> Result<(), ScannerError> {
         match self
             .logs
             .values()
             .find(|log| log.client().log().description() == log_name)
         {
-            Some(log) => log.update_sth().await,
+            Some(log) => Ok(log.update_sth().await?),
             None => {
                 tracing::warn!("Failed to find log {} to update", log_name);
                 Ok(())
@@ -79,14 +81,14 @@ impl<C: Client> Scanner<C> {
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series
     /// of PEM encoded certificates.
-    pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ClientError> {
+    pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ScannerError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
         cert_chain.verify_chain()?;
         self.collect_leads(cert_chain)
     }
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`]
-    pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ClientError> {
+    pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ScannerError> {
         // TODO: Check that no CA is in the denylist of the scanner
         // TODO: Get OCSP SCT leads
         // TODO: Get revocation list leads
@@ -115,7 +117,7 @@ impl<C: Client> Scanner<C> {
         }
     }
 
-    async fn investigate_lead_impl(&self, lead: &Lead) -> Result<LeadResult, ClientError> {
+    async fn investigate_lead_impl(&self, lead: &Lead) -> Result<LeadResult, ScannerError> {
         match lead {
             Lead::EmbeddedSct(embedded_sct) => {
                 let Some(log) = self.logs.get(&embedded_sct.sct.log_id()) else {
@@ -137,4 +139,26 @@ impl<C: Client> Scanner<C> {
 pub struct ScannerBuilder {
     config: ScannerConfig,
     logs: Vec<CtLogConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Error)]
+pub enum ScannerError {
+    #[error("Invalid certificate: {0}")]
+    CertificateError(#[from] CertificateError),
+
+    #[error("HTTP client error {0}")]
+    ClientError(#[from] ClientError),
+
+    #[error("Failed to construct proof from tiles {0}")]
+    TilingError(#[from] TilingError),
+}
+
+impl CheckSeverity for ScannerError {
+    fn severity(&self) -> Severity {
+        match self {
+            ScannerError::CertificateError(err) => err.severity(),
+            ScannerError::ClientError(err) => err.severity(),
+            ScannerError::TilingError(_) => Severity::Unsafe,
+        }
+    }
 }

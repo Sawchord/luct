@@ -1,5 +1,5 @@
 use luct_core::{
-    CertificateError, CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
+    CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
     tiling::{ParseCheckpointError, TilingError},
 };
 use std::{fmt::Debug, sync::Arc};
@@ -58,9 +58,6 @@ pub enum ClientError {
     #[error("Failed to parse JSON: line: {line}, column: {column}")]
     JsonError { line: usize, column: usize },
 
-    #[error("Invalid certificate: {0}")]
-    CertificateError(#[from] CertificateError),
-
     #[error("Signature validation of {0} against the logs key failed: {1}")]
     SignatureValidationFailed(&'static str, SignatureValidationError),
 
@@ -100,7 +97,6 @@ impl CheckSeverity for ClientError {
         match self {
             ClientError::UnsupportedVersion => Severity::Inconclusive,
             ClientError::JsonError { .. } => Severity::Unsafe,
-            ClientError::CertificateError(err) => err.severity(),
             ClientError::SignatureValidationFailed(_, err) => err.severity(),
             ClientError::ConsistencyProofError => Severity::Unsafe,
             ClientError::AuditProofError => Severity::Unsafe,

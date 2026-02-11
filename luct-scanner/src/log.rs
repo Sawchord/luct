@@ -1,7 +1,7 @@
-use crate::{Conclusion, Scanner, lead::EmbeddedSct, log::tiling::TileFetcher};
+use crate::{Conclusion, Scanner, ScannerError, lead::EmbeddedSct, log::tiling::TileFetcher};
 use luct_client::{Client, ClientError, CtClient};
 use luct_core::{
-    Certificate, CertificateChain,
+    Certificate, CertificateChain, CertificateError,
     store::{Hashable, OrderedStore, Store},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
@@ -42,7 +42,7 @@ impl<C: Client> ScannerLog<C> {
         &self,
         sct: &EmbeddedSct,
         scanner: &Scanner<C>,
-    ) -> Result<Conclusion, ClientError> {
+    ) -> Result<Conclusion, ScannerError> {
         let EmbeddedSct { sct, chain } = sct;
 
         if scanner.sct_cache.get(&sct.hash()).is_some() {
@@ -73,7 +73,7 @@ impl<C: Client> ScannerLog<C> {
         &self,
         sct: &SignedCertificateTimestamp,
         chain: &Arc<CertificateChain>,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), ScannerError> {
         if sct.timestamp() > self.latest_sth().await?.timestamp() {
             self.update_sth().await?;
         }
@@ -85,20 +85,24 @@ impl<C: Client> ScannerLog<C> {
             sth.tree_size()
         );
 
+        // Compute tree leaf hash
+        let leaf = chain
+            .as_leaf_v1(sct, true)
+            .map_err(CertificateError::from)?;
+
         match &self.tiles {
             Some(tiles) => tiles.check_embdedded_sct_inclusion(sct, &sth, chain).await,
-            None => {
-                self.log
-                    .client
-                    .check_embedded_sct_inclusion_v1(sct, &sth, chain)
-                    .await
-            }
+            None => Ok(self
+                .log
+                .client
+                .check_sct_inclusion_v1(sct, &sth, &leaf)
+                .await?),
         }
     }
 
     /// Returns the latests STH, if it exists, fetches it otherwise
     #[tracing::instrument(level = "trace")]
-    async fn latest_sth(&self) -> Result<SignedTreeHead, ClientError> {
+    async fn latest_sth(&self) -> Result<SignedTreeHead, ScannerError> {
         match self.log.sth_store.last() {
             Some((_, sth)) => Ok(sth),
             None => {
@@ -113,7 +117,7 @@ impl<C: Client> ScannerLog<C> {
     ///
     /// Checks consistency to the last STH, of one exists
     #[tracing::instrument(level = "trace")]
-    pub(crate) async fn update_sth(&self) -> Result<(), ClientError> {
+    pub(crate) async fn update_sth(&self) -> Result<(), ScannerError> {
         let new_sth = self.get_sth().await?;
 
         if let Some((_, old_sth)) = self.log.sth_store.last() {
@@ -137,7 +141,9 @@ impl<C: Client> ScannerLog<C> {
                 || old_sth.timestamp() > new_sth.timestamp()
             {
                 // TODO: Better error
-                return Err(ClientError::ConsistencyProofError);
+                return Err(ScannerError::ClientError(
+                    ClientError::ConsistencyProofError,
+                ));
             }
         };
         self.log.sth_store.insert(new_sth.tree_size(), new_sth);
@@ -146,16 +152,16 @@ impl<C: Client> ScannerLog<C> {
     }
 
     #[tracing::instrument(level = "trace")]
-    async fn get_sth(&self) -> Result<SignedTreeHead, ClientError> {
+    async fn get_sth(&self) -> Result<SignedTreeHead, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.tiles {
-            Some(_) => self.log.client.get_checkpoint().await,
-            None => self.log.client.get_sth_v1().await,
+            Some(_) => Ok(self.log.client.get_checkpoint().await?),
+            None => Ok(self.log.client.get_sth_v1().await?),
         }
     }
 
     #[tracing::instrument(level = "trace")]
-    async fn validate_root(&self, root: &Certificate) -> Result<Conclusion, ClientError> {
+    async fn validate_root(&self, root: &Certificate) -> Result<Conclusion, ScannerError> {
         let Some(key_id) = root
             .get_authority_key_info()
             .or_else(|| root.get_subject_key_info())
@@ -183,7 +189,7 @@ impl<C: Client> ScannerLog<C> {
     }
 
     #[tracing::instrument(level = "trace")]
-    async fn update_roots(&self) -> Result<(), ClientError> {
+    async fn update_roots(&self) -> Result<(), ScannerError> {
         let certs = self.log.client.get_roots_v1().await?;
         for cert in certs {
             if let Some(key_id) = cert.get_subject_key_info() {

@@ -1,4 +1,4 @@
-use crate::{HashOutput, log::ScannerLogInner};
+use crate::{HashOutput, ScannerError, log::ScannerLogInner};
 use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError,
@@ -46,7 +46,7 @@ impl<C: Client> TileFetcher<C> {
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,
         chain: &CertificateChain,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), ScannerError> {
         let Some(leaf_index) = sct.leaf_index() else {
             return Err(TilingError::LeafIndexMissing.into());
         };
@@ -70,11 +70,11 @@ impl<C: Client> TileFetcher<C> {
 
         let leaf = chain
             .as_leaf_v1(sct, true)
-            .map_err(|err| ClientError::CertificateError(CertificateError::CodecError(err)))?;
+            .map_err(CertificateError::CodecError)?;
 
         // TODO: Better error
         if !audit_proof.validate(&tree_head, &leaf) {
-            return Err(ClientError::AuditProofError);
+            return Err(ScannerError::ClientError(ClientError::AuditProofError));
         }
 
         Ok(())
@@ -84,7 +84,7 @@ impl<C: Client> TileFetcher<C> {
         &self,
         old_sth: &SignedTreeHead,
         new_sth: &SignedTreeHead,
-    ) -> Result<(), ClientError> {
+    ) -> Result<(), ScannerError> {
         if old_sth.tree_size() == new_sth.tree_size() {
             return Ok(());
         }
@@ -109,7 +109,9 @@ impl<C: Client> TileFetcher<C> {
 
         // TODO: Better error
         if !consistency_proof.validate(&old_tree_head, &new_tree_head) {
-            return Err(ClientError::ConsistencyProofError);
+            return Err(ScannerError::ClientError(
+                ClientError::ConsistencyProofError,
+            ));
         }
 
         Ok(())
