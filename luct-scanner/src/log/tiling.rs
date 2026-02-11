@@ -7,7 +7,13 @@ use luct_core::{
     tree::{Node, NodeKey, Tree, TreeHead},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
-use std::{fmt, sync::Arc};
+use std::{
+    fmt,
+    sync::{
+        Arc,
+        atomic::{AtomicU64, Ordering},
+    },
+};
 
 #[derive(Debug)]
 pub(crate) struct TileFetcher<C>(
@@ -53,6 +59,9 @@ impl<C: Client> TileFetcher<C> {
             tree_head.tree_size()
         );
 
+        // Need to set the sth correctly for the async proof to work
+        self.0.nodes().set_tree_size(tree_head.tree_size());
+
         let audit_proof = self
             .0
             .get_audit_proof_async(&tree_head, *leaf_index)
@@ -76,6 +85,10 @@ impl<C: Client> TileFetcher<C> {
         old_sth: &SignedTreeHead,
         new_sth: &SignedTreeHead,
     ) -> Result<(), ClientError> {
+        if old_sth.tree_size() == new_sth.tree_size() {
+            return Ok(());
+        }
+
         let old_tree_head = TreeHead::from(old_sth);
         let new_tree_head = TreeHead::from(new_sth);
 
@@ -84,6 +97,9 @@ impl<C: Client> TileFetcher<C> {
             old_tree_head.tree_size(),
             new_tree_head.tree_size()
         );
+
+        // Need to set the sth correctly for the async proof to work
+        self.0.nodes().set_tree_size(new_tree_head.tree_size());
 
         let consistency_proof = self
             .0
@@ -103,6 +119,7 @@ impl<C: Client> TileFetcher<C> {
 pub(crate) struct TileFetchStore<C> {
     node_cache: Box<dyn Store<NodeKey, HashOutput>>,
     log: Arc<ScannerLogInner<C>>,
+    tree_size: AtomicU64,
 }
 
 impl<C> fmt::Debug for TileFetchStore<C> {
@@ -112,11 +129,16 @@ impl<C> fmt::Debug for TileFetchStore<C> {
 }
 
 impl<C> TileFetchStore<C> {
-    pub(crate) fn new(
-        log: Arc<ScannerLogInner<C>>,
-        node_cache: Box<dyn Store<NodeKey, HashOutput>>,
-    ) -> Self {
-        Self { node_cache, log }
+    fn new(log: Arc<ScannerLogInner<C>>, node_cache: Box<dyn Store<NodeKey, HashOutput>>) -> Self {
+        Self {
+            node_cache,
+            log,
+            tree_size: AtomicU64::new(0),
+        }
+    }
+
+    fn set_tree_size(&self, tree_size: u64) {
+        self.tree_size.store(tree_size, Ordering::Release);
     }
 }
 
@@ -133,16 +155,14 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
         }
 
         // If not available, calculate which tile should have the value and fetch it
-        let tree_size = match self.log.sth_store.last() {
-            Some(sth) => sth.1.tree_size(),
-            None => {
-                tracing::error!(
-                    "Failed to retrieve STH for log {}. Initialize log before checking inclusions",
-                    self.log.name
-                );
-                return None;
-            }
-        };
+        let tree_size = self.tree_size.load(Ordering::Acquire);
+        if tree_size == 0 {
+            tracing::error!(
+                "Failed to retrieve STH for log {}. Initialize STH before checking inclusions",
+                self.log.name
+            );
+            return None;
+        }
 
         tracing::debug!("Fetching key {:?} against tree size {}", key, tree_size);
         let nodes = self.fetch_unbalanced_keys(&key, tree_size).await?;

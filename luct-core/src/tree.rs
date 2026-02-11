@@ -44,6 +44,10 @@ impl<N, L, V> Tree<N, L, V> {
             values: PhantomData,
         }
     }
+
+    pub fn nodes(&self) -> &N {
+        &self.nodes
+    }
 }
 
 impl<N, L, V> Tree<N, L, V>
