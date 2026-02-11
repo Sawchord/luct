@@ -1,6 +1,7 @@
 use luct_core::{
     CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
     tiling::{ParseCheckpointError, TilingError},
+    tree::ProofValidationError,
 };
 use std::{fmt::Debug, sync::Arc};
 use thiserror::Error;
@@ -64,8 +65,8 @@ pub enum ClientError {
     #[error("Failed to validate a consistency path")]
     ConsistencyProofError,
 
-    #[error("Failed to validate an audit path")]
-    AuditProofError,
+    #[error("Failed to validate an audit path: {0}")]
+    AuditProofError(ProofValidationError),
 
     #[error("Failed to connect to host: {0}")]
     ConnectionError(String),
@@ -99,7 +100,7 @@ impl CheckSeverity for ClientError {
             ClientError::JsonError { .. } => Severity::Unsafe,
             ClientError::SignatureValidationFailed(_, err) => err.severity(),
             ClientError::ConsistencyProofError => Severity::Unsafe,
-            ClientError::AuditProofError => Severity::Unsafe,
+            ClientError::AuditProofError(_) => Severity::Unsafe,
             ClientError::ConnectionError(_) => Severity::Inconclusive,
             ClientError::ResponseError { .. } => Severity::Inconclusive,
             ClientError::Checkpoint(_) => Severity::Unsafe,

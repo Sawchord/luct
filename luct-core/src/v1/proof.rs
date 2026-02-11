@@ -1,5 +1,5 @@
 use crate::{
-    tree::{AuditProof, ConsistencyProof, TreeHead},
+    tree::{AuditProof, ConsistencyProof, ProofValidationError, TreeHead},
     v1::{
         responses::{GetProofByHashResponse, GetSthConsistencyResponse},
         sth::{SignedTreeHead, TreeHeadSignature},
@@ -37,7 +37,7 @@ impl From<&SignedTreeHead> for TreeHead {
 }
 
 impl TryFrom<GetProofByHashResponse> for AuditProof {
-    type Error = ();
+    type Error = ProofValidationError;
 
     fn try_from(value: GetProofByHashResponse) -> Result<Self, Self::Error> {
         Ok(Self {
@@ -45,8 +45,15 @@ impl TryFrom<GetProofByHashResponse> for AuditProof {
             path: value
                 .audit_path
                 .into_iter()
-                .map(|elem| elem.0.try_into().map_err(|_| ()))
-                .collect::<Result<Vec<[u8; 32]>, ()>>()?,
+                .map(|elem| {
+                    elem.0.try_into().map_err(|vec: Vec<u8>| {
+                        ProofValidationError::InvalidHashLength {
+                            expected: 32,
+                            received: vec.len(),
+                        }
+                    })
+                })
+                .collect::<Result<Vec<[u8; 32]>, ProofValidationError>>()?,
         })
     }
 }
@@ -108,6 +115,6 @@ mod tests {
         let audit_proof: GetProofByHashResponse = serde_json::from_str(GOOGLE_AUDIT_PROOF).unwrap();
         let proof = AuditProof::try_from(audit_proof).unwrap();
 
-        assert!(proof.validate(&tree_head, &leaf))
+        proof.validate(&tree_head, &leaf).unwrap();
     }
 }

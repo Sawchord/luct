@@ -29,6 +29,30 @@ pub enum ProofGenerationError {
     KeyNotFound(NodeKey),
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Error)]
+pub enum ProofValidationError {
+    #[error("Found an unxexpected hash length (expected: {expected}, received: {received})")]
+    InvalidHashLength { expected: usize, received: usize },
+
+    #[error("Index {index} not found in tree of size {tree_size}")]
+    InvalidIndex { tree_size: u64, index: u64 },
+
+    #[error("Tree of size {small_tree_size} is smaller than {large_tree_size}")]
+    InvalidTreeSize {
+        small_tree_size: u64,
+        large_tree_size: u64,
+    },
+
+    #[error("Hash mismatch")]
+    HashMismatch,
+
+    #[error("Merkle path was too short")]
+    PathTooShort,
+
+    #[error("Merkle path was too long")]
+    PathTooLong,
+}
+
 #[derive(Debug, Clone)]
 pub struct Tree<N, L, V> {
     nodes: N,

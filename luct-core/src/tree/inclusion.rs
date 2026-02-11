@@ -1,6 +1,6 @@
 use crate::{
     store::{AsyncStore, Hashable, Store},
-    tree::{HashOutput, Node, NodeKey, ProofGenerationError, Tree, TreeHead},
+    tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
 
@@ -102,9 +102,16 @@ pub struct AuditProof {
 }
 
 impl AuditProof {
-    pub fn validate(&self, head: &TreeHead, leaf: &impl Hashable) -> bool {
+    pub fn validate(
+        &self,
+        head: &TreeHead,
+        leaf: &impl Hashable,
+    ) -> Result<(), ProofValidationError> {
         if head.tree_size < self.index {
-            return false;
+            return Err(ProofValidationError::InvalidIndex {
+                tree_size: head.tree_size,
+                index: self.index,
+            });
         }
 
         let mut f_n = self.index;
@@ -113,7 +120,7 @@ impl AuditProof {
 
         for p in &self.path {
             if s_n == 0 {
-                return false;
+                return Err(ProofValidationError::PathTooShort);
             }
 
             if f_n & 1 == 1 || f_n == s_n {
@@ -131,7 +138,14 @@ impl AuditProof {
             s_n >>= 1;
         }
 
-        r == head.head && s_n == 0
+        if s_n != 0 {
+            return Err(ProofValidationError::PathTooLong);
+        }
+        if r != head.head {
+            return Err(ProofValidationError::PathTooLong);
+        }
+
+        Ok(())
     }
 }
 
@@ -156,18 +170,18 @@ mod tests {
 
         let proof1 = tree.get_audit_proof(&head, 0).unwrap();
         assert_eq!(proof1.path.len(), 3);
-        assert!(proof1.validate(&head, &"A".to_string()));
+        proof1.validate(&head, &"A".to_string()).unwrap();
 
         let proof2 = tree.get_audit_proof(&head, 3).unwrap();
         assert_eq!(proof2.path.len(), 3);
-        assert!(proof2.validate(&head, &"D".to_string()));
+        proof2.validate(&head, &"D".to_string()).unwrap();
 
         let proof3 = tree.get_audit_proof(&head, 4).unwrap();
         assert_eq!(proof3.path.len(), 3);
-        assert!(proof3.validate(&head, &"E".to_string()));
+        proof3.validate(&head, &"E".to_string()).unwrap();
 
         let proof4 = tree.get_audit_proof(&head, 6).unwrap();
         assert_eq!(proof4.path.len(), 2);
-        assert!(proof4.validate(&head, &"G".to_string()));
+        proof4.validate(&head, &"G".to_string()).unwrap();
     }
 }

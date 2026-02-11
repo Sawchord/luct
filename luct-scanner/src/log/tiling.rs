@@ -73,9 +73,9 @@ impl<C: Client> TileFetcher<C> {
             .map_err(CertificateError::CodecError)?;
 
         // TODO: Better error
-        if !audit_proof.validate(&tree_head, &leaf) {
-            return Err(ScannerError::ClientError(ClientError::AuditProofError));
-        }
+        audit_proof
+            .validate(&tree_head, &leaf)
+            .map_err(|err| ScannerError::ClientError(ClientError::AuditProofError(err)))?;
 
         Ok(())
     }

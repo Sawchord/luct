@@ -134,13 +134,13 @@ impl<C: Client> CtClient<C> {
         self.check_status(&url, status, &response)?;
 
         let response: GetProofByHashResponse = serde_json::from_str(&response)?;
-        let proof = AuditProof::try_from(response).map_err(|_| ClientError::AuditProofError)?;
+        let proof = AuditProof::try_from(response).map_err(ClientError::AuditProofError)?;
         let tree_head = TreeHead::from(sth);
 
         // Validate inclusion proof
-        if !proof.validate(&tree_head, leaf) {
-            return Err(ClientError::AuditProofError);
-        }
+        proof
+            .validate(&tree_head, leaf)
+            .map_err(ClientError::AuditProofError)?;
 
         tracing::debug!(
             "fetched and validated embedded SCT {:?} for tree size {}",
