@@ -71,7 +71,33 @@ impl<C: Client> TileFetcher<C> {
         Ok(())
     }
 
-    // TODO: Implement check_sth_extension
+    pub(crate) async fn check_sth_consistency(
+        &self,
+        old_sth: &SignedTreeHead,
+        new_sth: &SignedTreeHead,
+    ) -> Result<(), ClientError> {
+        let old_tree_head = TreeHead::from(old_sth);
+        let new_tree_head = TreeHead::from(new_sth);
+
+        tracing::debug!(
+            "Fetching extension proof from tree size {} to {}",
+            old_tree_head.tree_size(),
+            new_tree_head.tree_size()
+        );
+
+        let consistency_proof = self
+            .0
+            .get_consistency_proof_async(&old_tree_head, &new_tree_head)
+            .await
+            .map_err(TilingError::ConsistencyProofGenerationError)?;
+
+        // TODO: Better error
+        if !consistency_proof.validate(&old_tree_head, &new_tree_head) {
+            return Err(ClientError::ConsistencyProofError);
+        }
+
+        Ok(())
+    }
 }
 
 pub(crate) struct TileFetchStore<C> {
@@ -107,7 +133,6 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
         }
 
         // If not available, calculate which tile should have the value and fetch it
-
         let tree_size = match self.log.sth_store.last() {
             Some(sth) => sth.1.tree_size(),
             None => {

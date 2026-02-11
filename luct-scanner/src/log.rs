@@ -80,7 +80,7 @@ impl<C: Client> ScannerLog<C> {
         let sth = self.latest_sth().await?;
 
         tracing::debug!(
-            "Checking embedded sct against log {} at tree size {}",
+            "Checking embedded SCT against log {} at tree size {}",
             self.log.name,
             sth.tree_size()
         );
@@ -109,16 +109,29 @@ impl<C: Client> ScannerLog<C> {
         }
     }
 
-    /// Updates the log to the newest STH, checks consistency if possible
+    /// Updates the log to the newest STH
+    ///
+    /// Checks consistency to the last STH, of one exists
     #[tracing::instrument(level = "trace")]
     pub(crate) async fn update_sth(&self) -> Result<(), ClientError> {
         let new_sth = self.get_sth().await?;
 
         if let Some((_, old_sth)) = self.log.sth_store.last() {
-            self.log
-                .client
-                .check_consistency_v1(&old_sth, &new_sth)
-                .await?;
+            tracing::debug!(
+                "Updating STH: Checking STH {} against old STH {}",
+                new_sth.tree_size(),
+                old_sth.tree_size()
+            );
+
+            match &self.tiles {
+                Some(tiles) => tiles.check_sth_consistency(&old_sth, &new_sth).await?,
+                None => {
+                    self.log
+                        .client
+                        .check_consistency_v1(&old_sth, &new_sth)
+                        .await?
+                }
+            };
         };
         self.log.sth_store.insert(new_sth.tree_size(), new_sth);
 
@@ -127,6 +140,7 @@ impl<C: Client> ScannerLog<C> {
 
     #[tracing::instrument(level = "trace")]
     async fn get_sth(&self) -> Result<SignedTreeHead, ClientError> {
+        tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.tiles {
             Some(_) => self.log.client.get_checkpoint().await,
             None => self.log.client.get_sth_v1().await,

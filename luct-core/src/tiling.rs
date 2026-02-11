@@ -21,7 +21,10 @@ pub enum TilingError {
     LeafIndexMissing,
 
     #[error("Failed to generate audit proof: {0}")]
-    AuditProofGenerationError(#[from] ProofGenerationError),
+    AuditProofGenerationError(ProofGenerationError),
+
+    #[error("Failed to generate consistency proof: {0}")]
+    ConsistencyProofGenerationError(ProofGenerationError),
 }
 
 /// Turn an index into a url as specified in the tiling spec, i.e. "1234067" to "x001/x234/067"
