@@ -63,6 +63,20 @@ impl<C: Client> Scanner<C> {
         Ok(())
     }
 
+    pub async fn update_sth(&self, log_name: &str) -> Result<(), ClientError> {
+        match self
+            .logs
+            .values()
+            .find(|log| log.client().log().description() == log_name)
+        {
+            Some(log) => log.update_sth().await,
+            None => {
+                tracing::warn!("Failed to find log {} to update", log_name);
+                Ok(())
+            }
+        }
+    }
+
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series
     /// of PEM encoded certificates.
     pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ClientError> {
