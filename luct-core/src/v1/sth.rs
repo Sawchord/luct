@@ -36,6 +36,10 @@ impl SignedTreeHead {
     pub fn timestamp(&self) -> u64 {
         self.timestamp
     }
+
+    pub fn sha256_root_hash(&self) -> &HashOutput {
+        &self.sha256_root_hash
+    }
 }
 
 impl TryFrom<GetSthResponse> for SignedTreeHead {

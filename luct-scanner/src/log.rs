@@ -117,21 +117,28 @@ impl<C: Client> ScannerLog<C> {
         let new_sth = self.get_sth().await?;
 
         if let Some((_, old_sth)) = self.log.sth_store.last() {
-            tracing::debug!(
-                "Updating STH: Checking STH {} against old STH {}",
-                new_sth.tree_size(),
-                old_sth.tree_size()
-            );
+            if old_sth.tree_size() < new_sth.tree_size() {
+                tracing::debug!(
+                    "Updating STH: Checking STH {} against old STH {}",
+                    new_sth.tree_size(),
+                    old_sth.tree_size()
+                );
 
-            match &self.tiles {
-                Some(tiles) => tiles.check_sth_consistency(&old_sth, &new_sth).await?,
-                None => {
-                    self.log
-                        .client
-                        .check_consistency_v1(&old_sth, &new_sth)
-                        .await?
-                }
-            };
+                match &self.tiles {
+                    Some(tiles) => tiles.check_sth_consistency(&old_sth, &new_sth).await?,
+                    None => {
+                        self.log
+                            .client
+                            .check_consistency_v1(&old_sth, &new_sth)
+                            .await?
+                    }
+                };
+            } else if old_sth.sha256_root_hash() != new_sth.sha256_root_hash()
+                || old_sth.timestamp() > new_sth.timestamp()
+            {
+                // TODO: Better error
+                return Err(ClientError::ConsistencyProofError);
+            }
         };
         self.log.sth_store.insert(new_sth.tree_size(), new_sth);
 
