@@ -142,4 +142,10 @@ mod tests {
             Sha256::digest(self.as_bytes()).into()
         }
     }
+
+    impl Hashable for HashOutput {
+        fn hash(&self) -> HashOutput {
+            Sha256::digest(self).into()
+        }
+    }
 }

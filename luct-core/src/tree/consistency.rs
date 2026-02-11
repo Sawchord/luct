@@ -46,7 +46,7 @@ where
         first: &TreeHead,
         second: &TreeHead,
     ) -> Result<ConsistencyProof, ProofGenerationError> {
-        if first.tree_size > second.tree_size {
+        if first.tree_size >= second.tree_size {
             return Err(ProofGenerationError::InvalidTreeSize {
                 small_tree_size: second.tree_size,
                 large_tree_size: first.tree_size,
@@ -72,15 +72,13 @@ fn get_consistency_proof<F, O>(first: &TreeHead, second: &TreeHead, get: F) -> V
 where
     F: Fn(NodeKey) -> O,
 {
-    let tree_size = second.tree_size;
-
-    let mut n = NodeKey::full_range(tree_size);
-    let mut m = first.tree_size;
+    let mut n = NodeKey::full_range(second.tree_size);
+    let m = first.tree_size;
     let mut known = true;
 
     let mut path = vec![];
 
-    while m + n.start != n.end {
+    while m != n.end {
         let (left, right) = n.split();
         if m <= right.start {
             let elem = get(right);
@@ -91,7 +89,6 @@ where
             path.push(elem);
 
             known = false;
-            m -= right.start;
             n = right;
         }
     }
@@ -178,9 +175,10 @@ impl ConsistencyProof {
 
 #[cfg(test)]
 mod tests {
-    use crate::store::MemoryStore;
+    use rand::{Rng, SeedableRng, rngs::ChaCha8Rng};
 
     use super::*;
+    use crate::store::MemoryStore;
 
     #[test]
     fn compute_inclusion_proofs() {
@@ -229,5 +227,33 @@ mod tests {
             .unwrap();
         assert!(proof4.path.is_empty());
         assert!(proof4.validate(&tree_head4, &tree_head4));
+    }
+
+    #[test]
+    fn randomized_inclusion_proof() {
+        let first_size = 4973;
+        let second_size = 5009;
+        let mut rng = ChaCha8Rng::seed_from_u64(1337);
+
+        let tree = Tree::<_, _, HashOutput>::new(MemoryStore::default(), MemoryStore::default());
+
+        for _ in 0..first_size {
+            let mut entry = [0; 32];
+            rng.fill_bytes(&mut entry);
+            tree.insert_entry(entry);
+        }
+
+        let first_th = tree.recompute_tree_head();
+
+        for _ in first_size..second_size {
+            let mut entry = [0; 32];
+            rng.fill_bytes(&mut entry);
+            tree.insert_entry(entry);
+        }
+
+        let second_th = tree.recompute_tree_head();
+
+        let proof = tree.get_consistency_proof(&first_th, &second_th).unwrap();
+        assert!(proof.validate(&first_th, &second_th));
     }
 }
