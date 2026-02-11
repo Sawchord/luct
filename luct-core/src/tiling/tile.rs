@@ -175,7 +175,7 @@ impl Tile {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, rng};
+    use rand::{RngExt, rng};
 
     #[test]
     fn as_url() {

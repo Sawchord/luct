@@ -111,7 +111,7 @@ impl Decode for LeafIndex {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use rand::{Rng, rng};
+    use rand::{RngExt, rng};
     use std::io::Cursor;
 
     /// Test that empty bytes parses correctly

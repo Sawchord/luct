@@ -58,7 +58,7 @@ clap = { version = "4", features = ["derive"] }
 eyre = { version = "0.6" }
 thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
-rand = { version = "0.9" }
+rand = { version = "0.10", features = ["chacha"] }
 async-oneshot = { version = "0.5" }
 
 # Observability
