@@ -89,10 +89,6 @@ impl<C: Client> Scanner<C> {
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`]
     pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ScannerError> {
-        // TODO: Check that no CA is in the denylist of the scanner
-        // TODO: Get OCSP SCT leads
-        // TODO: Get revocation list leads
-        // TODO: Get DNS CAA leads
         let leads = chain
             .cert()
             .extract_scts_v1()?

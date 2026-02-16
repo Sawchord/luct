@@ -4,7 +4,7 @@ use luct_core::{
     CertificateChain, CertificateError,
     store::{AsyncStore, Hashable, MemoryStore, Store},
     tiling::{TileId, TilingError},
-    tree::{Node, NodeKey, Tree, TreeHead},
+    tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{
@@ -14,6 +14,8 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
 };
+
+// TODO: Use TilingError in this file
 
 #[derive(Debug)]
 pub(crate) struct TileFetcher<C>(
@@ -84,8 +86,24 @@ impl<C: Client> TileFetcher<C> {
         old_sth: &SignedTreeHead,
         new_sth: &SignedTreeHead,
     ) -> Result<(), ScannerError> {
+        // TODO: Move these checks into TreeHead and use here as well as in consistency validation function
+        if old_sth.tree_size() > new_sth.tree_size() {
+            return Err(ScannerError::ClientError(
+                ClientError::ConsistencyProofError(ProofValidationError::InvalidTreeSize {
+                    expected: old_sth.tree_size(),
+                    received: new_sth.tree_size(),
+                }),
+            ));
+        }
+
         if old_sth.tree_size() == new_sth.tree_size() {
-            return Ok(());
+            if old_sth.sha256_root_hash() == new_sth.sha256_root_hash() {
+                return Ok(());
+            } else {
+                return Err(ScannerError::ClientError(
+                    ClientError::ConsistencyProofError(ProofValidationError::HashMismatch),
+                ));
+            }
         }
 
         let old_tree_head = TreeHead::from(old_sth);
