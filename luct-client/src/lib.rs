@@ -62,8 +62,8 @@ pub enum ClientError {
     #[error("Signature validation of {0} against the logs key failed: {1}")]
     SignatureValidationFailed(&'static str, SignatureValidationError),
 
-    #[error("Failed to validate a consistency path")]
-    ConsistencyProofError,
+    #[error("Failed to validate a consistency path: {0}")]
+    ConsistencyProofError(ProofValidationError),
 
     #[error("Failed to validate an audit path: {0}")]
     AuditProofError(ProofValidationError),
@@ -99,7 +99,7 @@ impl CheckSeverity for ClientError {
             ClientError::UnsupportedVersion => Severity::Inconclusive,
             ClientError::JsonError { .. } => Severity::Unsafe,
             ClientError::SignatureValidationFailed(_, err) => err.severity(),
-            ClientError::ConsistencyProofError => Severity::Unsafe,
+            ClientError::ConsistencyProofError(_) => Severity::Unsafe,
             ClientError::AuditProofError(_) => Severity::Unsafe,
             ClientError::ConnectionError(_) => Severity::Inconclusive,
             ClientError::ResponseError { .. } => Severity::Inconclusive,

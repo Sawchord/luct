@@ -7,15 +7,22 @@ use crate::{
 };
 
 impl TryFrom<GetSthConsistencyResponse> for ConsistencyProof {
-    type Error = ();
+    type Error = ProofValidationError;
 
     fn try_from(value: GetSthConsistencyResponse) -> Result<Self, Self::Error> {
         Ok(ConsistencyProof {
             path: value
                 .consistency
                 .into_iter()
-                .map(|elem| elem.0.try_into().map_err(|_| ()))
-                .collect::<Result<Vec<[u8; 32]>, ()>>()?,
+                .map(|elem| {
+                    elem.0.try_into().map_err(|vec: Vec<u8>| {
+                        ProofValidationError::InvalidHashLength {
+                            expected: 32,
+                            received: vec.len(),
+                        }
+                    })
+                })
+                .collect::<Result<Vec<[u8; 32]>, ProofValidationError>>()?,
         })
     }
 }
@@ -92,10 +99,12 @@ mod tests {
             serde_json::from_str(GOOGLE_STH_CONSISTENCY_PROOF).unwrap();
         let proof = ConsistencyProof::try_from(proof).unwrap();
 
-        assert!(proof.validate(
-            &old_tree_head,
-            &TreeHead::from(&new_sth.try_into().unwrap())
-        ))
+        proof
+            .validate(
+                &old_tree_head,
+                &TreeHead::from(&new_sth.try_into().unwrap()),
+            )
+            .unwrap();
     }
 
     #[test]

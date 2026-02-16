@@ -19,11 +19,8 @@ pub enum ProofGenerationError {
     #[error("Index {index} not found in tree of size {tree_size}")]
     InvalidIndex { tree_size: u64, index: u64 },
 
-    #[error("Tree of size {small_tree_size} is smaller than {large_tree_size}")]
-    InvalidTreeSize {
-        small_tree_size: u64,
-        large_tree_size: u64,
-    },
+    #[error("Invalid tree size {received} smaller than {expected}")]
+    InvalidTreeSize { expected: u64, received: u64 },
 
     #[error("Failed to fetch key {0:?} from the store")]
     KeyNotFound(NodeKey),
@@ -37,11 +34,8 @@ pub enum ProofValidationError {
     #[error("Index {index} not found in tree of size {tree_size}")]
     InvalidIndex { tree_size: u64, index: u64 },
 
-    #[error("Tree of size {small_tree_size} is smaller than {large_tree_size}")]
-    InvalidTreeSize {
-        small_tree_size: u64,
-        large_tree_size: u64,
-    },
+    #[error("Invalid tree size {received} smaller than {expected}")]
+    InvalidTreeSize { expected: u64, received: u64 },
 
     #[error("Hash mismatch")]
     HashMismatch,

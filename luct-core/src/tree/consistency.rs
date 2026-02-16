@@ -1,6 +1,6 @@
 use crate::{
     store::{AsyncStore, Hashable, Store},
-    tree::{HashOutput, Node, NodeKey, ProofGenerationError, Tree, TreeHead},
+    tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
 
@@ -17,8 +17,8 @@ where
     ) -> Result<ConsistencyProof, ProofGenerationError> {
         if first.tree_size > second.tree_size {
             return Err(ProofGenerationError::InvalidTreeSize {
-                small_tree_size: second.tree_size,
-                large_tree_size: first.tree_size,
+                expected: first.tree_size,
+                received: second.tree_size,
             });
         }
 
@@ -48,8 +48,8 @@ where
     ) -> Result<ConsistencyProof, ProofGenerationError> {
         if first.tree_size >= second.tree_size {
             return Err(ProofGenerationError::InvalidTreeSize {
-                small_tree_size: second.tree_size,
-                large_tree_size: first.tree_size,
+                expected: first.tree_size,
+                received: second.tree_size,
             });
         }
 
@@ -108,12 +108,19 @@ pub struct ConsistencyProof {
 
 impl ConsistencyProof {
     /// This follows RFC 9162 2.1.4.2
-    pub fn validate(&self, first: &TreeHead, second: &TreeHead) -> bool {
+    pub fn validate(
+        &self,
+        first: &TreeHead,
+        second: &TreeHead,
+    ) -> Result<(), ProofValidationError> {
         if first.tree_size > second.tree_size {
-            return false;
+            return Err(ProofValidationError::InvalidTreeSize {
+                expected: first.tree_size,
+                received: second.tree_size,
+            });
         };
         if first == second && self.path.is_empty() {
-            return true;
+            return Ok(());
         }
 
         let path: Vec<&HashOutput> = if first.tree_size.is_power_of_two() {
@@ -137,7 +144,7 @@ impl ConsistencyProof {
 
         for &c in &path[1..] {
             if s_n == 0 {
-                return false;
+                return Err(ProofValidationError::PathTooShort);
             }
 
             if f_n & 1 == 1 || f_n == s_n {
@@ -169,7 +176,15 @@ impl ConsistencyProof {
             s_n >>= 1;
         }
 
-        f_r == first.head && s_r == second.head && s_n == 0
+        if s_n != 0 {
+            return Err(ProofValidationError::PathTooLong);
+        }
+
+        if f_r != first.head || s_r != second.head {
+            return Err(ProofValidationError::HashMismatch);
+        }
+
+        Ok(())
     }
 }
 
@@ -207,26 +222,26 @@ mod tests {
             .get_consistency_proof(&tree_head1, &tree_head4)
             .unwrap();
         assert_eq!(proof1.path.len(), 4);
-        assert!(proof1.validate(&tree_head1, &tree_head4));
+        proof1.validate(&tree_head1, &tree_head4).unwrap();
 
         let proof2 = tree
             .get_consistency_proof(&tree_head2, &tree_head4)
             .unwrap();
         assert_eq!(proof2.path.len(), 1);
         assert_eq!(proof1.path[3], proof2.path[0]);
-        assert!(proof2.validate(&tree_head2, &tree_head4));
+        proof2.validate(&tree_head2, &tree_head4).unwrap();
 
         let proof3 = tree
             .get_consistency_proof(&tree_head3, &tree_head4)
             .unwrap();
         assert_eq!(proof3.path.len(), 3);
-        assert!(proof3.validate(&tree_head3, &tree_head4));
+        proof3.validate(&tree_head3, &tree_head4).unwrap();
 
         let proof4 = tree
             .get_consistency_proof(&tree_head4, &tree_head4)
             .unwrap();
         assert!(proof4.path.is_empty());
-        assert!(proof4.validate(&tree_head4, &tree_head4));
+        proof4.validate(&tree_head4, &tree_head4).unwrap();
     }
 
     #[test]
@@ -254,6 +269,6 @@ mod tests {
         let second_th = tree.recompute_tree_head();
 
         let proof = tree.get_consistency_proof(&first_th, &second_th).unwrap();
-        assert!(proof.validate(&first_th, &second_th));
+        proof.validate(&first_th, &second_th).unwrap();
     }
 }

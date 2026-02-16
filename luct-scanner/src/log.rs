@@ -142,7 +142,8 @@ impl<C: Client> ScannerLog<C> {
             {
                 // TODO: Better error
                 return Err(ScannerError::ClientError(
-                    ClientError::ConsistencyProofError,
+                    //ClientError::ConsistencyProofError,
+                    todo!(),
                 ));
             }
         };

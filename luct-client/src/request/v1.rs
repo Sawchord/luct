@@ -19,8 +19,6 @@ use luct_core::{
 use std::cmp::Ordering;
 use url::Url;
 
-// TODO: Introduce logging / tracing
-
 impl<C: Client> CtClient<C> {
     #[tracing::instrument(level = "trace")]
     pub async fn get_sth_v1(&self) -> Result<SignedTreeHead, ClientError> {
@@ -92,15 +90,15 @@ impl<C: Client> CtClient<C> {
 
         let response: GetSthConsistencyResponse = serde_json::from_str(&response)?;
         let proof =
-            ConsistencyProof::try_from(response).map_err(|_| ClientError::ConsistencyProofError)?;
+            ConsistencyProof::try_from(response).map_err(ClientError::ConsistencyProofError)?;
 
         let first = TreeHead::from(first);
         let second = TreeHead::from(second);
 
         // Validate inclusion proof
-        if !proof.validate(&first, &second) {
-            return Err(ClientError::ConsistencyProofError);
-        }
+        proof
+            .validate(&first, &second)
+            .map_err(ClientError::ConsistencyProofError)?;
 
         tracing::debug!(
             "fetched and validated consistency proof for tree sizes {} to {}",

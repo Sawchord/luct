@@ -72,7 +72,6 @@ impl<C: Client> TileFetcher<C> {
             .as_leaf_v1(sct, true)
             .map_err(CertificateError::CodecError)?;
 
-        // TODO: Better error
         audit_proof
             .validate(&tree_head, &leaf)
             .map_err(|err| ScannerError::ClientError(ClientError::AuditProofError(err)))?;
@@ -107,12 +106,9 @@ impl<C: Client> TileFetcher<C> {
             .await
             .map_err(TilingError::ConsistencyProofGenerationError)?;
 
-        // TODO: Better error
-        if !consistency_proof.validate(&old_tree_head, &new_tree_head) {
-            return Err(ScannerError::ClientError(
-                ClientError::ConsistencyProofError,
-            ));
-        }
+        consistency_proof
+            .validate(&old_tree_head, &new_tree_head)
+            .map_err(|err| ScannerError::ClientError(ClientError::ConsistencyProofError(err)))?;
 
         Ok(())
     }
