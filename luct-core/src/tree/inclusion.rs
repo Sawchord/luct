@@ -142,7 +142,7 @@ impl AuditProof {
             return Err(ProofValidationError::PathTooLong);
         }
         if r != head.head {
-            return Err(ProofValidationError::PathTooLong);
+            return Err(ProofValidationError::HashMismatch);
         }
 
         Ok(())
