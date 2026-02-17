@@ -1,11 +1,10 @@
-use crate::{HashOutput, ScannerError, log::ScannerLogInner};
-use luct_client::{Client, ClientError};
+use crate::{HashOutput, log::ScannerLogInner};
+use luct_client::Client;
 use luct_core::{
-    CertificateChain, CertificateError,
     store::{AsyncStore, Hashable, MemoryStore, Store},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
-    v1::{SignedCertificateTimestamp, SignedTreeHead},
+    v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{
     fmt,
@@ -14,8 +13,6 @@ use std::{
         atomic::{AtomicU64, Ordering},
     },
 };
-
-// TODO: Use TilingError in this file
 
 #[derive(Debug)]
 pub(crate) struct TileFetcher<C>(
@@ -47,10 +44,10 @@ impl<C: Client> TileFetcher<C> {
         &self,
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,
-        chain: &CertificateChain,
-    ) -> Result<(), ScannerError> {
+        leaf: &MerkleTreeLeaf,
+    ) -> Result<(), TilingError> {
         let Some(leaf_index) = sct.leaf_index() else {
-            return Err(TilingError::LeafIndexMissing.into());
+            return Err(TilingError::LeafIndexMissing);
         };
 
         let tree_head = TreeHead::from(sth);
@@ -70,13 +67,9 @@ impl<C: Client> TileFetcher<C> {
             .await
             .map_err(TilingError::AuditProofGenerationError)?;
 
-        let leaf = chain
-            .as_leaf_v1(sct, true)
-            .map_err(CertificateError::CodecError)?;
-
         audit_proof
-            .validate(&tree_head, &leaf)
-            .map_err(|err| ScannerError::ClientError(ClientError::AuditProofError(err)))?;
+            .validate(&tree_head, leaf)
+            .map_err(TilingError::AuditProofError)?;
 
         Ok(())
     }
@@ -85,14 +78,14 @@ impl<C: Client> TileFetcher<C> {
         &self,
         old_sth: &SignedTreeHead,
         new_sth: &SignedTreeHead,
-    ) -> Result<(), ScannerError> {
+    ) -> Result<(), TilingError> {
         // TODO: Move these checks into TreeHead and use here as well as in consistency validation function
         if old_sth.tree_size() > new_sth.tree_size() {
-            return Err(ScannerError::ClientError(
-                ClientError::ConsistencyProofError(ProofValidationError::InvalidTreeSize {
+            return Err(TilingError::ConsistencyProofError(
+                ProofValidationError::InvalidTreeSize {
                     expected: old_sth.tree_size(),
                     received: new_sth.tree_size(),
-                }),
+                },
             ));
         }
 
@@ -100,8 +93,8 @@ impl<C: Client> TileFetcher<C> {
             if old_sth.sha256_root_hash() == new_sth.sha256_root_hash() {
                 return Ok(());
             } else {
-                return Err(ScannerError::ClientError(
-                    ClientError::ConsistencyProofError(ProofValidationError::HashMismatch),
+                return Err(TilingError::ConsistencyProofError(
+                    ProofValidationError::HashMismatch,
                 ));
             }
         }
@@ -126,7 +119,7 @@ impl<C: Client> TileFetcher<C> {
 
         consistency_proof
             .validate(&old_tree_head, &new_tree_head)
-            .map_err(|err| ScannerError::ClientError(ClientError::ConsistencyProofError(err)))?;
+            .map_err(TilingError::ConsistencyProofError)?;
 
         Ok(())
     }

@@ -91,7 +91,9 @@ impl<C: Client> ScannerLog<C> {
             .map_err(CertificateError::from)?;
 
         match &self.tiles {
-            Some(tiles) => tiles.check_embdedded_sct_inclusion(sct, &sth, chain).await,
+            Some(tiles) => Ok(tiles
+                .check_embdedded_sct_inclusion(sct, &sth, &leaf)
+                .await?),
             None => Ok(self
                 .log
                 .client

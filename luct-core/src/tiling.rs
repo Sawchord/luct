@@ -2,7 +2,7 @@ mod checkpoint;
 mod data_tile;
 mod tile;
 
-use crate::tree::ProofGenerationError;
+use crate::tree::{ProofGenerationError, ProofValidationError};
 pub use checkpoint::{Checkpoint, ParseCheckpointError};
 pub use data_tile::{DataTile, DataTileId};
 use itertools::Itertools;
@@ -25,6 +25,12 @@ pub enum TilingError {
 
     #[error("Failed to generate consistency proof: {0}")]
     ConsistencyProofGenerationError(ProofGenerationError),
+
+    #[error("Failed to validate a consistency path: {0}")]
+    ConsistencyProofError(ProofValidationError),
+
+    #[error("Failed to validate an audit path: {0}")]
+    AuditProofError(ProofValidationError),
 }
 
 /// Turn an index into a url as specified in the tiling spec, i.e. "1234067" to "x001/x234/067"
