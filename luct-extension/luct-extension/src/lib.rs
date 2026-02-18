@@ -16,6 +16,12 @@ use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 
 mod store;
 
+const USER_AGENT: &str = concat!(
+    "luct-firefox/",
+    env!("CARGO_PKG_VERSION"),
+    " (https://github.com/Sawchord/luct/)"
+);
+
 #[wasm_bindgen]
 extern "C" {
     #[wasm_bindgen(js_namespace = console)]
@@ -43,7 +49,7 @@ impl Scanner {
         let log_list: LogList = serde_json::from_str(&config).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
-        let client = RequestDeduplicationClient::new(ReqwestClient::new());
+        let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
         let sct_cache = Box::new(
             BrowserStore::<[u8; 32], SignedCertificateTimestamp>::new_local_store(
                 "sct".to_string(),

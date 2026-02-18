@@ -11,10 +11,12 @@ pub struct ReqwestClient {
 }
 
 impl ReqwestClient {
-    pub fn new() -> Self {
+    pub fn new(agent: &str) -> Self {
         Self {
-            // TODO: Make the user agent setable
-            client: reqwest::Client::new(),
+            client: reqwest::Client::builder()
+                .user_agent(agent)
+                .build()
+                .expect("Failed to initialize reqwest client"),
         }
     }
 }

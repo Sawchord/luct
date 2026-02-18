@@ -116,7 +116,7 @@ mod tests {
 
     fn get_client() -> CtClient<ReqwestClient> {
         let config: CtLogConfig = serde_json::from_str(ARCHE2026H1).unwrap();
-        let client = ReqwestClient::new();
+        let client = ReqwestClient::new("luct-test");
         CtClient::new(config, client)
     }
 }

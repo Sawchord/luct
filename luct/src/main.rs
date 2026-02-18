@@ -15,6 +15,11 @@ use tracing_subscriber::EnvFilter;
 mod args;
 mod fetch;
 
+const USER_AGENT: &str = concat!(
+    "luct-cli/",
+    env!("CARGO_PKG_VERSION"),
+    " (https://github.com/Sawchord/luct/)"
+);
 const LOG_LIST: &str = include_str!("../../luct-extension/luct/assets/log_list.json");
 
 #[tokio::main(flavor = "current_thread")]
@@ -55,7 +60,7 @@ async fn main() -> eyre::Result<()> {
         Box::new(FilesystemStore::new(workdir.join("sct"))) as _
     };
 
-    let client = RequestDeduplicationClient::new(ReqwestClient::new());
+    let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
     let mut scanner = Scanner::new_with_client(sct_cache, client);
     tracing::info!("Initialized scanner");
 

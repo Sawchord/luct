@@ -14,10 +14,19 @@ use std::{
 /// - The endpoint must return the same response on the same request
 /// - The deduplication may fail due to TOCTOU, and sending the same request
 ///   twice must not change the servers behavioru
-#[derive(Debug, Clone, Default)]
+#[derive(Clone, Default)]
 pub struct RequestDeduplicationClient<C> {
     inner: C,
     requests: Arc<Mutex<BTreeMap<DeduplicationKey, Vec<Sender<Response>>>>>,
+}
+
+impl<C: fmt::Debug> fmt::Debug for RequestDeduplicationClient<C> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_struct("RequestDeduplicationClient")
+            .field("inner", &self.inner)
+            .field("requests", &self.requests.lock().unwrap().len())
+            .finish()
+    }
 }
 
 impl<C> RequestDeduplicationClient<C> {
