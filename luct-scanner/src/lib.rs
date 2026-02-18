@@ -1,5 +1,5 @@
-use crate::{lead::EmbeddedSct, log::ScannerLog};
-use futures::future;
+use crate::{lead::EmbeddedSct, log::ScannerLog, report::SctReport};
+use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError, CheckSeverity, CtLog, CtLogConfig, LogId, Severity,
@@ -11,6 +11,7 @@ use thiserror::Error;
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
+    report::Report,
     utils::Validated,
 };
 
@@ -18,6 +19,7 @@ type HashOutput = [u8; 32];
 
 mod lead;
 mod log;
+mod report;
 mod utils;
 
 pub struct Scanner<C> {
@@ -79,6 +81,45 @@ impl<C: Client> Scanner<C> {
                 Ok(())
             }
         }
+    }
+
+    pub async fn collect_report_pem(&self, data: &str) -> Result<Report, ScannerError> {
+        let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
+        cert_chain.verify_chain()?;
+        self.collect_report(cert_chain).await
+    }
+
+    pub async fn collect_report(
+        &self,
+        chain: Arc<CertificateChain>,
+    ) -> Result<Report, ScannerError> {
+        let cert = chain.cert();
+        let (not_before, not_after) = cert.get_validity();
+
+        let embedded_scts = cert.extract_scts_v1()?;
+
+        let scts = join_all(
+            embedded_scts
+                .into_iter()
+                .map(|sct| self.collect_sct_report(sct)),
+        )
+        .await
+        .into_iter()
+        .collect::<Result<Vec<SctReport>, ScannerError>>()?;
+
+        Ok(Report {
+            ca_name: chain.root().get_issuer_name(),
+            not_before: not_before.into(),
+            not_after: not_after.into(),
+            scts,
+        })
+    }
+
+    pub(crate) async fn collect_sct_report(
+        &self,
+        sct: SignedCertificateTimestamp,
+    ) -> Result<SctReport, ScannerError> {
+        todo!()
     }
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series

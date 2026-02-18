@@ -20,6 +20,7 @@ serde_json = { workspace = true }
 
 thiserror = { workspace = true }
 futures = { workspace = true }
+chrono = { workspace = true }
 
 tracing = { workspace = true }
 
