@@ -1,4 +1,7 @@
-use crate::{Conclusion, Scanner, ScannerError, lead::EmbeddedSct, log::tiling::TileFetcher};
+use crate::{
+    Conclusion, Scanner, ScannerError, lead::EmbeddedSct, log::tiling::TileFetcher,
+    utils::Validated,
+};
 use luct_client::{Client, CtClient};
 use luct_core::{
     Certificate, CertificateChain, CertificateError,
@@ -21,7 +24,7 @@ pub(crate) struct ScannerLog<C> {
 pub(crate) struct ScannerLogInner<C> {
     name: String,
     client: CtClient<C>,
-    sth_store: Box<dyn OrderedStore<u64, SignedTreeHead>>,
+    sth_store: Box<dyn OrderedStore<u64, Validated<SignedTreeHead>>>,
     root_keys: Box<dyn Store<Vec<u8>, ()>>,
 }
 
@@ -60,7 +63,9 @@ impl<C: Client> ScannerLog<C> {
             return Ok(root_validation);
         }
 
-        scanner.sct_cache.insert(sct.hash(), sct.clone());
+        scanner
+            .sct_cache
+            .insert(sct.hash(), Validated::new(sct.clone()));
 
         Ok(Conclusion::Safe(format!(
             "\"{}\" returned a valid audit proof",
@@ -106,10 +111,12 @@ impl<C: Client> ScannerLog<C> {
     #[tracing::instrument(level = "trace")]
     async fn latest_sth(&self) -> Result<SignedTreeHead, ScannerError> {
         match self.log.sth_store.last() {
-            Some((_, sth)) => Ok(sth),
+            Some((_, sth)) => Ok(sth.into_inner()),
             None => {
                 let sth = self.get_sth().await?;
-                self.log.sth_store.insert(sth.tree_size(), sth.clone());
+                self.log
+                    .sth_store
+                    .insert(sth.tree_size(), Validated::new(sth.clone()));
                 Ok(sth)
             }
         }
@@ -139,7 +146,10 @@ impl<C: Client> ScannerLog<C> {
                 }
             };
         };
-        self.log.sth_store.insert(new_sth.tree_size(), new_sth);
+
+        self.log
+            .sth_store
+            .insert(new_sth.tree_size(), Validated::new(new_sth));
 
         Ok(())
     }

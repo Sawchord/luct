@@ -50,13 +50,10 @@ impl<T: StringStoreValue> StringStoreValue for Validated<T> {
         let validated_at: u64 = self
             .validated_at
             .duration_since(SystemTime::UNIX_EPOCH)
-            .inspect_err(|_| tracing::warn!("Failed to serialize validated_at"))
             .unwrap()
             .as_millis() as u64;
 
-        serde_json::to_string(&(validated_at, inner))
-            .inspect_err(|_| tracing::warn!("Failed to serialize the values"))
-            .unwrap()
+        serde_json::to_string(&(validated_at, inner)).unwrap()
     }
 
     fn deserialize_value(value: &str) -> Option<Self> {

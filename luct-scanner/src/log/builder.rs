@@ -1,4 +1,7 @@
-use crate::log::{ScannerLog, ScannerLogInner, tiling::TileFetcher};
+use crate::{
+    log::{ScannerLog, ScannerLogInner, tiling::TileFetcher},
+    utils::Validated,
+};
 use luct_client::{Client, CtClient};
 use luct_core::{
     CtLog, CtLogConfig,
@@ -10,7 +13,7 @@ use std::sync::Arc;
 pub struct LogBuilder {
     name: String,
     config: CtLogConfig,
-    sth_store: Option<Box<dyn OrderedStore<u64, SignedTreeHead>>>,
+    sth_store: Option<Box<dyn OrderedStore<u64, Validated<SignedTreeHead>>>>,
     root_keys: Option<Box<dyn Store<Vec<u8>, ()>>>,
 }
 
@@ -26,7 +29,7 @@ impl LogBuilder {
 
     pub fn with_sth_store(
         mut self,
-        store: impl OrderedStore<u64, SignedTreeHead> + 'static,
+        store: impl OrderedStore<u64, Validated<SignedTreeHead>> + 'static,
     ) -> Self {
         self.sth_store = Some(Box::new(store) as _);
         self

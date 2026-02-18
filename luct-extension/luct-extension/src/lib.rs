@@ -6,7 +6,7 @@ use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestCli
 use luct_core::{CertificateChain, log_list::v3::LogList, v1::SignedCertificateTimestamp};
 use luct_scanner::{
     Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, LogBuilder,
-    Scanner as CtScanner,
+    Scanner as CtScanner, Validated,
 };
 use std::sync::Arc;
 use tracing::Level;
@@ -53,7 +53,7 @@ impl Scanner {
 
         let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
         let sct_cache = Box::new(
-            BrowserStore::<[u8; 32], SignedCertificateTimestamp>::new_local_store(
+            BrowserStore::<[u8; 32], Validated<SignedCertificateTimestamp>>::new_local_store(
                 "sct".to_string(),
             )
             .expect("Failed to inistalize SCT cache"),
