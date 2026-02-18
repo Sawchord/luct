@@ -6,6 +6,7 @@ use crate::{
     },
     v1,
 };
+use chrono::{DateTime, Utc};
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
 use std::{
@@ -99,6 +100,17 @@ impl Certificate {
 
         let hash: [u8; 32] = Sha256::digest(&cert_bytes).into();
         Fingerprint(hash)
+    }
+
+    pub fn get_issuer_name(&self) -> String {
+        self.0.tbs_certificate.issuer.to_string()
+    }
+
+    pub fn get_validity(&self) -> (DateTime<Utc>, DateTime<Utc>) {
+        (
+            DateTime::from(self.0.tbs_certificate.validity.not_before.to_system_time()),
+            DateTime::from(self.0.tbs_certificate.validity.not_after.to_system_time()),
+        )
     }
 
     pub fn get_subject_key_info(&self) -> Option<Vec<u8>> {
