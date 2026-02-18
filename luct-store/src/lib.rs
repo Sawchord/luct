@@ -10,7 +10,7 @@ pub trait StringStoreKey: Clone + Ord + Send + 'static {
     fn deserialize_key(key: &str) -> Option<Self>;
 }
 
-pub trait StringStoreValue: Clone + Send + 'static {
+pub trait StringStoreValue: Clone + Send + Eq + 'static {
     fn serialize_value(&self) -> String;
     fn deserialize_value(value: &str) -> Option<Self>;
 }
