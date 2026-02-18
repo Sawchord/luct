@@ -13,13 +13,17 @@ license = { workspace = true }
 [dependencies]
 luct-core = { path = "../luct-core" }
 luct-client = { path = "../luct-client" }
+luct-store = { path = "../luct-store" }
 
 serde = { workspace = true }
+serde_json = { workspace = true }
+
 thiserror = { workspace = true }
+futures = { workspace = true }
 
 tracing = { workspace = true }
 
-futures = { workspace = true }
+web-time = { workspace = true }
 
 [features]
 default = []

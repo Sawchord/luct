@@ -11,12 +11,14 @@ use thiserror::Error;
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
+    utils::Validated,
 };
 
 type HashOutput = [u8; 32];
 
 mod lead;
 mod log;
+mod utils;
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
