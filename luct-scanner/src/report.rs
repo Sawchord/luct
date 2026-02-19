@@ -13,12 +13,12 @@ pub struct Report {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SctReport {
-    pub(crate) cached: bool,
-    pub(crate) signature_validation_time: Option<DateTime<Local>>,
-    pub(crate) log_name: Option<String>,
-    pub(crate) last_sth: Option<SthReport>,
-    pub(crate) inclusion_proof: Option<SthReport>,
-    pub(crate) error_description: Option<String>,
+    cached: bool,
+    signature_validation_time: Option<DateTime<Local>>,
+    log_name: Option<String>,
+    last_sth: Option<SthReport>,
+    inclusion_proof: Option<SthReport>,
+    error_description: Option<String>,
 }
 
 impl SctReport {
@@ -33,10 +33,10 @@ impl SctReport {
         }
     }
 
-    pub(crate) fn cached(mut self) -> Self {
-        self.cached = true;
-        self
-    }
+    // pub(crate) fn cached(mut self) -> Self {
+    //     self.cached = true;
+    //     self
+    // }
 
     pub(crate) fn signature_validation_time(mut self, time: DateTime<Local>) -> Self {
         self.signature_validation_time = Some(time);
@@ -66,9 +66,9 @@ impl SctReport {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SthReport {
-    pub(crate) height: u64,
-    pub(crate) timestamp: DateTime<Local>,
-    pub(crate) verification_time: DateTime<Local>,
+    height: u64,
+    timestamp: DateTime<Local>,
+    verification_time: DateTime<Local>,
 }
 
 impl From<&Validated<SignedTreeHead>> for SthReport {
