@@ -12,11 +12,54 @@ pub struct Report {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SctReport {
     pub(crate) cached: bool,
-    pub(crate) signature_validates: bool,
-    pub(crate) signature_validation_time: DateTime<Local>,
-    pub(crate) log_name: String,
-    pub(crate) last_sth: SthReport,
+    pub(crate) signature_validation_time: Option<DateTime<Local>>,
+    pub(crate) log_name: Option<String>,
+    pub(crate) last_sth: Option<SthReport>,
     pub(crate) inclusion_proof: Option<SthReport>,
+    pub(crate) error_description: Option<String>,
+}
+
+impl SctReport {
+    pub(crate) fn new() -> Self {
+        Self {
+            cached: false,
+            signature_validation_time: None,
+            log_name: None,
+            last_sth: None,
+            inclusion_proof: None,
+            error_description: None,
+        }
+    }
+
+    pub(crate) fn cached(mut self) -> Self {
+        self.cached = true;
+        self
+    }
+
+    pub(crate) fn signature_validation_time(mut self, time: DateTime<Local>) -> Self {
+        self.signature_validation_time = Some(time);
+        self
+    }
+
+    pub(crate) fn log_name(mut self, name: String) -> Self {
+        self.log_name = Some(name);
+        self
+    }
+
+    pub(crate) fn last_sth(mut self, sth: SthReport) -> Self {
+        self.last_sth = Some(sth);
+        self
+    }
+
+    pub(crate) fn inclusion_proof(mut self, sth: SthReport) -> Self {
+        self.inclusion_proof = Some(sth);
+        self
+    }
+
+    pub(crate) fn error_description(mut self, err: String) -> Self {
+        self.error_description = Some(err);
+        self
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]

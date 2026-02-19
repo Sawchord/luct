@@ -109,7 +109,7 @@ impl<C: Client> ScannerLog<C> {
 
     /// Returns the latests STH, if it exists, fetches it otherwise
     #[tracing::instrument(level = "trace")]
-    async fn latest_sth(&self) -> Result<SignedTreeHead, ScannerError> {
+    pub(crate) async fn latest_sth(&self) -> Result<SignedTreeHead, ScannerError> {
         match self.log.sth_store.last() {
             Some((_, sth)) => Ok(sth.into_inner()),
             None => {

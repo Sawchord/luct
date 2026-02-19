@@ -1,4 +1,9 @@
-use crate::{lead::EmbeddedSct, log::ScannerLog, report::SctReport};
+use crate::{
+    lead::EmbeddedSct,
+    log::ScannerLog,
+    report::{SctReport, SthReport},
+};
+use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
@@ -101,11 +106,9 @@ impl<C: Client> Scanner<C> {
         let scts = join_all(
             embedded_scts
                 .into_iter()
-                .map(|sct| self.collect_sct_report(sct)),
+                .map(|sct| self.collect_embedded_sct_report(sct, &chain)),
         )
-        .await
-        .into_iter()
-        .collect::<Result<Vec<SctReport>, ScannerError>>()?;
+        .await;
 
         Ok(Report {
             ca_name: chain.root().get_issuer_name(),
@@ -115,10 +118,70 @@ impl<C: Client> Scanner<C> {
         })
     }
 
-    pub(crate) async fn collect_sct_report(
+    pub(crate) async fn collect_embedded_sct_report(
         &self,
         sct: SignedCertificateTimestamp,
-    ) -> Result<SctReport, ScannerError> {
+        chain: &Arc<CertificateChain>,
+    ) -> SctReport {
+        // TODO: Use a report cache, such that we can just enter the data and look it up
+        // if let Some(sct) = self.sct_cache.get(&sct.hash) {
+        //     todo!()
+        // };
+        // TODO: We would still need to check the sth
+
+        let Some(log) = self.logs.get(&sct.log_id()) else {
+            return SctReport::new()
+                .error_description(format!("No log with id {} known", sct.log_id()));
+        };
+
+        if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
+            return SctReport::new()
+                .log_name(log.client().log().description().to_string())
+                .error_description(err.to_string());
+        };
+
+        let last_sth = match log.latest_sth().await {
+            Err(err) => {
+                return SctReport::new()
+                    .log_name(log.client().log().description().to_string())
+                    .error_description(err.to_string());
+            }
+            Ok(sth) => sth,
+        };
+        let last_sth_report = SthReport {
+            height: last_sth.tree_size(),
+            timestamp: DateTime::from_timestamp_millis(last_sth.timestamp() as i64)
+                .unwrap()
+                .into(),
+            verification_time: todo!(),
+        };
+
+        // TODO: Use oldest valid sth for the inclusion proof, not last
+
+        let leaf = match chain.as_leaf_v1(&sct, true) {
+            Err(err) => {
+                return SctReport::new()
+                    .log_name(log.client().log().description().to_string())
+                    .last_sth(last_sth_report)
+                    .error_description(err.to_string());
+            }
+            Ok(leaf) => leaf,
+        };
+
+        // TODO: Check inclusion
+        // match &self.tiles {
+        //     Some(tiles) => Ok(tiles
+        //         .check_embdedded_sct_inclusion(sct, &sth, &leaf)
+        //         .await?),
+        //     None => Ok(self
+        //         .log
+        //         .client
+        //         .check_sct_inclusion_v1(sct, &sth, &leaf)
+        //         .await?),
+        // }
+
+        // TODO: Build and cache final report
+
         todo!()
     }
 
