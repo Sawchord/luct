@@ -148,13 +148,7 @@ impl<C: Client> Scanner<C> {
             }
             Ok(sth) => sth,
         };
-        let last_sth_report = SthReport {
-            height: last_sth.tree_size(),
-            timestamp: DateTime::from_timestamp_millis(last_sth.timestamp() as i64)
-                .unwrap()
-                .into(),
-            verification_time: todo!(),
-        };
+        let last_sth_report = SthReport::from(&last_sth);
 
         // TODO: Use oldest valid sth for the inclusion proof, not last
 

@@ -27,13 +27,9 @@ impl<T> Validated<T> {
         }
     }
 
-    pub(crate) fn into_inner(self) -> T {
-        self.inner
+    pub(crate) fn validated_at(&self) -> SystemTime {
+        self.validated_at
     }
-
-    // pub(crate) fn validated_at(&self) -> SystemTime {
-    //     self.validated_at
-    // }
 }
 
 impl<T> Deref for Validated<T> {

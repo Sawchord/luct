@@ -1,4 +1,6 @@
+use crate::Validated;
 use chrono::{DateTime, Local};
+use luct_core::v1::SignedTreeHead;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -67,4 +69,16 @@ pub struct SthReport {
     pub(crate) height: u64,
     pub(crate) timestamp: DateTime<Local>,
     pub(crate) verification_time: DateTime<Local>,
+}
+
+impl From<&Validated<SignedTreeHead>> for SthReport {
+    fn from(value: &Validated<SignedTreeHead>) -> Self {
+        Self {
+            height: value.tree_size(),
+            timestamp: DateTime::from_timestamp_millis(value.timestamp() as i64)
+                .unwrap()
+                .into(),
+            verification_time: value.validated_at().into(),
+        }
+    }
 }
