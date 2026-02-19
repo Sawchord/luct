@@ -109,14 +109,12 @@ impl<C: Client> ScannerLog<C> {
 
     /// Returns the latests STH, if it exists, fetches it otherwise
     #[tracing::instrument(level = "trace")]
-    pub(crate) async fn latest_sth(&self) -> Result<SignedTreeHead, ScannerError> {
+    pub(crate) async fn latest_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         match self.log.sth_store.last() {
-            Some((_, sth)) => Ok(sth.into_inner()),
+            Some((_, sth)) => Ok(sth),
             None => {
                 let sth = self.get_sth().await?;
-                self.log
-                    .sth_store
-                    .insert(sth.tree_size(), Validated::new(sth.clone()));
+                self.log.sth_store.insert(sth.tree_size(), sth.clone());
                 Ok(sth)
             }
         }
@@ -147,19 +145,17 @@ impl<C: Client> ScannerLog<C> {
             };
         };
 
-        self.log
-            .sth_store
-            .insert(new_sth.tree_size(), Validated::new(new_sth));
+        self.log.sth_store.insert(new_sth.tree_size(), new_sth);
 
         Ok(())
     }
 
     #[tracing::instrument(level = "trace")]
-    async fn get_sth(&self) -> Result<SignedTreeHead, ScannerError> {
+    async fn get_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.tiles {
-            Some(_) => Ok(self.log.client.get_checkpoint().await?),
-            None => Ok(self.log.client.get_sth_v1().await?),
+            Some(_) => Ok(Validated::new(self.log.client.get_checkpoint().await?)),
+            None => Ok(Validated::new(self.log.client.get_sth_v1().await?)),
         }
     }
 
