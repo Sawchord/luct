@@ -2,14 +2,14 @@ use crate::{
     args::{Args, get_workdir, log_list_path},
     fetch::fetch_cert_chain,
 };
+use chrono::DateTime;
 use clap::Parser;
 use eyre::Context;
-use futures::future;
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
 use luct_core::{log_list::v3::LogList, store::MemoryStore};
-use luct_scanner::{LeadResult, LogBuilder, Scanner};
+use luct_scanner::{LogBuilder, Scanner};
 use luct_store::FilesystemStore;
-use std::sync::Arc;
+use std::{sync::Arc, time::SystemTime};
 use tracing_subscriber::EnvFilter;
 
 mod args;
@@ -81,47 +81,16 @@ async fn main() -> eyre::Result<()> {
     let chain = fetch_cert_chain(&args.source)?;
     println!("Fingerprint: {}", chain.cert().fingerprint_sha256());
 
-    let mut leads = scanner
-        .collect_leads(Arc::new(chain))
+    let report = scanner
+        .collect_report(Arc::new(chain))
+        .await
         .with_context(|| format!("failed to collext leads for {}", args.source))?;
+    let report_str = serde_json::to_string_pretty(&report).unwrap();
+    println!("Finished report: {}", report_str);
 
-    loop {
-        for lead in &leads {
-            println!("Found a lead: {lead}")
-        }
-
-        let investigations: Vec<_> = leads
-            .iter()
-            .map(async |lead| {
-                let result = scanner.investigate_lead(lead).await;
-                match &result {
-                    LeadResult::Conclusion(conclusion) => {
-                        println!("Conclusion: {conclusion}")
-                    }
-                    LeadResult::FollowUp(_) => (),
-                };
-
-                result
-            })
-            .collect();
-
-        let investigations = future::join_all(investigations).await;
-
-        let follow_ups = investigations
-            .into_iter()
-            .filter_map(|result| match result {
-                LeadResult::Conclusion(_) => None,
-                LeadResult::FollowUp(leads) => Some(leads),
-            })
-            .flatten()
-            .collect::<Vec<_>>();
-
-        if follow_ups.is_empty() {
-            break;
-        } else {
-            leads = follow_ups;
-        }
-    }
+    report
+        .evaluate_policy(DateTime::from(SystemTime::now()))
+        .map_err(|err| eyre::eyre!(err))?;
 
     Ok(())
 }
