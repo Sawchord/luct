@@ -40,7 +40,7 @@ impl<C> TileFetcher<C> {
 
 impl<C: Client> TileFetcher<C> {
     #[tracing::instrument(level = "trace")]
-    pub(crate) async fn check_embdedded_sct_inclusion(
+    pub(crate) async fn check_sct_inclusion(
         &self,
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,

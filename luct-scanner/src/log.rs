@@ -6,7 +6,7 @@ use luct_client::{Client, CtClient};
 use luct_core::{
     Certificate, CertificateChain, CertificateError,
     store::{Hashable, OrderedStore, Store},
-    v1::{SignedCertificateTimestamp, SignedTreeHead},
+    v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{fmt, sync::Arc};
 
@@ -95,14 +95,22 @@ impl<C: Client> ScannerLog<C> {
             .as_leaf_v1(sct, true)
             .map_err(CertificateError::from)?;
 
+        self.check_sct_inclusion(sct, &sth, &leaf).await
+    }
+
+    #[tracing::instrument(level = "trace")]
+    pub(crate) async fn check_sct_inclusion(
+        &self,
+        sct: &SignedCertificateTimestamp,
+        sth: &Validated<SignedTreeHead>,
+        leaf: &MerkleTreeLeaf,
+    ) -> Result<(), ScannerError> {
         match &self.tiles {
-            Some(tiles) => Ok(tiles
-                .check_embdedded_sct_inclusion(sct, &sth, &leaf)
-                .await?),
+            Some(tiles) => Ok(tiles.check_sct_inclusion(sct, sth, leaf).await?),
             None => Ok(self
                 .log
                 .client
-                .check_sct_inclusion_v1(sct, &sth, &leaf)
+                .check_sct_inclusion_v1(sct, sth, leaf)
                 .await?),
         }
     }
