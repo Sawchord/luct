@@ -1,5 +1,5 @@
 use crate::Validated;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, TimeDelta};
 use luct_core::v1::SignedTreeHead;
 use serde::{Deserialize, Serialize};
 
@@ -9,6 +9,53 @@ pub struct Report {
     pub(crate) not_before: DateTime<Local>,
     pub(crate) not_after: DateTime<Local>,
     pub(crate) scts: Vec<SctReport>,
+}
+
+impl Report {
+    pub fn evaluate_policy(&self, time: DateTime<Local>) -> Result<(), String> {
+        let num_expected_scts = match self.not_after - self.not_before {
+            time if time <= TimeDelta::days(180) => 2,
+            _ => 3,
+        };
+
+        let num_scts = self
+            .scts
+            .iter()
+            .filter(|sct| sct.signature_validation_time.is_some())
+            .count();
+
+        if num_scts < num_expected_scts {
+            return Err(format!(
+                "Insufficient number of SCTs from known logs. Expected {} but got {}",
+                num_expected_scts, num_scts
+            ));
+        }
+
+        // TODO: Check that expiration date matches logs bracket?
+
+        let (old_inclusion_proofs, fresh_inclusion_proofs) = self
+            .scts
+            .iter()
+            // Filter out sct reports that correspond to logs that don't have a recent sth
+            .filter(|sct_report| {
+                sct_report.last_sth.as_ref().is_some_and(|sth_report| {
+                    sth_report.verification_time > time - TimeDelta::hours(24)
+                })
+            })
+            .filter_map(|sct_report| sct_report.inclusion_proof.as_ref())
+            .partition::<Vec<_>, _>(|sth_report| {
+                sth_report.verification_time < time - TimeDelta::hours(24)
+            });
+
+        if old_inclusion_proofs.is_empty() && fresh_inclusion_proofs.len() < 2 {
+            return Err(
+                "Insufficient number of inclusion proofs with fresh sths could be verified!"
+                    .to_string(),
+            );
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
