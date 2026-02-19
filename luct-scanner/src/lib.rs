@@ -3,7 +3,6 @@ use crate::{
     log::ScannerLog,
     report::{SctReport, SthReport},
 };
-use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
@@ -13,6 +12,7 @@ use luct_core::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
+use web_time::SystemTime;
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
@@ -127,56 +127,47 @@ impl<C: Client> Scanner<C> {
         // if let Some(sct) = self.sct_cache.get(&sct.hash) {
         //     todo!()
         // };
-        // TODO: We would still need to check the sth
 
+        let report = SctReport::new();
+
+        // Find the log this sct belongs to
         let Some(log) = self.logs.get(&sct.log_id()) else {
-            return SctReport::new()
-                .error_description(format!("No log with id {} known", sct.log_id()));
+            return report.error_description(format!("No log with id {} known", sct.log_id()));
         };
+        let report = report.log_name(log.client().log().description().to_string());
 
+        // Validate the signature
         if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
-            return SctReport::new()
-                .log_name(log.client().log().description().to_string())
-                .error_description(err.to_string());
+            return report.error_description(err.to_string());
         };
+        let report = report.signature_validation_time(SystemTime::now().into());
 
+        // TODO: Use oldest valid sth for the inclusion proof, not last. Then only add last_sth after caching
+
+        // Get the last sth
         let last_sth = match log.latest_sth().await {
             Err(err) => {
-                return SctReport::new()
-                    .log_name(log.client().log().description().to_string())
-                    .error_description(err.to_string());
+                return report.error_description(err.to_string());
             }
             Ok(sth) => sth,
         };
-        let last_sth_report = SthReport::from(&last_sth);
-
-        // TODO: Use oldest valid sth for the inclusion proof, not last
+        let report = report.last_sth(SthReport::from(&last_sth));
 
         let leaf = match chain.as_leaf_v1(&sct, true) {
             Err(err) => {
-                return SctReport::new()
-                    .log_name(log.client().log().description().to_string())
-                    .last_sth(last_sth_report)
-                    .error_description(err.to_string());
+                return report.error_description(err.to_string());
             }
             Ok(leaf) => leaf,
         };
 
-        // TODO: Check inclusion
-        // match &self.tiles {
-        //     Some(tiles) => Ok(tiles
-        //         .check_embdedded_sct_inclusion(sct, &sth, &leaf)
-        //         .await?),
-        //     None => Ok(self
-        //         .log
-        //         .client
-        //         .check_sct_inclusion_v1(sct, &sth, &leaf)
-        //         .await?),
-        // }
+        // Check inclusion
+        if let Err(err) = log.check_sct_inclusion(&sct, &last_sth, &leaf).await {
+            return report.error_description(err.to_string());
+        };
 
-        // TODO: Build and cache final report
+        // TODO: Cache final report
 
-        todo!()
+        report.inclusion_proof(SthReport::from(&last_sth))
     }
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series
