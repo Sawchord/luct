@@ -60,8 +60,14 @@ async fn main() -> eyre::Result<()> {
         Box::new(FilesystemStore::new(workdir.join("sct"))) as _
     };
 
+    let sct_report_cache = if args.no_cache {
+        Box::new(MemoryStore::default()) as _
+    } else {
+        Box::new(FilesystemStore::new(workdir.join("sct_report"))) as _
+    };
+
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
-    let mut scanner = Scanner::new_with_client(sct_cache, client);
+    let mut scanner = Scanner::new_with_client(sct_cache, sct_report_cache, client);
     tracing::info!("Initialized scanner");
 
     for log in logs {

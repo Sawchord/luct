@@ -1,14 +1,12 @@
-use crate::{
-    lead::EmbeddedSct,
-    log::ScannerLog,
-    report::{SctReport, SthReport},
-};
+use crate::{lead::EmbeddedSct, log::ScannerLog};
 use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError, CheckSeverity, CtLog, CtLogConfig, LogId, Severity,
-    store::Store, tiling::TilingError, v1::SignedCertificateTimestamp,
+    store::{Hashable, Store},
+    tiling::TilingError,
+    v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
@@ -17,7 +15,7 @@ use web_time::{SystemTime, UNIX_EPOCH};
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
-    report::Report,
+    report::{Report, SctReport, SthReport},
     utils::Validated,
 };
 
@@ -31,6 +29,7 @@ mod utils;
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
     sct_cache: Box<dyn Store<HashOutput, Validated<SignedCertificateTimestamp>>>,
+    sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
     client: C,
     // TODO: CertificateChainStore
     // TODO: Roots denylist
@@ -44,11 +43,13 @@ impl<C: Client + Clone> Scanner<C> {
 
     pub fn new_with_client(
         sct_cache: Box<dyn Store<HashOutput, Validated<SignedCertificateTimestamp>>>,
+        sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
         client: C,
     ) -> Self {
         Self {
             logs: BTreeMap::new(),
             sct_cache,
+            sct_report_cache,
             client,
         }
     }
@@ -124,18 +125,28 @@ impl<C: Client> Scanner<C> {
         sct: SignedCertificateTimestamp,
         chain: &Arc<CertificateChain>,
     ) -> SctReport {
-        // TODO: Use a report cache, such that we can just enter the data and look it up
-        // if let Some(sct) = self.sct_cache.get(&sct.hash) {
-        //     todo!()
-        // };
-
         let report = SctReport::new();
 
         // Find the log this sct belongs to
         let Some(log) = self.logs.get(&sct.log_id()) else {
             return report.error_description(format!("No log with id {} known", sct.log_id()));
         };
+
         let report = report.log_name(log.client().log().description().to_string());
+
+        // Look up data in report cache
+        if let Some(report) = self.sct_report_cache.get(&sct.hash()) {
+            let latest_sth = match Self::add_latest_sth(log, &report).await {
+                Ok(sth) => sth,
+                Err(report) => return report,
+            };
+
+            tracing::debug!(
+                "Using cached sct report for log {}",
+                log.client().log().description()
+            );
+            return report.latest_sth(SthReport::from(&latest_sth)).cached();
+        };
 
         // Validate the signature
         if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
@@ -153,15 +164,10 @@ impl<C: Client> Scanner<C> {
         );
 
         // TODO: Use oldest valid sth for the inclusion proof, not last. Then only add last_sth after caching
-
-        // Get the last sth
-        let last_sth = match log.latest_sth().await {
-            Err(err) => {
-                return report.error_description(err.to_string());
-            }
+        let latest_sth = match Self::add_latest_sth(log, &report).await {
             Ok(sth) => sth,
+            Err(report) => return report,
         };
-        let report = report.last_sth(SthReport::from(&last_sth));
 
         let leaf = match chain.as_leaf_v1(&sct, true) {
             Err(err) => {
@@ -171,13 +177,30 @@ impl<C: Client> Scanner<C> {
         };
 
         // Check inclusion
-        if let Err(err) = log.check_sct_inclusion(&sct, &last_sth, &leaf).await {
+        if let Err(err) = log.check_sct_inclusion(&sct, &latest_sth, &leaf).await {
             return report.error_description(err.to_string());
         };
+        let report = report.inclusion_proof(SthReport::from(&latest_sth));
 
-        // TODO: Cache final report
+        //  Cache report
+        self.sct_report_cache.insert(sct.hash(), report.clone());
 
-        report.inclusion_proof(SthReport::from(&last_sth))
+        // Set last_sth and return
+        report.latest_sth(SthReport::from(&latest_sth))
+    }
+
+    async fn add_latest_sth(
+        log: &ScannerLog<C>,
+        report: &SctReport,
+    ) -> Result<Validated<SignedTreeHead>, SctReport> {
+        let latest_sth = match log.latest_sth().await {
+            Err(err) => {
+                return Err(report.clone().error_description(err.to_string()));
+            }
+            Ok(sth) => sth,
+        };
+
+        Ok(latest_sth)
     }
 
     /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series

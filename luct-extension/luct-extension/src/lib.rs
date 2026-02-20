@@ -7,7 +7,7 @@ use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestCli
 use luct_core::{CertificateChain, log_list::v3::LogList, v1::SignedCertificateTimestamp};
 use luct_scanner::{
     Conclusion as CtConclusion, Lead as CtLead, LeadResult as CtLeadResult, LogBuilder, Report,
-    Scanner as CtScanner, Validated,
+    Scanner as CtScanner, SctReport, Validated,
 };
 use std::sync::Arc;
 use tracing::Level;
@@ -54,13 +54,20 @@ impl Scanner {
         let logs = log_list.currently_active_logs();
 
         let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
+
         let sct_cache = Box::new(
             BrowserStore::<[u8; 32], Validated<SignedCertificateTimestamp>>::new_local_store(
                 "sct".to_string(),
             )
-            .expect("Failed to inistalize SCT cache"),
+            .expect("Failed to initialize SCT cache"),
         ) as _;
-        let mut scanner = CtScanner::new_with_client(sct_cache, client);
+
+        let sct_report_cache = Box::new(
+            BrowserStore::<[u8; 32], SctReport>::new_local_store("report".to_string())
+                .expect("Failed to initialize SCT report cache"),
+        ) as _;
+
+        let mut scanner = CtScanner::new_with_client(sct_cache, sct_report_cache, client);
 
         for log in logs {
             let name = log.description();

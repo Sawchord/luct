@@ -1,6 +1,7 @@
 use crate::Validated;
 use chrono::{DateTime, Local, TimeDelta};
 use luct_core::v1::SignedTreeHead;
+use luct_store::StringStoreValue;
 use serde::{Deserialize, Serialize};
 use web_time::UNIX_EPOCH;
 
@@ -69,22 +70,32 @@ pub struct SctReport {
     error_description: Option<String>,
 }
 
+impl StringStoreValue for SctReport {
+    fn serialize_value(&self) -> String {
+        serde_json::to_string(self).unwrap()
+    }
+
+    fn deserialize_value(value: &str) -> Option<Self> {
+        serde_json::from_str(value).ok()
+    }
+}
+
 impl SctReport {
     pub(crate) fn new() -> Self {
         Self {
             cached: false,
             signature_validation_time: None,
             log_name: None,
-            last_sth: None,
+            latest_sth: None,
             inclusion_proof: None,
             error_description: None,
         }
     }
 
-    // pub(crate) fn cached(mut self) -> Self {
-    //     self.cached = true;
-    //     self
-    // }
+    pub(crate) fn cached(mut self) -> Self {
+        self.cached = true;
+        self
+    }
 
     pub(crate) fn signature_validation_time(mut self, time: DateTime<Local>) -> Self {
         self.signature_validation_time = Some(time);
