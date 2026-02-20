@@ -1,7 +1,7 @@
 use crate::{ScannerError, log::tiling::TileFetcher, utils::Validated};
 use luct_client::{Client, CtClient};
 use luct_core::{
-    store::{OrderedStore, Store},
+    store::OrderedStore,
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{fmt, sync::Arc};
@@ -21,7 +21,6 @@ pub(crate) struct ScannerLogInner<C> {
     name: String,
     client: CtClient<C>,
     sth_store: Box<dyn OrderedStore<u64, Validated<SignedTreeHead>>>,
-    root_keys: Box<dyn Store<Vec<u8>, ()>>,
 }
 
 impl<C> fmt::Debug for ScannerLogInner<C> {

@@ -5,7 +5,7 @@ use crate::{
 use luct_client::{Client, CtClient};
 use luct_core::{
     CtLog, CtLogConfig,
-    store::{MemoryStore, OrderedStore, Store},
+    store::{MemoryStore, OrderedStore},
     v1::SignedTreeHead,
 };
 use std::sync::Arc;
@@ -14,7 +14,6 @@ pub struct LogBuilder {
     name: String,
     config: CtLogConfig,
     sth_store: Option<Box<dyn OrderedStore<u64, Validated<SignedTreeHead>>>>,
-    root_keys: Option<Box<dyn Store<Vec<u8>, ()>>>,
 }
 
 impl LogBuilder {
@@ -23,7 +22,6 @@ impl LogBuilder {
             name: log.description().to_string(),
             config: log.config().clone(),
             sth_store: None,
-            root_keys: None,
         }
     }
 
@@ -35,11 +33,6 @@ impl LogBuilder {
         self
     }
 
-    pub fn with_root_key_store(mut self, store: impl Store<Vec<u8>, ()> + 'static) -> Self {
-        self.root_keys = Some(Box::new(store) as _);
-        self
-    }
-
     pub(crate) fn build<C: Client + Clone>(self, client: &C) -> ScannerLog<C> {
         let client = CtClient::new(self.config, client.clone());
 
@@ -48,9 +41,6 @@ impl LogBuilder {
             client,
             sth_store: self
                 .sth_store
-                .unwrap_or_else(|| Box::new(MemoryStore::default())),
-            root_keys: self
-                .root_keys
                 .unwrap_or_else(|| Box::new(MemoryStore::default())),
         });
 

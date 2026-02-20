@@ -4,8 +4,8 @@ use crate::store::BrowserStore;
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
-use luct_core::{CertificateChain, log_list::v3::LogList, v1::SignedCertificateTimestamp};
-use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, SctReport, Validated};
+use luct_core::{CertificateChain, log_list::v3::LogList};
+use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, SctReport};
 use std::sync::Arc;
 use tracing::Level;
 use tracing_wasm::WASMLayerConfigBuilder;
@@ -51,33 +51,20 @@ impl Scanner {
         let logs = log_list.currently_active_logs();
 
         let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
-
-        let sct_cache = Box::new(
-            BrowserStore::<[u8; 32], Validated<SignedCertificateTimestamp>>::new_local_store(
-                "sct".to_string(),
-            )
-            .expect("Failed to initialize SCT cache"),
-        ) as _;
-
         let sct_report_cache = Box::new(
             BrowserStore::<[u8; 32], SctReport>::new_local_store("report".to_string())
                 .expect("Failed to initialize SCT report cache"),
         ) as _;
 
-        let mut scanner = CtScanner::new_with_client(sct_cache, sct_report_cache, client);
+        let mut scanner = CtScanner::new_with_client(sct_report_cache, client);
 
         for log in logs {
             let name = log.description();
             scanner.add_log(
-                LogBuilder::new(&log)
-                    .with_sth_store(
-                        BrowserStore::new_local_store(format!("sth/{name}"))
-                            .expect("Failed to initialize STH store"),
-                    )
-                    .with_root_key_store(
-                        BrowserStore::new_local_store(format!("roots/{name}"))
-                            .expect("Failed to initialize allowed roots fingerprint store"),
-                    ),
+                LogBuilder::new(&log).with_sth_store(
+                    BrowserStore::new_local_store(format!("sth/{name}"))
+                        .expect("Failed to initialize STH store"),
+                ),
             );
         }
 

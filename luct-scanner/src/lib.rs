@@ -26,7 +26,6 @@ mod utils;
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
-    _sct_cache: Box<dyn Store<HashOutput, Validated<SignedCertificateTimestamp>>>,
     sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
     client: C,
     // TODO: CertificateChainStore
@@ -40,13 +39,11 @@ impl<C: Client + Clone> Scanner<C> {
     }
 
     pub fn new_with_client(
-        sct_cache: Box<dyn Store<HashOutput, Validated<SignedCertificateTimestamp>>>,
         sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
         client: C,
     ) -> Self {
         Self {
             logs: BTreeMap::new(),
-            _sct_cache: sct_cache,
             sct_report_cache,
             client,
         }

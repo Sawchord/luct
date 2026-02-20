@@ -54,12 +54,6 @@ async fn main() -> eyre::Result<()> {
     let logs = log_list.currently_active_logs();
     tracing::info!("Imported {} logs", logs.len());
 
-    let sct_cache = if args.no_cache {
-        Box::new(MemoryStore::default()) as _
-    } else {
-        Box::new(FilesystemStore::new(workdir.join("sct"))) as _
-    };
-
     let sct_report_cache = if args.no_cache {
         Box::new(MemoryStore::default()) as _
     } else {
@@ -67,7 +61,7 @@ async fn main() -> eyre::Result<()> {
     };
 
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
-    let mut scanner = Scanner::new_with_client(sct_cache, sct_report_cache, client);
+    let mut scanner = Scanner::new_with_client(sct_report_cache, client);
     tracing::info!("Initialized scanner");
 
     for log in logs {
@@ -75,8 +69,7 @@ async fn main() -> eyre::Result<()> {
 
         scanner.add_log(
             LogBuilder::new(&log)
-                .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name)))
-                .with_root_key_store(FilesystemStore::new(workdir.join("roots").join(name))),
+                .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name))),
         );
     }
 
