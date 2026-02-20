@@ -36,7 +36,7 @@ pub fn start() -> Result<(), JsValue> {
 
     tracing_wasm::set_as_global_default_with_config(
         WASMLayerConfigBuilder::default()
-            .set_max_level(Level::DEBUG)
+            .set_max_level(Level::INFO)
             .build(),
     );
 
@@ -178,7 +178,7 @@ impl Scanner {
                     .config()
                     .tile_url()
                     .as_ref()
-                    .map(|fetch_url| fetch_url.domain())
+                    .map(|tile_url| tile_url.domain())
                     == Some(url.domain())
         });
 

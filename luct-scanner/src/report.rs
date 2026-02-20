@@ -39,7 +39,7 @@ impl Report {
             .iter()
             // Filter out sct reports that correspond to logs that don't have a recent sth
             .filter(|sct_report| {
-                sct_report.last_sth.as_ref().is_some_and(|sth_report| {
+                sct_report.latest_sth.as_ref().is_some_and(|sth_report| {
                     sth_report.verification_time > time - TimeDelta::hours(24)
                 })
             })
@@ -64,7 +64,7 @@ pub struct SctReport {
     cached: bool,
     signature_validation_time: Option<DateTime<Local>>,
     log_name: Option<String>,
-    last_sth: Option<SthReport>,
+    latest_sth: Option<SthReport>,
     inclusion_proof: Option<SthReport>,
     error_description: Option<String>,
 }
@@ -96,8 +96,8 @@ impl SctReport {
         self
     }
 
-    pub(crate) fn last_sth(mut self, sth: SthReport) -> Self {
-        self.last_sth = Some(sth);
+    pub(crate) fn latest_sth(mut self, sth: SthReport) -> Self {
+        self.latest_sth = Some(sth);
         self
     }
 
