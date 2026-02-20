@@ -66,24 +66,6 @@ impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for BrowserStore<K, V> 
         let key = self.get_key_string(&key);
         let val = value.serialize_value();
 
-        // TODO: Move this check to somewhere in store,
-        // it should be done automatically on all store implementations
-        if let Some(old_val) = self
-            .storage
-            .get_item(&key)
-            .expect("Failed to retrieve value from local store")
-        {
-            let old_value = V::deserialize_value(&old_val).unwrap();
-            if old_value == value {
-                return;
-            } else {
-                panic!(
-                    "Tried to overwrite value {} with {}. This is a bug",
-                    old_val, val
-                )
-            }
-        };
-
         self.storage
             .set_item(&key, &val)
             .expect("Failed to insert value into local store");
