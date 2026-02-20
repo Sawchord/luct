@@ -63,10 +63,15 @@ impl Report {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SctReport {
     cached: bool,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     signature_validation_time: Option<DateTime<Local>>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     log_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     latest_sth: Option<SthReport>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     inclusion_proof: Option<SthReport>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     error_description: Option<String>,
 }
 
