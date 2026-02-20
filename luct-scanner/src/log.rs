@@ -1,11 +1,7 @@
-use crate::{
-    Conclusion, Scanner, ScannerError, lead::EmbeddedSct, log::tiling::TileFetcher,
-    utils::Validated,
-};
+use crate::{ScannerError, log::tiling::TileFetcher, utils::Validated};
 use luct_client::{Client, CtClient};
 use luct_core::{
-    Certificate, CertificateChain, CertificateError,
-    store::{Hashable, OrderedStore, Store},
+    store::{OrderedStore, Store},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{fmt, sync::Arc};
@@ -39,63 +35,6 @@ impl<C> fmt::Debug for ScannerLogInner<C> {
 impl<C: Client> ScannerLog<C> {
     pub(crate) fn client(&self) -> &CtClient<C> {
         &self.log.client
-    }
-
-    pub(crate) async fn investigate_embedded_sct(
-        &self,
-        sct: &EmbeddedSct,
-        scanner: &Scanner<C>,
-    ) -> Result<Conclusion, ScannerError> {
-        let EmbeddedSct { sct, chain } = sct;
-
-        if scanner.sct_cache.get(&sct.hash()).is_some() {
-            return Ok(Conclusion::Safe(format!(
-                "cache returned valid SCT of \"{}\"",
-                self.log.name
-            )));
-        }
-
-        self.check_embedded_sct_inclusion(sct, chain).await?;
-
-        // Check that the roots certificate is included in the list of allowed roots
-        let root_validation = self.validate_root(chain.root()).await?;
-        if !root_validation.is_safe() {
-            return Ok(root_validation);
-        }
-
-        scanner
-            .sct_cache
-            .insert(sct.hash(), Validated::new(sct.clone()));
-
-        Ok(Conclusion::Safe(format!(
-            "\"{}\" returned a valid audit proof",
-            self.log.name
-        )))
-    }
-
-    #[tracing::instrument(level = "trace")]
-    async fn check_embedded_sct_inclusion(
-        &self,
-        sct: &SignedCertificateTimestamp,
-        chain: &Arc<CertificateChain>,
-    ) -> Result<(), ScannerError> {
-        if sct.timestamp() > self.latest_sth().await?.timestamp() {
-            self.update_sth().await?;
-        }
-        let sth = self.latest_sth().await?;
-
-        tracing::debug!(
-            "Checking embedded SCT against log {} at tree size {}",
-            self.log.name,
-            sth.tree_size()
-        );
-
-        // Compute tree leaf hash
-        let leaf = chain
-            .as_leaf_v1(sct, true)
-            .map_err(CertificateError::from)?;
-
-        self.check_sct_inclusion(sct, &sth, &leaf).await
     }
 
     #[tracing::instrument(level = "trace")]
@@ -165,45 +104,5 @@ impl<C: Client> ScannerLog<C> {
             Some(_) => Ok(Validated::new(self.log.client.get_checkpoint().await?)),
             None => Ok(Validated::new(self.log.client.get_sth_v1().await?)),
         }
-    }
-
-    #[tracing::instrument(level = "trace")]
-    async fn validate_root(&self, root: &Certificate) -> Result<Conclusion, ScannerError> {
-        let Some(key_id) = root
-            .get_authority_key_info()
-            .or_else(|| root.get_subject_key_info())
-        else {
-            return Ok(Conclusion::Inconclusive(
-                "Certificate chain is not RFC5280 compliant".to_string(),
-            ));
-        };
-
-        if self.log.root_keys.get(&key_id).is_some() {
-            return Ok(Conclusion::Safe(
-                "Fingerprint matches allowed roots".to_string(),
-            ));
-        }
-
-        self.update_roots().await?;
-
-        match self.log.root_keys.get(&key_id) {
-            Some(()) => Ok(Conclusion::Safe("Root matches allowed roots".to_string())),
-            None => Ok(Conclusion::Unsafe(format!(
-                "Root is not included in the list of allowed roots of log {}",
-                self.log.name
-            ))),
-        }
-    }
-
-    #[tracing::instrument(level = "trace")]
-    async fn update_roots(&self) -> Result<(), ScannerError> {
-        let certs = self.log.client.get_roots_v1().await?;
-        for cert in certs {
-            if let Some(key_id) = cert.get_subject_key_info() {
-                self.log.root_keys.insert(key_id, ());
-            }
-        }
-
-        Ok(())
     }
 }

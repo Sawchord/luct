@@ -1,4 +1,4 @@
-use crate::{lead::EmbeddedSct, log::ScannerLog};
+use crate::log::ScannerLog;
 use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
@@ -13,22 +13,20 @@ use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
 use web_time::{SystemTime, UNIX_EPOCH};
 pub use {
-    lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
     report::{Report, SctReport, SthReport},
-    utils::Validated,
+    utils::{ScannerConfig, Validated},
 };
 
 type HashOutput = [u8; 32];
 
-mod lead;
 mod log;
 mod report;
 mod utils;
 
 pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
-    sct_cache: Box<dyn Store<HashOutput, Validated<SignedCertificateTimestamp>>>,
+    _sct_cache: Box<dyn Store<HashOutput, Validated<SignedCertificateTimestamp>>>,
     sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
     client: C,
     // TODO: CertificateChainStore
@@ -48,7 +46,7 @@ impl<C: Client + Clone> Scanner<C> {
     ) -> Self {
         Self {
             logs: BTreeMap::new(),
-            sct_cache,
+            _sct_cache: sct_cache,
             sct_report_cache,
             client,
         }
@@ -201,57 +199,6 @@ impl<C: Client> Scanner<C> {
         };
 
         Ok(latest_sth)
-    }
-
-    /// Collect the [`Leads`](Lead) from a [`CertificateChain`], encoded as a series
-    /// of PEM encoded certificates.
-    pub fn collect_leads_pem(&self, data: &str) -> Result<Vec<Lead>, ScannerError> {
-        let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
-        cert_chain.verify_chain()?;
-        self.collect_leads(cert_chain)
-    }
-
-    /// Collect the [`Leads`](Lead) from a [`CertificateChain`]
-    pub fn collect_leads(&self, chain: Arc<CertificateChain>) -> Result<Vec<Lead>, ScannerError> {
-        let leads = chain
-            .cert()
-            .extract_scts_v1()?
-            .into_iter()
-            .map(|sct| {
-                Lead::EmbeddedSct(EmbeddedSct {
-                    sct,
-                    chain: chain.clone(),
-                })
-            })
-            .collect::<Vec<_>>();
-
-        Ok(leads)
-    }
-
-    pub async fn investigate_lead(&self, lead: &Lead) -> LeadResult {
-        let result = self.investigate_lead_impl(lead).await;
-
-        match result {
-            Ok(result) => result,
-            Err(err) => LeadResult::Conclusion(err.into()),
-        }
-    }
-
-    async fn investigate_lead_impl(&self, lead: &Lead) -> Result<LeadResult, ScannerError> {
-        match lead {
-            Lead::EmbeddedSct(embedded_sct) => {
-                let Some(log) = self.logs.get(&embedded_sct.sct.log_id()) else {
-                    return Ok(LeadResult::Conclusion(Conclusion::Inconclusive(format!(
-                        "The scanner does not recognize the log {}",
-                        embedded_sct.sct.log_id()
-                    ))));
-                };
-
-                log.investigate_embedded_sct(embedded_sct, self)
-                    .await
-                    .map(LeadResult::Conclusion)
-            }
-        }
     }
 }
 

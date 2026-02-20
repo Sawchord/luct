@@ -1,6 +1,10 @@
 use luct_store::StringStoreValue;
+use serde::{Deserialize, Serialize};
 use std::ops::Deref;
 use web_time::{Duration, SystemTime};
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ScannerConfig {}
 
 /// Wrapper around a type to indicate, that the contained value has been validated
 ///
