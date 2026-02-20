@@ -20,11 +20,16 @@ luct-client = { path = "../../luct-client" }
 luct-store = { path = "../../luct-store" }
 
 serde_json = { workspace = true }
+serde-wasm-bindgen = { workspace = true }
+
 url = { workspace = true }
+
+chrono = { workspace = true }
 
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 console_error_panic_hook = { workspace = true }
+web-time = { workspace = true }
 js-sys = { workspace = true }
 web-sys = { workspace = true, features = [
     'Document',
