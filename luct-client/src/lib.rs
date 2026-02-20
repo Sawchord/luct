@@ -1,5 +1,5 @@
 use luct_core::{
-    CheckSeverity, CtLog, CtLogConfig, Severity, SignatureValidationError,
+    CtLog, CtLogConfig, SignatureValidationError,
     tiling::{ParseCheckpointError, TilingError},
     tree::ProofValidationError,
 };
@@ -89,23 +89,6 @@ impl From<serde_json::Error> for ClientError {
         ClientError::JsonError {
             line: value.line(),
             column: value.column(),
-        }
-    }
-}
-
-impl CheckSeverity for ClientError {
-    fn severity(&self) -> Severity {
-        match self {
-            ClientError::UnsupportedVersion => Severity::Inconclusive,
-            ClientError::JsonError { .. } => Severity::Unsafe,
-            ClientError::SignatureValidationFailed(_, err) => err.severity(),
-            ClientError::ConsistencyProofError(_) => Severity::Unsafe,
-            ClientError::AuditProofError(_) => Severity::Unsafe,
-            ClientError::ConnectionError(_) => Severity::Inconclusive,
-            ClientError::ResponseError { .. } => Severity::Inconclusive,
-            ClientError::Checkpoint(_) => Severity::Unsafe,
-            ClientError::TilingError(_) => Severity::Unsafe,
-            ClientError::SthError => Severity::Unsafe,
         }
     }
 }

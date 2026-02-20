@@ -1,9 +1,6 @@
-use crate::{
-    CheckSeverity, Severity,
-    utils::{
-        codec::{CodecError, Decode, Encode},
-        codec_vec::CodecVec,
-    },
+use crate::utils::{
+    codec::{CodecError, Decode, Encode},
+    codec_vec::CodecVec,
 };
 use p256::{
     ecdsa::{Signature as EcdsaSignature, VerifyingKey, signature::Verifier},
@@ -62,19 +59,6 @@ pub enum SignatureValidationError {
 
     #[error("Error decoding a value: {0}")]
     CodecError(#[from] CodecError),
-}
-
-impl CheckSeverity for SignatureValidationError {
-    fn severity(&self) -> Severity {
-        match self {
-            SignatureValidationError::UnsupportedHashAlgorithm(_) => Severity::Inconclusive,
-            SignatureValidationError::UnsupportedSignatureAlgorithm(_) => Severity::Inconclusive,
-            SignatureValidationError::MalformedKey => Severity::Unsafe,
-            SignatureValidationError::MalformedSignature => Severity::Unsafe,
-            SignatureValidationError::InvalidSignature => Severity::Unsafe,
-            SignatureValidationError::CodecError(codec_error) => codec_error.severity(),
-        }
-    }
 }
 
 impl<T: Encode> Signature<T> {

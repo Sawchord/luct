@@ -3,7 +3,7 @@ use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
-    CertificateChain, CertificateError, CheckSeverity, CtLog, CtLogConfig, LogId, Severity,
+    CertificateChain, CertificateError, CtLog, CtLogConfig, LogId,
     store::{Hashable, Store},
     tiling::TilingError,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
@@ -215,14 +215,4 @@ pub enum ScannerError {
 
     #[error("Failed to construct proof from tiles {0}")]
     TilingError(#[from] TilingError),
-}
-
-impl CheckSeverity for ScannerError {
-    fn severity(&self) -> Severity {
-        match self {
-            ScannerError::CertificateError(err) => err.severity(),
-            ScannerError::ClientError(err) => err.severity(),
-            ScannerError::TilingError(_) => Severity::Unsafe,
-        }
-    }
 }
