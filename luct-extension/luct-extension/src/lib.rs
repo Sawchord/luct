@@ -14,7 +14,7 @@ use tracing::Level;
 use tracing_wasm::WASMLayerConfigBuilder;
 use url::Url;
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
-use web_time::SystemTime;
+use web_time::{SystemTime, UNIX_EPOCH};
 
 mod store;
 
@@ -120,7 +120,14 @@ impl Scanner {
         let report: Report =
             serde_wasm_bindgen::from_value(report).map_err(|err| format!("{err}"))?;
 
-        let now = DateTime::from(SystemTime::now());
+        let now = DateTime::from_timestamp_millis(
+            SystemTime::now()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis() as i64,
+        )
+        .unwrap()
+        .into();
         report.evaluate_policy(now)?;
 
         Ok(())

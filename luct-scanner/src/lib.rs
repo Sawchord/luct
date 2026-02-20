@@ -3,6 +3,7 @@ use crate::{
     log::ScannerLog,
     report::{SctReport, SthReport},
 };
+use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
@@ -12,7 +13,7 @@ use luct_core::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
-use web_time::SystemTime;
+use web_time::{SystemTime, UNIX_EPOCH};
 pub use {
     lead::{Conclusion, Lead, LeadResult, ScannerConfig},
     log::builder::LogBuilder,
@@ -140,7 +141,16 @@ impl<C: Client> Scanner<C> {
         if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
             return report.error_description(err.to_string());
         };
-        let report = report.signature_validation_time(SystemTime::now().into());
+        let report = report.signature_validation_time(
+            DateTime::from_timestamp_millis(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as i64,
+            )
+            .unwrap()
+            .into(),
+        );
 
         // TODO: Use oldest valid sth for the inclusion proof, not last. Then only add last_sth after caching
 

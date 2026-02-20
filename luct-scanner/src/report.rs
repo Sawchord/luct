@@ -2,6 +2,7 @@ use crate::Validated;
 use chrono::{DateTime, Local, TimeDelta};
 use luct_core::v1::SignedTreeHead;
 use serde::{Deserialize, Serialize};
+use web_time::UNIX_EPOCH;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
@@ -125,7 +126,15 @@ impl From<&Validated<SignedTreeHead>> for SthReport {
             timestamp: DateTime::from_timestamp_millis(value.timestamp() as i64)
                 .unwrap()
                 .into(),
-            verification_time: value.validated_at().into(),
+            verification_time: DateTime::from_timestamp_millis(
+                value
+                    .validated_at()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as i64,
+            )
+            .unwrap()
+            .into(),
         }
     }
 }
