@@ -4,10 +4,32 @@ let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }
 let extraInfoSpec = ['blocking'];
 
+// TODO: Introduce in progress state
+// TODO: Better management of tab security
+
 class TabState {
     constructor() {
         this.tabs = new Map();
     }
+
+    async updateTab(tabId, url, result) {
+        if (tabId === -1) {
+            // Calls to -1 are calls of the extension itself
+            return;
+        }
+
+        var tab = this.tabs.get(tabId);
+        if (!tab) {
+            log("Initializing new tab: " + tabId);
+            tab = new TabSecurity2(tabId, url);
+        }
+
+        tab.update_status(url, result);
+        await tab.update_page_action();
+        this.tabs.set(tabId, tab);
+        //log(this);
+    }
+
 
     async updateTabResult(tabId, url, result) {
         var tab = this.tabs.get(tabId);
@@ -72,11 +94,49 @@ class TabSecurity {
     }
 }
 
+
+class TabSecurity2 {
+    constructor(tabId, document_url) {
+        this.tabId = tabId;
+        this.document_url = document_url;
+        this.urls = new Map();
+    }
+
+    update_status(url, status) {
+        this.urls.set(url, status)
+    }
+
+    get_status() {
+        var status = "safe";
+
+        for (let [url, url_status] of this.urls) {
+            if (!url_status) {
+                status = null;
+            } else if (url_status !== "safe") {
+                status = url_status;
+            }
+        }
+
+        return status;
+    }
+
+    async update_page_action() {
+        log(this)
+        if (this.get_status() === "safe") {
+            await browser.pageAction.setIcon({ tabId: this.tabId, path: "assets/icons/luct_safe.svg" })
+            await browser.pageAction.show(this.tabId);
+        } else {
+            await browser.pageAction.setIcon({ tabId: this.tabId, path: "assets/icons/luct_unsafe.svg" })
+            await browser.pageAction.show(this.tabId);
+        }
+    }
+}
+
 log(`Loading luCT extension`)
 var scanner;
 var tabState = new TabState();
 
-init().then(load_scanner).then(add_listener).then(setup_tab_actions)
+init().then(load_scanner).then(setup_tab_actions).then(add_listener)
 
 function load_scanner() {
     fetch(browser.runtime.getURL('assets/log_list.json'))
@@ -102,19 +162,36 @@ function add_listener() {
             //log(details)
             //log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
             let certs = securityInfo.certificates.map((info) => info.rawDER);
+
+            tabState.updateTab(details.tabId, details.url, null);
+
+            let report = await scanner.collect_report(details.url, certs);
+            // Skip the recursive calls
+            if (!(report)) {
+                log("Skipping recursive request");
+                return;
+            }
+
+            log(report);
+            try {
+                Scanner.evaluate_report(report);
+                tabState.updateTab(details.tabId, details.url, "safe");
+            } catch (error) {
+                tabState.updateTab(details.tabId, details.url, error);
+            }
+
             //log(certs)
 
-            let leads = scanner.collect_leads(details.url, certs);
-            //log(leads);
-            let investigations = leads.map((lead) => scanner.investigate_lead(lead).then((result) => {
-                log("Investigated: " + lead.description());
-                log("Conclusion: " + result.conclusion().description());
-                return [lead, result]
-            }));
+            // let leads = scanner.collect_leads(details.url, certs);
+            // //log(leads);
+            // let investigations = leads.map((lead) => scanner.investigate_lead(lead).then((result) => {
+            //     log("Investigated: " + lead.description());
+            //     log("Conclusion: " + result.conclusion().description());
+            //     return [lead, result]
+            // }));
 
-            let results = await Promise.all(investigations);
-
-            results.forEach(async (result) => await tabState.updateTabResult(details.tabId, details.documentUrl, result[1]))
+            // let results = await Promise.all(investigations);
+            // results.forEach(async (result) => await tabState.updateTabResult(details.tabId, details.documentUrl, result[1]))
         });
 
 
@@ -132,8 +209,10 @@ function setup_tab_actions() {
 
     browser.tabs.onUpdated.addListener(async (tabId, _changeInfo, tab) => {
         log(`Tab ${tabId} has updated url`)
-        log(tab)
-        await tabState.updateTabUrl(tabId);
+        //log(tab)
+        //await tabState.updateTabUrl(tabId);
+        tabs.deleteTab(tabId);
+
     },
         { properties: ["url"] }
     )
