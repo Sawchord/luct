@@ -21,41 +21,13 @@ class TabState {
         var tab = this.tabs.get(tabId);
         if (!tab) {
             log("Initializing new tab: " + tabId);
-            tab = new TabSecurity2(tabId, url);
+            tab = new TabSecurity(tabId, url);
         }
 
         tab.update_status(url, result);
         await tab.update_page_action();
         this.tabs.set(tabId, tab);
         //log(this);
-    }
-
-
-    async updateTabResult(tabId, url, result) {
-        var tab = this.tabs.get(tabId);
-        if (!tab) {
-            log("Initializing new tab: " + tabId);
-            tab = new TabSecurity(url);
-        }
-
-        tab.update(url, result);
-        this.tabs.set(tabId, tab);
-        await this.updateTabUrl(tabId);
-    }
-
-    async updateTabUrl(tabId) {
-        let tab = this.tabs.get(tabId);
-        if (!tab) {
-            return;
-        }
-
-        if (tab.safety === "safe") {
-            await browser.pageAction.setIcon({ tabId: tabId, path: "assets/icons/luct_safe.svg" })
-            await browser.pageAction.show(tabId);
-        } else {
-            await browser.pageAction.setIcon({ tabId: tabId, path: "assets/icons/luct_unsafe.svg" })
-            await browser.pageAction.show(tabId);
-        }
     }
 
     deleteTab(tabId) {
@@ -71,31 +43,6 @@ class TabState {
 }
 
 class TabSecurity {
-    constructor(url) {
-        this.url = url;
-        this.safety = "safe";
-        this.checks = [];
-    }
-
-    update(url, result) {
-        if (this.url !== url) {
-            this.url = url;
-            this.checks = [];
-            this.safety = "safe"
-        };
-
-        this.checks.push(result);
-
-        if (result.conclusion().is_unsafe()) {
-            this.safety = "unsafe";
-        } else if (this.safety !== "unsafe" && result.conclusion().is_inconclusive()) {
-            this.safety = "inconclusive";
-        }
-    }
-}
-
-
-class TabSecurity2 {
     constructor(tabId, document_url) {
         this.tabId = tabId;
         this.document_url = document_url;
@@ -179,19 +126,6 @@ function add_listener() {
             } catch (error) {
                 tabState.updateTab(details.tabId, details.url, error);
             }
-
-            //log(certs)
-
-            // let leads = scanner.collect_leads(details.url, certs);
-            // //log(leads);
-            // let investigations = leads.map((lead) => scanner.investigate_lead(lead).then((result) => {
-            //     log("Investigated: " + lead.description());
-            //     log("Conclusion: " + result.conclusion().description());
-            //     return [lead, result]
-            // }));
-
-            // let results = await Promise.all(investigations);
-            // results.forEach(async (result) => await tabState.updateTabResult(details.tabId, details.documentUrl, result[1]))
         });
 
 
@@ -209,8 +143,6 @@ function setup_tab_actions() {
 
     browser.tabs.onUpdated.addListener(async (tabId, _changeInfo, tab) => {
         log(`Tab ${tabId} has updated url`)
-        //log(tab)
-        //await tabState.updateTabUrl(tabId);
         tabs.deleteTab(tabId);
 
     },
