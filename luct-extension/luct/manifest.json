@@ -13,11 +13,23 @@
         "default_icon": "assets/icons/luct_unsafe.svg",
         "browser_style": true
     },
+    "sidebar_action": {
+        "default_icon": "assets/icons/luct_safe.svg",
+        "default_title": "luCT",
+        "default_panel": "sidebar/sidebar.html"
+    },
     "permissions": [
         "webRequest",
         "webRequestBlocking",
         "activeTab",
         "tabs",
         "<all_urls>"
-    ]
+    ],
+    "commands": {
+        "_execute_sidebar_action": {
+            "suggested_key": {
+                "default": "Ctrl+Shift+L"
+            }
+        }
+    }
 }
