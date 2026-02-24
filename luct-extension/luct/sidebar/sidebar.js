@@ -1,5 +1,8 @@
 import Report from "../components/report.js"
+import DateTime from "../components/datetimes.js"
+
 customElements.define('luct-report', Report);
+customElements.define('date-time', DateTime);
 
 let log = console.log.bind(console)
 
@@ -36,8 +39,12 @@ async function update_content() {
 
         content.replaceChildren();
         for (const [url, rep] of report.urls) {
-            const reportElement = new Report(url, rep.report, rep.status);
-            content.insertAdjacentElement("beforeend", reportElement);
+            if (rep.report) {
+                const reportElement = new Report(url, rep.report, rep.status);
+                content.insertAdjacentElement("beforeend", reportElement);
+            } else {
+                log("Report not found for url: " + url);
+            }
         }
 
         contentText.textContent = "";
