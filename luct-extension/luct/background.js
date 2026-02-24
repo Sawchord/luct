@@ -14,7 +14,7 @@ class TabState {
         this.tabs = new Map();
     }
 
-    async updateTab(tabId, url, result) {
+    async updateTab(tabId, url, report, result) {
         if (tabId === -1) {
             // Calls to -1 are calls of the extension itself
             return;
@@ -26,7 +26,7 @@ class TabState {
             tab = new TabSecurity(tabId, url);
         }
 
-        tab.update_status(url, result);
+        tab.update_status(url, report, result);
         await tab.update_page_action();
         this.tabs.set(tabId, tab);
     }
@@ -53,8 +53,8 @@ class TabSecurity {
         this.urls = new Map();
     }
 
-    async update_status(url, status) {
-        this.urls.set(url, status)
+    async update_status(url, report, status) {
+        this.urls.set(url, { report, status })
 
         if (this.tabId === activeTab && await browser.sidebarAction.isOpen({})) {
             browser.runtime.sendMessage(this)
@@ -125,9 +125,9 @@ function add_listener() {
             log(report);
             try {
                 Scanner.evaluate_report(report);
-                tabState.updateTab(details.tabId, details.url, "safe");
+                tabState.updateTab(details.tabId, details.url, report, "safe");
             } catch (error) {
-                tabState.updateTab(details.tabId, details.url, error);
+                tabState.updateTab(details.tabId, details.url, report, error);
             }
         });
 
