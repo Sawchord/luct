@@ -157,5 +157,8 @@ function setup_tab_actions() {
         { properties: ["url"] }
     );
 
+    browser.pageAction.onClicked.addListener(() => {
+        browser.sidebarAction.toggle();
+    })
 }
 
