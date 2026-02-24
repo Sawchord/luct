@@ -130,9 +130,14 @@ function add_listener() {
 
 
 
-    }, ALL_SITES, extraInfoSpec)
+    }, ALL_SITES, extraInfoSpec);
 
-    log('Added listener')
+    browser.runtime.onMessage.addListener((message, _sender, respond) => {
+        let tabData = tabState.tabs.get(message.tabId);
+        respond(tabData);
+    });
+
+    log('Added listeners')
 }
 
 function setup_tab_actions() {
@@ -148,16 +153,5 @@ function setup_tab_actions() {
         { properties: ["url"] }
     );
 
-    // browser.tabs.onCreated.addListener(async (event) => {
-    //     log(`Switched to tab`)
-    //     log(event)
-
-
-    //     let tabId = event.id;
-    //     log(tabId);
-    //     let panel = await browser.runtime.getURL(`sidebar/sidebar.html?tabid=` + tabId);
-    //     browser.sidebarAction.setPanel({ panel, tabId });
-    //     log("updated panel");
-    // })
 }
 

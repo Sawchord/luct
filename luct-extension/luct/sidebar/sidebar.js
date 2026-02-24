@@ -20,5 +20,14 @@ browser.windows.getCurrent({ populate: true }).then(async (windowInfo) => {
 });
 
 async function update_content() {
-    document.querySelector("#content_text").textContent = tabId;
+    let report = await browser.runtime.sendMessage({ tabId })
+
+    if (report) {
+        let report_urls = Object.fromEntries(report.urls);
+        document.querySelector("#content_text").textContent = JSON.stringify(report) + JSON.stringify(report_urls);
+    } else {
+        document.querySelector("#content_text").textContent = "No data";
+    }
+
+
 }
