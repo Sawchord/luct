@@ -1,3 +1,6 @@
+import Report from "../components/report.js"
+customElements.define('luct-report', Report);
+
 let log = console.log.bind(console)
 
 let windowId;
@@ -25,11 +28,22 @@ browser.windows.getCurrent({ populate: true }).then(async (windowInfo) => {
 async function update_content() {
     let report = await browser.runtime.sendMessage({ tabId })
 
+    const content = document.querySelector("#content");
+    const contentText = document.querySelector("#content_text");
+
     if (report) {
         let report_urls = Object.fromEntries(report.urls);
-        document.querySelector("#content_text").textContent = JSON.stringify(report) + JSON.stringify(report_urls);
+
+        content.replaceChildren();
+        for (const [url, rep] of report.urls) {
+            const reportElement = new Report(url, rep.report, rep.status);
+            content.insertAdjacentElement("beforeend", reportElement);
+        }
+
+        contentText.textContent = "";
     } else {
-        document.querySelector("#content_text").textContent = "No data";
+        content.replaceChildren();
+        contentText.textContent = "No data";
     }
 
 
