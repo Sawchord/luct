@@ -10,8 +10,11 @@ browser.tabs.onActivated.addListener((tab) => {
 
 });
 
+browser.runtime.onMessage.addListener((message) => {
+    update_content();
+});
+
 browser.windows.getCurrent({ populate: true }).then(async (windowInfo) => {
-    log(windowInfo)
     windowId = windowInfo.id;
 
     let tabs = await browser.tabs.query({ windowId, active: true });

@@ -4,6 +4,8 @@ let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }
 let extraInfoSpec = ['blocking'];
 
+let activeTab = -1;
+
 // TODO: Introduce in progress state
 // TODO: Better management of tab security
 
@@ -27,7 +29,6 @@ class TabState {
         tab.update_status(url, result);
         await tab.update_page_action();
         this.tabs.set(tabId, tab);
-        //log(this);
     }
 
     deleteTab(tabId) {
@@ -42,6 +43,9 @@ class TabState {
     }
 }
 
+let scanner;
+let tabState = new TabState();
+
 class TabSecurity {
     constructor(tabId, document_url) {
         this.tabId = tabId;
@@ -49,8 +53,12 @@ class TabSecurity {
         this.urls = new Map();
     }
 
-    update_status(url, status) {
+    async update_status(url, status) {
         this.urls.set(url, status)
+
+        if (this.tabId === activeTab && await browser.sidebarAction.isOpen({})) {
+            browser.runtime.sendMessage(this)
+        }
     }
 
     get_status() {
@@ -80,8 +88,6 @@ class TabSecurity {
 }
 
 log(`Loading luCT extension`)
-var scanner;
-var tabState = new TabState();
 
 init().then(load_scanner).then(setup_tab_actions).then(add_listener)
 
@@ -98,21 +104,18 @@ function load_scanner() {
 function add_listener() {
     browser.webRequest.onHeadersReceived.addListener(async (details) => {
         log(`Got a request for ${details.url} with ID ${details.requestId}`)
-        //log("Tab id: " + details.tabId)
-
         let requestId = details.requestId
 
         browser.webRequest.getSecurityInfo(requestId, {
             certificateChain: true,
             rawDER: true
         }).then(async (securityInfo) => {
-            //log(details)
-            //log(`securityInfo: ${JSON.stringify(securityInfo, null, 2)}`)
             let certs = securityInfo.certificates.map((info) => info.rawDER);
 
             tabState.updateTab(details.tabId, details.url, null);
 
             let report = await scanner.collect_report(details.url, certs);
+
             // Skip the recursive calls
             if (!(report)) {
                 log("Skipping recursive request");
@@ -134,6 +137,7 @@ function add_listener() {
 
     browser.runtime.onMessage.addListener((message, _sender, respond) => {
         let tabData = tabState.tabs.get(message.tabId);
+        activeTab = message.tabId;
         respond(tabData);
     });
 
