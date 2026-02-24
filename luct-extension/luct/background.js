@@ -144,10 +144,20 @@ function setup_tab_actions() {
     browser.tabs.onUpdated.addListener(async (tabId, _changeInfo, tab) => {
         log(`Tab ${tabId} has updated url`)
         tabs.deleteTab(tabId);
-
     },
         { properties: ["url"] }
-    )
+    );
 
+    // browser.tabs.onCreated.addListener(async (event) => {
+    //     log(`Switched to tab`)
+    //     log(event)
+
+
+    //     let tabId = event.id;
+    //     log(tabId);
+    //     let panel = await browser.runtime.getURL(`sidebar/sidebar.html?tabid=` + tabId);
+    //     browser.sidebarAction.setPanel({ panel, tabId });
+    //     log("updated panel");
+    // })
 }
 
