@@ -1,24 +1,12 @@
-export default class DateTime extends HTMLElement {
+export default class DateTime extends HTMLTimeElement {
     constructor() {
         super()
 
-        const shadow = this.attachShadow({ mode: 'open' });
-        const anchor = document.createElement('time');
-        anchor.setAttribute("id", "time-display");
-
-        shadow.appendChild(anchor);
-    }
-
-    connectedCallback() {
-        this.datetime = new Date(this.getHTML());
-
-        const anchor = this.shadowRoot.querySelector("#time-display");
-        anchor.setAttribute("datetime", this.datetime.toLocaleString());
-        anchor.innerText = this.datetime.toLocaleString();
-
+        this.datetime = new Date(this.innerText);
+        this.innerText = this.datetime.toLocaleString()
     }
 
     static define() {
-        customElements.define("date-time", DateTime);
+        customElements.define("date-time", DateTime, { extends: "time" });
     }
 }
