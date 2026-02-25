@@ -64,11 +64,11 @@ class TabSecurity {
     get_status() {
         var status = "safe";
 
-        for (let [url, url_status] of this.urls) {
-            if (!url_status) {
+        for (let [url, rep] of this.urls) {
+            if (!rep || !rep.status) {
                 status = null;
-            } else if (url_status !== "safe") {
-                status = url_status;
+            } else if (rep.status !== "safe") {
+                status = rep;
             }
         }
 
