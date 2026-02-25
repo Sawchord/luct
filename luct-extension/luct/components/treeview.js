@@ -12,31 +12,28 @@ export default class TreeView extends HTMLUListElement {
 
         const lis = this.querySelectorAll("li");
         for (const li of lis) {
-            if (li.querySelectorAll("ul").length > 0) {
+
+            const ul = li.querySelector("ul");
+            if (ul) {
                 const headline = li.firstChild;
 
                 const newImage = document.createElement("i");
                 newImage.setAttribute("class", "fa fa-angle-right")
-                li.insertBefore(newImage, headline);
 
                 const newSpan = document.createElement("span");
-                const anchor = li.parentNode;
+                newSpan.appendChild(newImage);
+                newSpan.append(headline);
 
-                anchor.insertBefore(newSpan, li)
-                anchor.removeChild(li);
-                newSpan.appendChild(li);
+                li.insertBefore(newSpan, ul);
 
                 newSpan.addEventListener("click", (event) => {
-                    console.log(event);
-
-                    const ul = li.querySelector("ul");
                     if (ul.style.display === "none") {
                         ul.style.display = "block";
+                        newImage.setAttribute("class", "fa fa-angle-down")
                     } else {
                         ul.style.display = "none";
+                        newImage.setAttribute("class", "fa fa-angle-right")
                     }
-
-                    console.log(ul);
                 });
             }
         }
