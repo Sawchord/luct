@@ -24,21 +24,20 @@ export default class Report extends HTMLElement {
                 </header>
                 <div class="card-content">
                     <div class="content">
-                        <div>
-                            <b>CA: </b>
-                            ${this.report.ca_name}
-                        </div>
-                        <div>
-                            <b>Not valid before: </b> 
-                            <date-time>${this.report.not_before}</date-time>
-                        </div>
-                        <div>
-                            <b>Not valid after: </b> 
-                            <date-time>${this.report.not_after}</date-time>
-                        </div>
-                        ${JSON.stringify(this.report)}
+                        <ul is="tree-view">
+                            <li> <b> CA: </b>${this.report.ca_name}</li>
+                            <li> <b>Not valid before: </b> <time is="date-time">${this.report.not_before}</time> </li>
+                            <li> <b>Not valid after: </b> <time is="date-time">${this.report.not_after}</time> </li>
+                            <li> 
+                                 SCTs 
+                                <ul>
+                                    <li> SCT1 </li>
+                                </ul>
+                            </li>
+                        </ul>
                     </div>
                 </div>
+
             </div>
         `;
 

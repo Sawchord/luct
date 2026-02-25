@@ -1,9 +1,11 @@
 import Report from "../components/report.js"
 import DateTime from "../components/datetimes.js"
+import TreeView from "../components/treeview.js";
 
 
 Report.define();
 DateTime.define();
+TreeView.define();
 
 let log = console.log.bind(console)
 
