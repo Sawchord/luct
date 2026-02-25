@@ -1,8 +1,9 @@
 import Report from "../components/report.js"
 import DateTime from "../components/datetimes.js"
 
-customElements.define('luct-report', Report);
-customElements.define('date-time', DateTime);
+
+Report.define();
+DateTime.define();
 
 let log = console.log.bind(console)
 

@@ -17,4 +17,8 @@ export default class DateTime extends HTMLElement {
         anchor.innerText = this.datetime.toLocaleString();
 
     }
+
+    static define() {
+        customElements.define("date-time", DateTime);
+    }
 }
