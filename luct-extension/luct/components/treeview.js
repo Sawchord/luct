@@ -15,14 +15,27 @@ export default class TreeView extends HTMLUListElement {
 
             const ul = li.querySelector("ul");
             if (ul) {
-                const headline = li.firstChild;
+                const children = li.children;
 
                 const newImage = document.createElement("i");
                 newImage.setAttribute("class", "fa fa-angle-right")
 
                 const newSpan = document.createElement("span");
                 newSpan.appendChild(newImage);
-                newSpan.append(headline);
+
+                let elemsAdded = 0;
+                for (const child of children) {
+                    if (child === ul) {
+                        break;
+                    }
+
+                    newSpan.append(child);
+                    elemsAdded++;
+                }
+
+                if (elemsAdded === 0) {
+                    newSpan.append(li.firstChild)
+                }
 
                 li.insertBefore(newSpan, ul);
 
