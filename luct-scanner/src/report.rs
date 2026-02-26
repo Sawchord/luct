@@ -9,7 +9,7 @@ use web_time::UNIX_EPOCH;
 pub struct Report {
     pub(crate) ca_name: String,
     pub(crate) cert_name: String,
-    pub(crate) finperprint: String,
+    pub(crate) fingerprint: String,
     pub(crate) not_before: DateTime<Local>,
     pub(crate) not_after: DateTime<Local>,
     pub(crate) scts: Vec<SctReport>,
