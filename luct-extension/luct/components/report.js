@@ -33,8 +33,7 @@ export default class Report extends HTMLElement {
                 return `
                     <b> Log: ${sct.log_name} </b>
                         <ul>
-                        <li> <b> Error </b> ${sct.error_description} </li>
-                        
+                        <li> <b> Error </b> ${sct.error_description} </li> 
                     </ul>
                 `
             }

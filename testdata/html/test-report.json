@@ -1,0 +1,48 @@
+{
+    "report": {
+        "ca_name": "CN=ISRG Root X1,O=Internet Security Research Group,C=US",
+        "cert_name": "CN=E8,O=Let's Encrypt,C=US",
+        "fingerprint": "34:61:AA:F3:0B:87:E6:FF:B7:49:69:AE:7A:96:EF:A4:E8:E1:C6:A2:A3:9A:21:3E:D3:AB:D5:D1:7D:E9:27:9F",
+        "not_before": "2026-02-06T22:41:32+01:00",
+        "not_after": "2026-05-07T23:41:31+02:00",
+        "scts": [
+            {
+                "cached": true,
+                "signature_validation_time": "2026-02-26T15:33:26.704+01:00",
+                "log_name": "Let's Encrypt 'Sycamore2026h1'",
+                "latest_sth": {
+                    "height": 864289765,
+                    "timestamp": "2026-02-26T15:33:26.285+01:00",
+                    "verification_time": "2026-02-26T15:33:26.829+01:00"
+                },
+                "inclusion_proof": {
+                    "height": 864289765,
+                    "timestamp": "2026-02-26T15:33:26.285+01:00",
+                    "verification_time": "2026-02-26T15:33:26.829+01:00"
+                }
+            },
+            {
+                "cached": true,
+                "signature_validation_time": "2026-02-26T15:33:26.706+01:00",
+                "log_name": "DigiCert 'Wyvern2026h1'",
+                "latest_sth": {
+                    "height": 964546129,
+                    "timestamp": "2026-02-26T15:33:26.745+01:00",
+                    "verification_time": "2026-02-26T15:33:26.952+01:00"
+                },
+                "inclusion_proof": {
+                    "height": 964546129,
+                    "timestamp": "2026-02-26T15:33:26.745+01:00",
+                    "verification_time": "2026-02-26T15:33:26.952+01:00"
+                }
+            }
+        ]
+    },
+    "urls": [
+        "https://www.wikipedia.org/portal/wikipedia.org/assets/js/index-90de98612a.js",
+        "https://www.wikipedia.org/portal/wikipedia.org/assets/js/gt-ie9-507b16b6be.js",
+        "https://www.wikipedia.org/portal/wikipedia.org/assets/img/wikipedia25-synthesizer-poster-dark.webp",
+        "https://www.wikipedia.org/static/apple-touch/wikipedia.png",
+        "https://www.wikipedia.org/static/favicon/wikipedia.ico"
+    ]
+}

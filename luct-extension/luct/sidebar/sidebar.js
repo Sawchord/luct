@@ -61,6 +61,7 @@ async function update_content() {
         content.replaceChildren();
         for (const [_fp, data] of certs) {
             const reportElement = new Report(data);
+            console.log(data);
             content.insertAdjacentElement("beforeend", reportElement);
         }
 
