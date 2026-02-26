@@ -29,7 +29,7 @@ export default class Report extends HTMLElement {
                             <li> <b>Not valid before: </b> <time is="date-time">${this.report.not_before}</time> </li>
                             <li> <b>Not valid after: </b> <time is="date-time">${this.report.not_after}</time> </li>
                             <li> 
-                                 SCTs 
+                                <b> SCTs </b>
                                 <ul>
                                     <li> SCT1 </li>
                                 </ul>
