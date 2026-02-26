@@ -38,16 +38,30 @@ async function update_content() {
     const contentText = document.querySelector("#content_text");
 
     if (report) {
-        let report_urls = Object.fromEntries(report.urls);
+        let certs = new Map();
+
+        for (const [url, rep] of report.urls) {
+            if (!rep.report) {
+                continue;
+            }
+
+            let fingerprint = rep.report.fingerprint
+            let existing_entry = certs.get(fingerprint);
+            if (existing_entry) {
+                existing_entry.urls.push(url);
+                if (existing_entry.status === 'safe' && rep.status !== 'safe') {
+                    existing_entry.status = rep.status;
+                }
+                certs.set(fingerprint, existing_entry);
+            } else {
+                certs.set(fingerprint, { report: rep.report, urls: [] });
+            }
+        }
 
         content.replaceChildren();
-        for (const [url, rep] of report.urls) {
-            if (rep.report) {
-                const reportElement = new Report(url, rep.report, rep.status);
-                content.insertAdjacentElement("beforeend", reportElement);
-            } else {
-                log("Report not found for url: " + url);
-            }
+        for (const [_fp, data] of certs) {
+            const reportElement = new Report(data);
+            content.insertAdjacentElement("beforeend", reportElement);
         }
 
         contentText.textContent = "";
