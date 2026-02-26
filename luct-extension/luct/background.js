@@ -110,10 +110,13 @@ function add_listener() {
             certificateChain: true,
             rawDER: true
         }).then(async (securityInfo) => {
+            // Non TLS connections (e.g. localhost) don't have this field populated
+            if (!securityInfo.certificates) {
+                return;
+            }
+
             let certs = securityInfo.certificates.map((info) => info.rawDER);
-
             tabState.updateTab(details.tabId, details.url, null);
-
             let report = await scanner.collect_report(details.url, certs);
 
             // Skip the recursive calls
