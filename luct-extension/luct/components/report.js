@@ -9,12 +9,56 @@ export default class Report extends HTMLElement {
         const anchor = document.createElement('div');
 
 
-        // FIXME: Don't use innerHTML
-        let urlDisplay = `<b> Used by  ${this.urls.length} urls </b> <ul>`;
-        for (const url of this.urls) {
-            urlDisplay += `<li> ${url} </li>`
+        // FIXME: Don't use innerHTML, use templates and generate the inner data as elements
+        const urlsDisplay = () => {
+            let display = `<b> Used by  ${this.urls.length} urls </b> <ul>`;
+            for (const url of this.urls) {
+                display += `<li> ${url} </li>`;
+            }
+            display += "</ul>";
+            return display
         }
-        urlDisplay += "</ul>"
+
+        const sthDisplay = (name, sth) => {
+            return `
+            <b> ${name}: ${sth.height} </b>
+            <ul>
+                <li> <b> Timestamp: </b> <time is="date-time">${sth.timestamp}</time> </li>
+                <li> <b> Verification time: </b> <time is="date-time">${sth.verification_time}</time> </li>
+            </ul>`
+        }
+
+        const sctDisplay = (sct) => {
+            if (sct.error_description) {
+                return `
+                    <b> Log: ${sct.log_name} </b>
+                        <ul>
+                        <li> <b> Error </b> ${sct.error_description} </li>
+                        
+                    </ul>
+                `
+            }
+
+            return `
+            <b> Log: ${sct.log_name} </b> 
+            <ul>
+                <li> <b> Validation time: </b> <time is="date-time">${sct.signature_validation_time}</time> </li>
+                <li> ${sthDisplay("Inclusion proof", sct.inclusion_proof)} </li>
+                <li> ${sthDisplay("Latest STH", sct.latest_sth)} </li>
+                <li> <b> Cached: </b> ${sct.cached} </li>
+            </ul>`
+        }
+
+        const sctsDisplay = () => {
+            let display = `<b> Constains  ${this.report.scts.length} scts </b> <ul>`;
+            for (const sct of this.report.scts) {
+                display += `<li> ${sctDisplay(sct)} </li>`;
+            }
+
+            display += "</ul>";
+            return display
+        }
+
 
         anchor.innerHTML = `
             <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -41,13 +85,8 @@ export default class Report extends HTMLElement {
                             </li>
                             <li> <b>Not valid before: </b> <time is="date-time">${this.report.not_before}</time> </li>
                             <li> <b>Not valid after: </b> <time is="date-time">${this.report.not_after}</time> </li>
-                            <li> 
-                                <b> SCTs </b>
-                                <ul>
-                                    <li> SCT1 </li>
-                                </ul>
-                            </li>
-                            <li> ${urlDisplay} </li>
+                            <li> ${sctsDisplay()} </li>
+                            <li> ${urlsDisplay()} </li>
                         </ul>
                     </div>
                 </div>
@@ -61,6 +100,8 @@ export default class Report extends HTMLElement {
 
     connectedCallback() {
     }
+
+
 
     static define() {
         customElements.define("luct-report", Report);
