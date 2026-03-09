@@ -1,7 +1,9 @@
 export default class TreeView extends HTMLUListElement {
     constructor() {
         super();
+    }
 
+    connectedCallback() {
         const uls = this.querySelectorAll("ul");
         for (const ul of uls) {
             ul.style.display = "none";

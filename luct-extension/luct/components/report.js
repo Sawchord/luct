@@ -6,19 +6,12 @@ export default class Report extends HTMLElement {
         this.report = data.report;
 
         const shadow = this.attachShadow({ mode: 'open' });
+        this.shadow = shadow;
+
         const anchor = document.createElement('div');
 
 
         // FIXME: Don't use innerHTML, use templates and generate the inner data as elements
-        const urlsDisplay = () => {
-            let display = `<b> Used by  ${this.urls.length} urls </b> <ul>`;
-            for (const url of this.urls) {
-                display += `<li> ${url} </li>`;
-            }
-            display += "</ul>";
-            return display
-        }
-
         const sthDisplay = (name, sth) => {
             return `
             <b> ${name}: ${sth.height} </b>
@@ -74,7 +67,7 @@ export default class Report extends HTMLElement {
                 </header>
                 <div class="card-content">
                     <div class="content">
-                        <ul is="tree-view">
+                        <ul is="tree-view" id="tree-view">
                             <li> <b> CA: </b>${this.report.ca_name}</li>
                             <li>
                                 <b> Fingerprint </b> 
@@ -85,11 +78,10 @@ export default class Report extends HTMLElement {
                             <li> <b>Not valid before: </b> <time is="date-time">${this.report.not_before}</time> </li>
                             <li> <b>Not valid after: </b> <time is="date-time">${this.report.not_after}</time> </li>
                             <li> ${sctsDisplay()} </li>
-                            <li> ${urlsDisplay()} </li>
+                            <li id="url"> </li>
                         </ul>
                     </div>
                 </div>
-
             </div>
         `;
 
@@ -97,7 +89,25 @@ export default class Report extends HTMLElement {
 
     }
 
+    urlDisplay() {
+        const anchor = this.shadow.getElementById("url");
+
+        const summary = document.createElement("b");
+        summary.innerText = ` Used by  ${this.urls.length} urls`;
+        anchor.appendChild(summary);
+
+
+        const ul = document.createElement("ul");
+        for (const url of this.urls) {
+            const li = document.createElement("li");
+            li.innerText = url;
+            ul.appendChild(li);
+        }
+        anchor.appendChild(ul)
+    }
+
     connectedCallback() {
+        this.urlDisplay();
     }
 
 
