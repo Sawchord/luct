@@ -1,3 +1,12 @@
+
+
+
+function li(inner) {
+    const li = document.createElement("li");
+    li.appendChild(inner);
+    return li;
+}
+
 export default class Report extends HTMLElement {
     constructor(data) {
         super();
@@ -9,48 +18,6 @@ export default class Report extends HTMLElement {
         this.shadow = shadow;
 
         const anchor = document.createElement('div');
-
-
-        // FIXME: Don't use innerHTML, use templates and generate the inner data as elements
-        const sthDisplay = (name, sth) => {
-            return `
-            <b> ${name}: ${sth.height} </b>
-            <ul>
-                <li> <b> Timestamp: </b> <time is="date-time">${sth.timestamp}</time> </li>
-                <li> <b> Verification time: </b> <time is="date-time">${sth.verification_time}</time> </li>
-            </ul>`
-        }
-
-        const sctDisplay = (sct) => {
-            if (sct.error_description) {
-                return `
-                    <b> Log: ${sct.log_name} </b>
-                        <ul>
-                        <li> <b> Error </b> ${sct.error_description} </li> 
-                    </ul>
-                `
-            }
-
-            return `
-            <b> Log: ${sct.log_name} </b> 
-            <ul>
-                <li> <b> Validation time: </b> <time is="date-time">${sct.signature_validation_time}</time> </li>
-                <li> ${sthDisplay("Inclusion proof", sct.inclusion_proof)} </li>
-                <li> ${sthDisplay("Latest STH", sct.latest_sth)} </li>
-                <li> <b> Cached: </b> ${sct.cached} </li>
-            </ul>`
-        }
-
-        const sctsDisplay = () => {
-            let display = `<b> Constains  ${this.report.scts.length} scts </b> <ul>`;
-            for (const sct of this.report.scts) {
-                display += `<li> ${sctDisplay(sct)} </li>`;
-            }
-
-            display += "</ul>";
-            return display
-        }
-
 
         anchor.innerHTML = `
             <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.4.0/css/font-awesome.min.css">
@@ -77,7 +44,7 @@ export default class Report extends HTMLElement {
                             </li>
                             <li id="not-before"></li>
                             <li id="not-after"></li>
-                            <li> ${sctsDisplay()} </li>
+                            <li id="scts"> </li>
                             <li id="url"> </li>
                         </ul>
                     </div>
@@ -89,19 +56,73 @@ export default class Report extends HTMLElement {
 
     }
 
-    timeDisplay(name, time) {
+    valueDisplay(name, value) {
         const anchor = document.createElement("span");
 
         const b = document.createElement("b");
         b.innerText = name;
         anchor.appendChild(b);
 
-        const tim = document.createElement("time");
-        tim.innerText = new Date(time).toLocaleString();
-        anchor.appendChild(tim);
+        const val = document.createElement("time");
+        val.innerText = value;
+        anchor.appendChild(val);
 
         return anchor
     }
+
+    timeDisplay(name, time) {
+        return this.valueDisplay(name, new Date(time).toLocaleString())
+    }
+
+
+    sthDisplay(sth) {
+        const ul = document.createElement("ul");
+        ul.appendChild(li(this.timeDisplay("Timestamp: ", sth.timestamp)));
+        ul.appendChild(li(this.timeDisplay("Verification time: ", sth.verification_time)));
+        return ul;
+    }
+
+    sctDisplay(sct) {
+        const ul = document.createElement("ul");
+
+        if (sct.error_description) {
+            ul.appendChild(li(this.valueDisplay("Error: ", sct.error_description)));
+        } else {
+            ul.appendChild(li(this.timeDisplay("Validation time: ", sct.signature_validation_time)));
+
+            const inclusionProof = li(this.valueDisplay(" Inclusion proof: ", sct.inclusion_proof.height));
+            inclusionProof.appendChild(this.sthDisplay(sct.inclusion_proof));
+            ul.appendChild(inclusionProof);
+
+            const latestSth = li(this.valueDisplay(" Latest STH: ", sct.latest_sth.height));
+            latestSth.appendChild(this.sthDisplay(sct.latest_sth));
+            ul.appendChild(latestSth);
+
+            ul.appendChild(li(this.valueDisplay("Cached: ", sct.cached)));
+
+        }
+
+        return ul;
+    }
+
+    sctsDisplay() {
+        const anchor = this.shadow.getElementById("scts");
+
+        const summary = document.createElement("b");
+        summary.innerText = ` Contains ${this.report.scts.length} scts`;
+        anchor.appendChild(summary);
+
+        const ul = document.createElement("ul");
+
+        for (const sct of this.report.scts) {
+            const l = li(this.valueDisplay(" Log name: ", sct.log_name));
+            l.appendChild(this.sctDisplay(sct));
+            ul.appendChild(l);
+        }
+        anchor.appendChild(ul)
+
+    }
+
 
     urlDisplay() {
         const anchor = this.shadow.getElementById("url");
@@ -128,6 +149,7 @@ export default class Report extends HTMLElement {
         this.shadow.getElementById("not-before").appendChild(this.timeDisplay("Not valid before: ", this.report.not_before));
         this.shadow.getElementById("not-after").appendChild(this.timeDisplay("Not valid after: ", this.report.not_after));
 
+        this.sctsDisplay();
         this.urlDisplay();
     }
 
