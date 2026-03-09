@@ -34,7 +34,6 @@ async function update_content() {
     let report = await browser.runtime.sendMessage({ tabId })
 
     const content = document.getElementById("content");
-    const contentText = document.getElementById("content_text");
 
     if (report) {
         let certs = new Map();
@@ -64,10 +63,8 @@ async function update_content() {
             content.insertAdjacentElement("beforeend", reportElement);
         }
 
-        contentText.textContent = "";
     } else {
         content.replaceChildren();
-        contentText.textContent = "No data";
     }
 
 
