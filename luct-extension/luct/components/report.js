@@ -58,7 +58,7 @@ export default class Report extends HTMLElement {
             
             <div class="card">
                 <header class="card-header">
-                    <p class="card-header-title">${this.report.cert_name}</p>
+                    <p class="card-header-title" id="cert-name"></p>
                     <button class="card-header-icon" aria-label="more options">
                         <span class="icon">
                             <i class="fa fa-angle-down" aria-hidden="true"></i>
@@ -68,15 +68,15 @@ export default class Report extends HTMLElement {
                 <div class="card-content">
                     <div class="content">
                         <ul is="tree-view" id="tree-view">
-                            <li> <b> CA: </b>${this.report.ca_name}</li>
+                            <li> <b> CA: </b> <span id="ca-name"></span> </li>
                             <li>
                                 <b> Fingerprint </b> 
                                 <ul> 
-                                    <li> ${this.report.fingerprint} </li>
+                                    <li id="fingerprint"></li>
                                 </ul> 
                             </li>
-                            <li> <b>Not valid before: </b> <time is="date-time">${this.report.not_before}</time> </li>
-                            <li> <b>Not valid after: </b> <time is="date-time">${this.report.not_after}</time> </li>
+                            <li> <b>Not valid before: </b> <time is="date-time" id="not-before"></time> </li>
+                            <li> <b>Not valid after: </b> <time is="date-time" id="not-after"></time> </li>
                             <li> ${sctsDisplay()} </li>
                             <li id="url"> </li>
                         </ul>
@@ -107,6 +107,13 @@ export default class Report extends HTMLElement {
     }
 
     connectedCallback() {
+        this.shadow.getElementById("cert-name").innerText = this.report.cert_name;
+        this.shadow.getElementById("ca-name").innerText = this.report.ca_name;
+        this.shadow.getElementById("fingerprint").innerText = this.report.fingerprint;
+
+        this.shadow.getElementById("not-before").innerText = new Date(this.report.not_before).toLocaleString();
+        this.shadow.getElementById("not-after").innerText = new Date(this.report.not_after).toLocaleString();
+
         this.urlDisplay();
     }
 
