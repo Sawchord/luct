@@ -75,8 +75,8 @@ export default class Report extends HTMLElement {
                                     <li id="fingerprint"></li>
                                 </ul> 
                             </li>
-                            <li> <b>Not valid before: </b> <time is="date-time" id="not-before"></time> </li>
-                            <li> <b>Not valid after: </b> <time is="date-time" id="not-after"></time> </li>
+                            <li id="not-before"></li>
+                            <li id="not-after"></li>
                             <li> ${sctsDisplay()} </li>
                             <li id="url"> </li>
                         </ul>
@@ -87,6 +87,20 @@ export default class Report extends HTMLElement {
 
         shadow.appendChild(anchor);
 
+    }
+
+    timeDisplay(name, time) {
+        const anchor = document.createElement("span");
+
+        const b = document.createElement("b");
+        b.innerText = name;
+        anchor.appendChild(b);
+
+        const tim = document.createElement("time");
+        tim.innerText = new Date(time).toLocaleString();
+        anchor.appendChild(tim);
+
+        return anchor
     }
 
     urlDisplay() {
@@ -111,8 +125,8 @@ export default class Report extends HTMLElement {
         this.shadow.getElementById("ca-name").innerText = this.report.ca_name;
         this.shadow.getElementById("fingerprint").innerText = this.report.fingerprint;
 
-        this.shadow.getElementById("not-before").innerText = new Date(this.report.not_before).toLocaleString();
-        this.shadow.getElementById("not-after").innerText = new Date(this.report.not_after).toLocaleString();
+        this.shadow.getElementById("not-before").appendChild(this.timeDisplay("Not valid before: ", this.report.not_before));
+        this.shadow.getElementById("not-after").appendChild(this.timeDisplay("Not valid after: ", this.report.not_after));
 
         this.urlDisplay();
     }
