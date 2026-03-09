@@ -11,7 +11,6 @@ let log = console.log.bind(console)
 
 let windowId;
 let tabId;
-const contentBox = document.querySelector("#content_text");
 
 browser.tabs.onActivated.addListener((tab) => {
     tabId = tab.tabId;
@@ -19,7 +18,7 @@ browser.tabs.onActivated.addListener((tab) => {
 
 });
 
-browser.runtime.onMessage.addListener((message) => {
+browser.runtime.onMessage.addListener((_message) => {
     update_content();
 });
 
@@ -34,8 +33,8 @@ browser.windows.getCurrent({ populate: true }).then(async (windowInfo) => {
 async function update_content() {
     let report = await browser.runtime.sendMessage({ tabId })
 
-    const content = document.querySelector("#content");
-    const contentText = document.querySelector("#content_text");
+    const content = document.getElementById("content");
+    const contentText = document.getElementById("content_text");
 
     if (report) {
         let certs = new Map();
