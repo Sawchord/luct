@@ -8,7 +8,7 @@ export default class TreeView extends HTMLUListElement {
         }
 
 
-        const lis = this.querySelectorAll("li");
+        const lis = this.querySelectorAll("li, .expandible");
         for (const li of lis) {
 
             const ul = li.querySelector("ul");
