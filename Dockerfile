@@ -19,11 +19,12 @@ WORKDIR /usr/src
 COPY ./luct-extension/luct .
 COPY --from=wasm-builder /usr/src/target/wasm32-unknown-unknown/release/luct_extension.wasm /
 RUN /wasm-bindgen-0.2.108-x86_64-unknown-linux-musl/wasm-bindgen /luct_extension.wasm --target web --out-dir assets/wasm
-
 RUN tree
-RUN zip -r -FS /luct.zip .
-RUN sha256sum /luct.zip
+
+RUN TZ=UTC find . -exec touch --no-dereference -a -m -t 201202010000.00 {} +
+RUN TZ=UTC zip -r -FS -Xo /luct.xpi .
+RUN sha256sum /luct.xpi
 
 # Copy extension into empty exporter
 FROM scratch AS exporter
-COPY --from=extension-packager /luct.zip .
+COPY --from=extension-packager /luct.xpi .
