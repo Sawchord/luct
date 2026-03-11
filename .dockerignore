@@ -1,3 +1,6 @@
 **/target
 **/pkg
 **/wasm
+.github
+.vscode
+Dockerfile

@@ -18,9 +18,13 @@ RUN apk add zip tree
 
 WORKDIR /usr/src
 
-COPY ./luct-extension/luct luct
-COPY --from=wasm-builder /usr/src/target/wasm luct/assets
+COPY ./luct-extension/luct .
+COPY --from=wasm-builder /usr/src/target/wasm assets/wasm
 
 RUN tree
-RUN zip -r -FS /luct.zip luct
+RUN zip -r -FS /luct.zip .
 RUN sha256sum /luct.zip
+
+# Copy extension into empty exporter
+FROM scratch AS exporter
+COPY --from=extension-packager /luct.zip .
