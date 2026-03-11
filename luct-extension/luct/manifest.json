@@ -3,6 +3,11 @@
     "name": "luCT certificate scanner",
     "version": "0.0",
     "description": "luCT ",
+    "browser_specific_settings": {
+        "gecko": {
+            "id": "{30a71f7a-a1c7-41a9-9fce-8d025ec631b7}"
+        }
+    },
     "background": {
         "scripts": [
             "background.js"
