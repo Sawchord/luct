@@ -16,7 +16,7 @@ jobs:
     strategy: 
       matrix:
         platform:
-          - name: Linux X86-64
+          - name: Linux X86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             binary_ext: ""
