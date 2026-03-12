@@ -8,7 +8,7 @@ if __name__ == '__main__':
     zipf = ZipFile('luct.xpi', 'w', ZIP_DEFLATED) 
     path = 'luct'
 
-    for root, dirs, files in os.walk('luct'):
+    for root, dirs, files in sorted(os.walk('luct')):
         # for d in sorted(dirs):
         #     info = ZipInfo(
         #         filename=os.path.relpath(os.path.join(root, d),path) + "/",
