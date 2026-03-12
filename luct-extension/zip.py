@@ -9,7 +9,7 @@ if __name__ == '__main__':
     path = 'luct'
 
     for root, dirs, files in os.walk('luct'):
-        # for d in dirs:
+        # for d in sorted(dirs):
         #     info = ZipInfo(
         #         filename=os.path.relpath(os.path.join(root, d),path) + "/",
         #         date_time=(1980, 1, 1, 12, 1, 0)
@@ -19,7 +19,7 @@ if __name__ == '__main__':
         #     info.compress_type = ZIP_STORED
         #     info.CRC = 0 # unclear why necessary for directories, maybe a bug?
         #     zipf.mkdir(info)
-        for f in files:
+        for f in sorted(files):
             with open(os.path.join(root, f), 'rb') as data:
                 info = ZipInfo(
                         filename=os.path.relpath(os.path.join(root, f),path),
@@ -29,3 +29,4 @@ if __name__ == '__main__':
                 info.create_system = 3 # unx=3 vs fat=0
                 info.compress_type = ZIP_DEFLATED
                 zipf.writestr(info, data.read())
+                print("Compressed file: " + os.path.join(root, f))
