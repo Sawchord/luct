@@ -14,7 +14,7 @@ class TabState {
         this.tabs = new Map();
     }
 
-    async updateTab(tabId, url, report, result) {
+    async updateTab(tabId, url, report, status) {
         if (tabId === -1) {
             // Calls to -1 are calls of the extension itself
             return;
@@ -26,7 +26,7 @@ class TabState {
             tab = new TabSecurity(tabId, url);
         }
 
-        tab.update_status(url, report, result);
+        await tab.update_status(url, report, status);
         await tab.update_page_action();
         this.tabs.set(tabId, tab);
     }
@@ -64,7 +64,7 @@ class TabSecurity {
     get_status() {
         var status = "safe";
 
-        for (let [url, rep] of this.urls) {
+        for (let [_url, rep] of this.urls) {
             if (!rep || !rep.status) {
                 status = null;
             } else if (rep.status !== "safe") {
@@ -116,7 +116,7 @@ function add_listener() {
             }
 
             let certs = securityInfo.certificates.map((info) => info.rawDER);
-            tabState.updateTab(details.tabId, details.url, null);
+            tabState.updateTab(details.tabId, details.url, null, null);
             let report = await scanner.collect_report(details.url, certs);
 
             // Skip the recursive calls
