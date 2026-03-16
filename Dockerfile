@@ -21,7 +21,7 @@ COPY ./luct-extension/zip.py .
 COPY --from=wasm-builder /usr/src/target/wasm32-unknown-unknown/release/luct_extension.wasm .
 RUN sha256sum luct_extension.wasm
 
-RUN ./wasm-bindgen-0.2.108-x86_64-unknown-linux-musl/wasm-bindgen luct_extension.wasm --target web --out-dir luct/assets/wasm
+RUN ./wasm-bindgen-0.2.108-x86_64-unknown-linux-musl/wasm-bindgen luct_extension.wasm --no-typescript --target web --out-dir luct/assets/wasm
 RUN tree luct
 
 RUN ./zip.py

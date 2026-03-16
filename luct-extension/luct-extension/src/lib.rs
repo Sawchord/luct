@@ -41,13 +41,15 @@ pub fn start() -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub struct Scanner(CtScanner<RequestDeduplicationClient<ReqwestClient>>);
+pub struct Scanner {
+    scanner: CtScanner<RequestDeduplicationClient<ReqwestClient>>,
+}
 
 #[wasm_bindgen]
 impl Scanner {
     #[wasm_bindgen(constructor)]
-    pub fn new(config: String) -> Result<Self, String> {
-        let log_list: LogList = serde_json::from_str(&config).map_err(|err| format!("{err}"))?;
+    pub fn new(log_list: String) -> Result<Self, String> {
+        let log_list: LogList = serde_json::from_str(&log_list).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
         let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
@@ -69,14 +71,14 @@ impl Scanner {
         }
 
         log("Initialized scanner");
-        Ok(Scanner(scanner))
+        Ok(Scanner { scanner })
     }
 
     #[wasm_bindgen]
     pub async fn collect_report(
         &self,
         url: String,
-        leads: Array,
+        certs: Array,
     ) -> Result<Option<JsValue>, String> {
         // Check that this is not a recursion
         if self.is_recursion(&url)? {
@@ -85,7 +87,7 @@ impl Scanner {
         }
 
         // Parse the certificate
-        let cert_chain_bytes = leads
+        let cert_chain_bytes = certs
             .to_vec()
             .into_iter()
             .map(|value| Uint8Array::from(value).to_vec())
@@ -96,7 +98,7 @@ impl Scanner {
 
         // Generate the report
         let report = self
-            .0
+            .scanner
             .collect_report(Arc::new(cert_chain))
             .await
             .map_err(|err| err.to_string())?;
@@ -130,7 +132,7 @@ impl Scanner {
     /// security context and will be intercepted by the browser
     fn is_recursion(&self, url: &str) -> Result<bool, String> {
         let url = Url::parse(url).map_err(|err| format!("{err}"))?;
-        let is_recusion = self.0.logs().any(|log| {
+        let is_recusion = self.scanner.logs().any(|log| {
             log.config().url().domain() == url.domain()
                 || log
                     .config()
