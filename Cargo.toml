@@ -61,20 +61,21 @@ thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10", features = ["chacha"] }
 async-oneshot = { version = "0.5" }
+itertools = { version = "0.14" }
+lru = { version = "0.16" }
 
 # Observability
 tracing = { version = "0.1", features = ["log"] }
 tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }
 tracing-wasm = { version = "0.2" }
 
-itertools = { version = "0.14" }
-
 # Async
 tokio = { version = "1" }
 futures = { version = "0.3" }
 
 # WASM
-wasm-bindgen = { version = "0.2" }
+# NOTE: When updating wasm-bindgen, we also need to update the tool in CI
+wasm-bindgen = { version = "0.2.108" }
 wasm-bindgen-futures = { version = "0.4" }
 web-time = { version = "1.1" }
 console_error_panic_hook = { version = "0.1" }

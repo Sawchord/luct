@@ -1,15 +1,17 @@
 use crate::{HashOutput, log::ScannerLogInner};
+use lru::LruCache;
 use luct_client::Client;
 use luct_core::{
-    store::{AsyncStore, Hashable, MemoryStore, Store},
+    store::{AsyncStore, Hashable, MemoryStore},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{
     fmt,
+    num::NonZero,
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicU64, Ordering},
     },
 };
@@ -26,13 +28,7 @@ pub(crate) struct TileFetcher<C>(
 impl<C> TileFetcher<C> {
     pub(crate) fn new(log: &Arc<ScannerLogInner<C>>) -> Self {
         Self(Tree::new(
-            TileFetchStore::new(
-                log.clone(),
-                Box::new(
-                    // TODO: Use an LRU cache
-                    MemoryStore::default(),
-                ) as _,
-            ),
+            TileFetchStore::new(log.clone()),
             MemoryStore::default(),
         ))
     }
@@ -126,7 +122,7 @@ impl<C: Client> TileFetcher<C> {
 }
 
 pub(crate) struct TileFetchStore<C> {
-    node_cache: Box<dyn Store<NodeKey, HashOutput>>,
+    node_cache: Mutex<LruCache<NodeKey, HashOutput>>,
     log: Arc<ScannerLogInner<C>>,
     tree_size: AtomicU64,
 }
@@ -138,9 +134,9 @@ impl<C> fmt::Debug for TileFetchStore<C> {
 }
 
 impl<C> TileFetchStore<C> {
-    fn new(log: Arc<ScannerLogInner<C>>, node_cache: Box<dyn Store<NodeKey, HashOutput>>) -> Self {
+    fn new(log: Arc<ScannerLogInner<C>>) -> Self {
         Self {
-            node_cache,
+            node_cache: Mutex::new(LruCache::new(NonZero::new(1000).unwrap())),
             log,
             tree_size: AtomicU64::new(0),
         }
@@ -159,8 +155,8 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // First, try to get the node from the cache
-        if let Some(value) = self.node_cache.get(&key) {
-            return Some(value);
+        if let Some(value) = self.node_cache.lock().unwrap().get(&key) {
+            return Some(*value);
         }
 
         // If not available, calculate which tile should have the value and fetch it
@@ -183,10 +179,11 @@ impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
             .map(|(_, hash)| *hash)
             .expect("Node was not included in result. This is a bug");
 
+        let mut node_cache = self.node_cache.lock().unwrap();
         // Put the nodes into the cache
-        nodes
-            .into_iter()
-            .for_each(|(key, hash)| self.node_cache.insert(key, hash));
+        nodes.into_iter().for_each(|(key, hash)| {
+            node_cache.put(key, hash);
+        });
 
         Some(result)
     }
@@ -207,8 +204,8 @@ impl<C: Client> TileFetchStore<C> {
         key: &NodeKey,
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        if let Some(value) = self.node_cache.get(key) {
-            return Some(vec![(key.clone(), value)]);
+        if let Some(value) = self.node_cache.lock().unwrap().get(key) {
+            return Some(vec![(key.clone(), *value)]);
         }
 
         let nodes = if key.is_balanced() {
@@ -256,8 +253,8 @@ impl<C: Client> TileFetchStore<C> {
         key: &NodeKey,
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        if let Some(value) = self.node_cache.get(key) {
-            return Some(vec![(key.clone(), value)]);
+        if let Some(value) = self.node_cache.lock().unwrap().get(key) {
+            return Some(vec![(key.clone(), *value)]);
         }
 
         let tile_id = TileId::from_node_key(key, tree_size)?;

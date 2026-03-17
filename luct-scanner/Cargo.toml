@@ -23,6 +23,7 @@ futures = { workspace = true }
 chrono = { workspace = true }
 
 tracing = { workspace = true }
+lru = { workspace = true }
 
 web-time = { workspace = true }
 
