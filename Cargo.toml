@@ -49,6 +49,7 @@ rustls-rustcrypto = { version = "0.0.2-alpha", default-features = false, feature
 # HTTP 
 url = { version = "2", features = ["serde"] }
 reqwest = { version = "0.13", default-features = false, features = [
+    "rustls-no-provider",
     "query",
     "gzip",
 ] }
