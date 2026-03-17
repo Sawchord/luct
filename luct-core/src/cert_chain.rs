@@ -53,7 +53,6 @@ impl CertificateChain {
         }
 
         let chain = Self(chain.into_iter().map(Certificate).collect());
-        chain.verify_chain()?;
         Ok(chain)
     }
 

@@ -7,7 +7,7 @@ use clap::Parser;
 use eyre::Context;
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
 use luct_core::{log_list::v3::LogList, store::MemoryStore};
-use luct_scanner::{LogBuilder, Scanner};
+use luct_scanner::{LogBuilder, Scanner, ScannerConfig};
 use luct_store::FilesystemStore;
 use std::{sync::Arc, time::SystemTime};
 use tracing_subscriber::EnvFilter;
@@ -60,8 +60,9 @@ async fn main() -> eyre::Result<()> {
         Box::new(FilesystemStore::new(workdir.join("sct_report"))) as _
     };
 
+    let config = ScannerConfig::new().validate_cert_chain();
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
-    let mut scanner = Scanner::new_with_client(sct_report_cache, client);
+    let mut scanner = Scanner::new_with_client(config, sct_report_cache, client);
     tracing::info!("Initialized scanner");
 
     for log in logs {

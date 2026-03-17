@@ -13,18 +13,21 @@ use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
 use web_time::{SystemTime, UNIX_EPOCH};
 pub use {
+    config::ScannerConfig,
     log::builder::LogBuilder,
     report::{Report, SctReport, SthReport},
-    utils::{ScannerConfig, Validated},
+    utils::Validated,
 };
 
 type HashOutput = [u8; 32];
 
+mod config;
 mod log;
 mod report;
 mod utils;
 
 pub struct Scanner<C> {
+    config: ScannerConfig,
     logs: BTreeMap<LogId, ScannerLog<C>>,
     sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
     client: C,
@@ -39,10 +42,12 @@ impl<C: Client + Clone> Scanner<C> {
     }
 
     pub fn new_with_client(
+        config: ScannerConfig,
         sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
         client: C,
     ) -> Self {
         Self {
+            config,
             logs: BTreeMap::new(),
             sct_report_cache,
             client,
@@ -87,7 +92,11 @@ impl<C: Client> Scanner<C> {
 
     pub async fn collect_report_pem(&self, data: &str) -> Result<Report, ScannerError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
-        cert_chain.verify_chain()?;
+
+        if self.config.validate_cert_chain {
+            cert_chain.verify_chain()?;
+        }
+
         self.collect_report(cert_chain).await
     }
 

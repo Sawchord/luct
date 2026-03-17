@@ -5,7 +5,7 @@ use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
 use luct_core::{CertificateChain, log_list::v3::LogList};
-use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, SctReport};
+use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, ScannerConfig, SctReport};
 use std::sync::Arc;
 use tracing::Level;
 use tracing_wasm::WASMLayerConfigBuilder;
@@ -52,13 +52,14 @@ impl Scanner {
         let log_list: LogList = serde_json::from_str(&log_list).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
+        let config = ScannerConfig::new();
         let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
         let sct_report_cache = Box::new(
             BrowserStore::<[u8; 32], SctReport>::new_local_store("report".to_string())
                 .expect("Failed to initialize SCT report cache"),
         ) as _;
 
-        let mut scanner = CtScanner::new_with_client(sct_report_cache, client);
+        let mut scanner = CtScanner::new_with_client(config, sct_report_cache, client);
 
         for log in logs {
             let name = log.description();
