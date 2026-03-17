@@ -11,6 +11,7 @@ let log = console.log.bind(console)
 
 let windowId;
 let tabId;
+let updateScheduled = false;
 
 browser.tabs.onActivated.addListener((tab) => {
     tabId = tab.tabId;
@@ -19,7 +20,15 @@ browser.tabs.onActivated.addListener((tab) => {
 });
 
 browser.runtime.onMessage.addListener((_message) => {
-    update_content();
+    if (!updateScheduled) {
+        updateScheduled = true;
+        setTimeout(() => {
+            updateScheduled = false;
+            update_content();
+        },
+            2000);
+    }
+
 });
 
 browser.windows.getCurrent({ populate: true }).then(async (windowInfo) => {
