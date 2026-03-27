@@ -1,11 +1,12 @@
 use crate::{
     utils::{
         codec::{CodecError, Decode},
-        hex_with_colons,
+        extract_oid_from_rdn, hex_with_colons,
     },
     v1,
 };
 use chrono::{DateTime, Utc};
+use const_oid::db::rfc4519::{CN, COMMON_NAME, O, ORGANIZATION, ORGANIZATION_NAME};
 use p256::pkcs8::ObjectIdentifier;
 use sha2::{Digest, Sha256};
 use std::{
@@ -19,6 +20,7 @@ use x509_cert::{
     ext::pkix::{AuthorityKeyIdentifier, SubjectKeyIdentifier},
 };
 
+// TODO: Use oid db for these values
 pub(crate) const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
 pub(crate) const CT_POISON: ObjectIdentifier =
     ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
@@ -102,11 +104,18 @@ impl Certificate {
     }
 
     pub fn get_issuer_name(&self) -> String {
-        self.0.tbs_certificate.issuer.to_string()
+        let issuer = &self.0.tbs_certificate.issuer;
+        extract_oid_from_rdn(issuer, O)
+            .or_else(|| extract_oid_from_rdn(issuer, ORGANIZATION))
+            .or_else(|| extract_oid_from_rdn(issuer, ORGANIZATION_NAME))
+            .unwrap_or_else(|| issuer.to_string())
     }
 
     pub fn get_subject_name(&self) -> String {
-        self.0.tbs_certificate.subject.to_string()
+        let subject = &self.0.tbs_certificate.subject;
+        extract_oid_from_rdn(subject, CN)
+            .or_else(|| extract_oid_from_rdn(subject, COMMON_NAME))
+            .unwrap_or_else(|| subject.to_string())
     }
 
     pub fn get_validity(&self) -> (DateTime<Utc>, DateTime<Utc>) {
