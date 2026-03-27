@@ -6,7 +6,7 @@ WORKDIR /usr/src
 
 COPY . .
 RUN mkdir target
-RUN cargo build -p luct-extension --release --target wasm32-unknown-unknown
+RUN cargo build -p luct-extension --release --locked --target wasm32-unknown-unknown
 
 # Build the extension
 FROM alpine:3.23.3 AS extension-packager

@@ -69,11 +69,11 @@ jobs:
 
       - name: Build CLI tool (native)
         if: ${{ !matrix.platform.use_cross }}
-        run: cargo build --bin luct --release --target ${{ matrix.platform.target }}
+        run: cargo build --bin luct --release --locked --target ${{ matrix.platform.target }}
 
       - name: Build CLI tool (cross)
         if: matrix.platform.use_cross
-        run: cross build --bin luct --release --target ${{ matrix.platform.target }}
+        run: cross build --bin luct --release --locked --target ${{ matrix.platform.target }}
 
       - name: Upload CLI tool
         uses: actions/upload-artifact@v4
@@ -146,6 +146,6 @@ jobs:
 
       - name: Build CLI tool (native)
         if: ${{ !matrix.platform.use_cross }}
-        run: cargo test --target ${{ matrix.platform.target }}
+        run: cargo test --locked --target ${{ matrix.platform.target }}
 
     
