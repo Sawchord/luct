@@ -61,7 +61,7 @@ async function update_content() {
                 }
                 certs.set(fingerprint, existing_entry);
             } else {
-                certs.set(fingerprint, { report: rep.report, urls: [] });
+                certs.set(fingerprint, { report: rep.report, urls: [], status: rep.status });
             }
         }
 

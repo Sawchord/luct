@@ -9,7 +9,7 @@ building the extension requires a single line:
 docker buildx build --progress=plain . -o .
 ```
 
-You should find the `luct.zip` in the working directory
+You should find the `luct.xpi` in the working directory
 
 ## Developing
 

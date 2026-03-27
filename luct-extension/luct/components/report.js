@@ -13,6 +13,7 @@ export default class Report extends HTMLElement {
 
         this.urls = data.urls;
         this.report = data.report;
+        this.status = data.status;
 
         const shadow = this.attachShadow({ mode: 'open' });
         this.shadow = shadow;
@@ -27,8 +28,8 @@ export default class Report extends HTMLElement {
                 <header class="card-header">
                     <p class="card-header-title" id="cert-name"></p>
                     <button class="card-header-icon" aria-label="more options">
-                        <span class="icon">
-                            <i class="fa fa-angle-down" aria-hidden="true"></i>
+                        <span id="check-outer" class="icon">
+                            <i id="check-inner" class="fa" aria-hidden="true"></i>
                         </span>
                     </button>
                 </header>
@@ -141,6 +142,22 @@ export default class Report extends HTMLElement {
         anchor.appendChild(ul)
     }
 
+    updateStatus() {
+        const span = this.shadow.getElementById("check-outer");
+        const img = this.shadow.getElementById("check-inner");
+
+        console.log(span);
+        if (this.status === "safe") {
+            console.log("safe")
+            span.className = "icon has-text-success"
+            img.className = "fa fa-check"
+        } else {
+            span.className = "icon"
+            img.className = "fa"
+        }
+
+    }
+
     connectedCallback() {
         this.shadow.getElementById("cert-name").innerText = this.report.cert_name;
         this.shadow.getElementById("ca-name").innerText = this.report.ca_name;
@@ -151,6 +168,7 @@ export default class Report extends HTMLElement {
 
         this.sctsDisplay();
         this.urlDisplay();
+        this.updateStatus();
     }
 
 
