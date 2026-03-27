@@ -159,8 +159,8 @@ export default class Report extends HTMLElement {
     }
 
     connectedCallback() {
-        this.shadow.getElementById("cert-name").innerText = this.report.cert_name;
-        this.shadow.getElementById("ca-name").innerText = this.report.ca_name;
+        this.shadow.getElementById("cert-name").innerText = this.report.cert_subject;
+        this.shadow.getElementById("ca-name").innerText = this.report.ca_issuer;
         this.shadow.getElementById("fingerprint").innerText = this.report.fingerprint;
 
         this.shadow.getElementById("not-before").appendChild(this.timeDisplay("Not valid before: ", this.report.not_before));

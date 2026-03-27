@@ -105,6 +105,10 @@ impl Certificate {
         self.0.tbs_certificate.issuer.to_string()
     }
 
+    pub fn get_subject_name(&self) -> String {
+        self.0.tbs_certificate.subject.to_string()
+    }
+
     pub fn get_validity(&self) -> (DateTime<Utc>, DateTime<Utc>) {
         (
             DateTime::from(self.0.tbs_certificate.validity.not_before.to_system_time()),

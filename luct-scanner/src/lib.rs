@@ -117,8 +117,10 @@ impl<C: Client> Scanner<C> {
         .await;
 
         Ok(Report {
-            ca_name: chain.root().get_issuer_name(),
-            cert_name: chain.cert().get_issuer_name(),
+            ca_issuer: chain.root().get_issuer_name(),
+            ca_subject: chain.root().get_subject_name(),
+            cert_issuer: chain.cert().get_issuer_name(),
+            cert_subject: chain.cert().get_subject_name(),
             fingerprint: chain.cert().fingerprint_sha256().to_string(),
             not_before: not_before.into(),
             not_after: not_after.into(),

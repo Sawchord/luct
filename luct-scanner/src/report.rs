@@ -7,8 +7,10 @@ use web_time::UNIX_EPOCH;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
-    pub(crate) ca_name: String,
-    pub(crate) cert_name: String,
+    pub(crate) ca_issuer: String,
+    pub(crate) ca_subject: String,
+    pub(crate) cert_issuer: String,
+    pub(crate) cert_subject: String,
     pub(crate) fingerprint: String,
     pub(crate) not_before: DateTime<Local>,
     pub(crate) not_after: DateTime<Local>,
