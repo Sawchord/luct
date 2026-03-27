@@ -20,10 +20,8 @@ use x509_cert::{
     ext::pkix::{AuthorityKeyIdentifier, SubjectKeyIdentifier},
 };
 
-// TODO: Use oid db for these values
-pub(crate) const SCT_V1: ObjectIdentifier = ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.2");
-pub(crate) const CT_POISON: ObjectIdentifier =
-    ObjectIdentifier::new_unwrap("1.3.6.1.4.1.11129.2.4.3");
+pub(crate) const SCT_V1: ObjectIdentifier = const_oid::db::rfc6962::CT_PRECERT_SCTS;
+pub(crate) const CT_POISON: ObjectIdentifier = const_oid::db::rfc6962::CT_PRECERT_POISON;
 
 pub(crate) const SUBJECT_KEY_ID: ObjectIdentifier =
     const_oid::db::rfc5280::ID_CE_SUBJECT_KEY_IDENTIFIER;
