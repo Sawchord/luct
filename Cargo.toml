@@ -71,6 +71,8 @@ axum = { version = "0.8", features = ["ws"] }
 
 # Utilities
 clap = { version = "4", features = ["derive"] }
+config = { version = "0.15", default-features = false, features = ["toml"] }
+dotenv = { version = "0.15" }
 eyre = { version = "0.6" }
 thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
