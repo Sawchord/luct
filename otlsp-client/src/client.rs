@@ -174,47 +174,47 @@ impl hyper::rt::Write for AsyncStream {
 
 #[cfg(test)]
 mod tests {
-    #![allow(dead_code)]
-    use super::*;
-    use http_body_util::BodyExt;
-    use hyper::{
-        Request,
-        body::{Buf, Bytes},
-    };
-    use wasm_bindgen_test::wasm_bindgen_test;
-    use x509_cert::der::DecodePem;
+    // #![allow(dead_code)]
+    // use super::*;
+    // use http_body_util::BodyExt;
+    // use hyper::{
+    //     Request,
+    //     body::{Buf, Bytes},
+    // };
+    // use wasm_bindgen_test::wasm_bindgen_test;
+    // use x509_cert::der::DecodePem;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    /// NOTE: This test requires setup that can be found in the e2e test directory
-    #[wasm_bindgen_test]
-    async fn e2e_test() {
-        let mut sender = OtlspClientBuilder::new(Url::parse("ws://127.0.0.1:3000").unwrap())
-            .with_webpki_roots()
-            .with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
-            .handshake(
-                Url::parse("https://localhost:8080").unwrap(),
-                //Url::parse("https://google.com:443").unwrap(),
-            )
-            .await
-            .unwrap();
+    // NOTE: This test requires setup that can be found in the e2e test directory
+    // #[wasm_bindgen_test]
+    // async fn e2e_test() {
+    //     let mut sender = OtlspClientBuilder::new(Url::parse("ws://127.0.0.1:3000").unwrap())
+    //         .with_webpki_roots()
+    //         .with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
+    //         .handshake(
+    //             Url::parse("https://localhost:8080").unwrap(),
+    //             //Url::parse("https://google.com:443").unwrap(),
+    //         )
+    //         .await
+    //         .unwrap();
 
-        console_log!("Still alive");
+    //     console_log!("Still alive");
 
-        let req = Request::builder()
-            .uri("/")
-            .method("GET")
-            .body("".to_string())
-            .unwrap();
+    //     let req = Request::builder()
+    //         .uri("/")
+    //         .method("GET")
+    //         .body("".to_string())
+    //         .unwrap();
 
-        console_log!("Still alive");
-        let res = sender.send_request(req).await.unwrap();
+    //     console_log!("Still alive");
+    //     let res = sender.send_request(req).await.unwrap();
 
-        assert_eq!(res.status(), 200);
-        let mut response = res.collect().await.unwrap().aggregate();
-        let response = response.copy_to_bytes(response.remaining()).to_vec();
+    //     assert_eq!(res.status(), 200);
+    //     let mut response = res.collect().await.unwrap().aggregate();
+    //     let response = response.copy_to_bytes(response.remaining()).to_vec();
 
-        const TEXT: &str = include_str!("../e2e-test/data/test.txt");
-        assert_eq!(Bytes::from(TEXT), response);
-        console_log!("{}", String::from_utf8_lossy(&response));
-    }
+    //     const TEXT: &str = include_str!("../e2e-test/data/test.txt");
+    //     assert_eq!(Bytes::from(TEXT), response);
+    //     console_log!("{}", String::from_utf8_lossy(&response));
+    // }
 }

@@ -24,7 +24,7 @@ struct Destination {
     to: Url,
 }
 
-#[tokio::main]
+#[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
     pretty_env_logger::init();
     let config = Config::default();

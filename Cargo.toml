@@ -8,6 +8,8 @@ members = [
     "luct-scanner",
     "luct-store",
     "luct-extension/luct-extension",
+    "otlsp-client",
+    "otlsp-server",
 ]
 
 resolver = "2"
@@ -90,6 +92,7 @@ futures = { version = "0.3" }
 # NOTE: When updating wasm-bindgen, we also need to update the tool in CI
 wasm-bindgen = { version = "0.2.117" }
 wasm-bindgen-futures = { version = "0.4" }
+wasm-bindgen-test = { version = "0.3" }
 web-time = { version = "1.1" }
 console_error_panic_hook = { version = "0.1" }
 js-sys = { version = "0.3" }

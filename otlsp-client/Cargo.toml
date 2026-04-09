@@ -26,7 +26,6 @@ x509-cert = { workspace = true }
 
 # Async
 futures = { workspace = true }
-tower = { workspace = true }
 
 # Util
 thiserror = { workspace = true }
