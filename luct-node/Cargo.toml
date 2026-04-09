@@ -11,8 +11,10 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
+luct-core = { path = "../luct-core" }
 
 serde = { workspace = true }
+serde_json = { workspace = true }
 toml = { workspace = true }
 
 clap = { workspace = true, features = ["derive"] }
@@ -20,7 +22,9 @@ config = { workspace = true }
 eyre = { workspace = true }
 dotenv = { workspace = true }
 
+axum = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
+url = { workspace = true }
 
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

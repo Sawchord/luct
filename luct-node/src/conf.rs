@@ -2,7 +2,16 @@ use config::{Config as Conf, Environment, File};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
-pub(crate) struct Config {}
+pub(crate) struct Config {
+    /// Endpoint address
+    pub(crate) endpoint_addr: String,
+
+    /// Path to the log list to use in luct-node
+    pub(crate) log_list: String,
+
+    /// Path at which to serve the oblivious TLS proxy
+    pub(crate) otlsp_path: Option<String>,
+}
 
 impl Config {
     pub(crate) fn parse() -> eyre::Result<Self> {

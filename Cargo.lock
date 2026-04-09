@@ -1633,15 +1633,19 @@ dependencies = [
 name = "luct-node"
 version = "0.0.0"
 dependencies = [
+ "axum",
  "clap",
  "config",
  "dotenv",
  "eyre",
+ "luct-core",
  "serde",
+ "serde_json",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
  "tracing",
  "tracing-subscriber",
+ "url",
 ]
 
 [[package]]
