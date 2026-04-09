@@ -4,6 +4,7 @@ members = [
     "luct",
     "luct-client",
     "luct-core",
+    "luct-node",
     "luct-server",
     "luct-scanner",
     "luct-store",
