@@ -73,7 +73,7 @@ jobs:
 
       - name: Build CLI tool (cross)
         if: matrix.platform.use_cross
-        run: cross build --bin luct --release --locked --target ${{ matrix.platform.target }}
+        run: cross build --bin luct --bin luct-node --release --locked --target ${{ matrix.platform.target }}
 
       - name: Upload CLI tool
         uses: actions/upload-artifact@v7
