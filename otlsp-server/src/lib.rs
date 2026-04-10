@@ -1,15 +1,13 @@
-use crate::config::{Config, is_valid_destination};
 use axum::{
-    Error, Router,
+    Error,
     body::Body,
     extract::{
-        Query, State, WebSocketUpgrade,
+        WebSocketUpgrade,
         ws::{Message, WebSocket},
     },
     response::Response,
-    routing::get,
 };
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -17,64 +15,20 @@ use tokio::{
 };
 use url::{Host, Url};
 
-mod config;
-
-#[derive(Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Destination {
     to: Url,
 }
 
-#[tokio::main(flavor = "current_thread")]
-async fn main() -> eyre::Result<()> {
-    pretty_env_logger::init();
-    let config = Config::default();
-
-    let listener = tokio::net::TcpListener::bind(config.endpoint.clone())
-        .await
-        .unwrap();
-
-    let router = Router::new()
-        .route(&config.route, get(handle_connection))
-        .with_state(config.clone());
-
-    tracing::info!("Serving requests at {}:{}", config.endpoint, config.route);
-    axum::serve(listener, router).await.unwrap();
-    Ok(())
+impl Destination {
+    pub fn dst(&self) -> &Url {
+        &self.to
+    }
 }
 
-async fn handle_connection(
-    config: State<Config>,
-    destination: Query<Destination>,
-    ws: WebSocketUpgrade,
-) -> Response {
-    tracing::debug!(
-        "Received a new connection request to {}",
-        destination.to.as_str()
-    );
-    //tracing::debug!("Enabled: {:?}", config.enabled_urls);
-
-    // Check that destination is enabled in config
-    if !config
-        .enabled_urls
-        .iter()
-        .any(|url| is_valid_destination(url, &destination.to))
-    {
-        tracing::debug!(
-            "Connection request rejected since {} is not target enabled URL",
-            destination.to
-        );
-
-        return Response::builder()
-            .status(400)
-            .body(Body::from("Requested destination is not enabled"))
-            .unwrap();
-    }
-
+pub async fn handle_connection(destination: Url, ws: WebSocketUpgrade) -> Response {
     // Connect to destination
-    let stream = match (
-        destination.to.host(),
-        destination.to.port_or_known_default(),
-    ) {
+    let stream = match (destination.host(), destination.port_or_known_default()) {
         (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,
         (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
         (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
@@ -124,11 +78,11 @@ async fn handle_websocket_receive(
     data: Option<Result<Message, Error>>,
     ws: &mut WebSocket,
     stream: &mut TcpStream,
-    destination: &Query<Destination>,
+    destination: &Url,
 ) -> bool {
     match data {
         None => {
-            tracing::debug!("Shutting down connction to {:?}", destination.to);
+            tracing::debug!("Shutting down connction to {:?}", destination);
             let _ = stream.shutdown().await;
             false
         }
@@ -147,7 +101,7 @@ async fn handle_websocket_receive(
                     true
                 }
                 Message::Close(_) => {
-                    tracing::debug!("Shutting down conntextion to {:?}", destination.to);
+                    tracing::debug!("Shutting down conntextion to {:?}", destination);
                     let _ = stream.shutdown().await;
                     false
                 }
@@ -174,7 +128,7 @@ async fn handle_tcp_stream_receive(
     buf: &[u8],
     ws: &mut WebSocket,
     _stream: &mut TcpStream,
-    _destination: &Query<Destination>,
+    _destination: &Url,
 ) -> bool {
     match read {
         Err(err) => {
