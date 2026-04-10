@@ -69,7 +69,7 @@ jobs:
 
       - name: Build CLI tool (native)
         if: ${{ !matrix.platform.use_cross }}
-        run: cargo build --bin luct --release --locked --target ${{ matrix.platform.target }}
+        run: cargo build --bin luct --bin luct-node --release --locked --target ${{ matrix.platform.target }}
 
       - name: Build CLI tool (cross)
         if: matrix.platform.use_cross
@@ -78,7 +78,7 @@ jobs:
       - name: Upload CLI tool
         uses: actions/upload-artifact@v7
         with:
-          name: luct-cli(${{ matrix.platform.name }})
+          name: luct-cli(${{ matrix.platform.target }})
           path: target/${{ matrix.platform.target }}/release/luct${{ matrix.platform.binary_ext }}
 
       - name: Upload node
