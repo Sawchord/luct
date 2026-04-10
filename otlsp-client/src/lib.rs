@@ -1,6 +1,6 @@
+mod browser;
 mod client;
 mod error;
-mod ws_stream;
 use wasm_bindgen::prelude::wasm_bindgen;
 
 pub use client::OtlspClientBuilder;
