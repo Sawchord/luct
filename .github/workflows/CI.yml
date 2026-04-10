@@ -13,7 +13,7 @@ jobs:
     name: CLI build
     needs:
       - unit-tests
-    strategy: 
+    strategy:
       matrix:
         platform:
           - name: Linux X86_64
@@ -37,32 +37,32 @@ jobs:
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@master
         with:
           toolchain: 1.92.0
           targets: ${{ matrix.platform.target }}
-        
+
       - name: Install cross-compilation tool
         if: matrix.platform.use_cross
         run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo index
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
@@ -76,7 +76,7 @@ jobs:
         run: cross build --bin luct --release --locked --target ${{ matrix.platform.target }}
 
       - name: Upload CLI tool
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: luct-cli(${{ matrix.platform.name }})
           path: target/${{ matrix.platform.target }}/release/luct${{ matrix.platform.binary_ext }}
@@ -88,7 +88,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Setup docker buildx
         id: buildx
@@ -98,7 +98,7 @@ jobs:
         run: docker buildx build --progress=plain . -o .
 
       - name: Upload CLI tool
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: luct-extension
           path: luct.xpi
@@ -106,7 +106,7 @@ jobs:
   unit-tests:
     name: Unit tests
 
-    strategy: 
+    strategy:
       matrix:
         platform:
           - name: Linux X86-64
@@ -118,7 +118,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout source code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v5
 
       - name: Setup Rust toolchain
         uses: dtolnay/rust-toolchain@master
@@ -127,19 +127,19 @@ jobs:
             targets: ${{ matrix.platform.target }}
 
       - name: Cache cargo registry
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/registry
           key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo index
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.cargo/git
           key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Cache cargo build
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: target
           key: ${{ runner.os }}-cargo-test-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
@@ -148,4 +148,3 @@ jobs:
         if: ${{ !matrix.platform.use_cross }}
         run: cargo test --locked --target ${{ matrix.platform.target }}
 
-    
