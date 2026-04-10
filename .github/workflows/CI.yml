@@ -92,7 +92,7 @@ jobs:
 
       - name: Setup docker buildx
         id: buildx
-        uses: docker/setup-buildx-action@v2
+        uses: docker/setup-buildx-action@v4
 
       - name: Build extension
         run: docker buildx build --progress=plain . -o .
