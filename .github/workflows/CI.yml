@@ -81,6 +81,12 @@ jobs:
           name: luct-cli(${{ matrix.platform.name }})
           path: target/${{ matrix.platform.target }}/release/luct${{ matrix.platform.binary_ext }}
 
+      - name: Upload node
+        uses: actions/upload-artifact@v7
+        with:
+          name: luct-node(${{ matrix.platform.target }})
+          path: target/${{ matrix.platform.target }}/release/luct-node${{ matrix.platform.binary_ext }}
+
   build-extension:
     name: Firefox extension build
     needs:
