@@ -68,6 +68,7 @@ hyper-util = { version = "0.1", default-features = false, features = [
 ] }
 http-body-util = { version = "0.1" }
 axum = { version = "0.8", features = ["ws"] }
+axum-macros = { version = "0.5" }
 
 # Utilities
 clap = { version = "4", features = ["derive"] }

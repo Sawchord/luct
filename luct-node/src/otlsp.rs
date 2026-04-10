@@ -1,6 +1,12 @@
 use crate::conf::Config;
+use axum::{
+    extract::{Query, State, WebSocketUpgrade},
+    response::Response,
+};
+use axum_macros::debug_handler;
 use eyre::Context;
 use luct_core::log_list::v3::LogList;
+use otlsp_server::Destination;
 use std::collections::BTreeSet;
 use url::Url;
 
@@ -27,4 +33,13 @@ impl Config {
 
         Ok(urls.into_iter().collect())
     }
+}
+
+#[debug_handler]
+pub(crate) async fn handle_otlsp_connection(
+    config: State<(Config, Vec<Url>)>,
+    destination: Query<Destination>,
+    ws: WebSocketUpgrade,
+) -> Response {
+    todo!()
 }

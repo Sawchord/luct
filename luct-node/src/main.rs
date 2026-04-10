@@ -1,5 +1,5 @@
-use crate::{args::Args, conf::Config};
-use axum::Router;
+use crate::{args::Args, conf::Config, otlsp::handle_otlsp_connection};
+use axum::{Router, routing::get};
 use clap::Parser;
 use tracing_subscriber::EnvFilter;
 
@@ -26,9 +26,15 @@ async fn main() -> eyre::Result<()> {
         .await
         .unwrap();
 
-    let router = Router::new()
-        //.route(&config.route, get(handle_connection))
-        .with_state(config.clone());
+    let logs = config.get_otlsp_urls()?;
+
+    let router = Router::new();
+    let router = if let Some(otlsp_path) = &config.otlsp_path {
+        router.route(otlsp_path, get(handle_otlsp_connection))
+    } else {
+        router
+    };
+    let router = router.with_state((config.clone(), logs));
 
     tracing::info!("Serving requests at {}", config.endpoint_addr,);
     axum::serve(listener, router).await.unwrap();

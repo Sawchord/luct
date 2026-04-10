@@ -20,7 +20,7 @@ use url::{Host, Url};
 mod config;
 
 #[derive(Deserialize)]
-struct Destination {
+pub struct Destination {
     to: Url,
 }
 

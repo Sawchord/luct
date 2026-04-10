@@ -12,6 +12,7 @@ license = { workspace = true }
 
 [dependencies]
 luct-core = { path = "../luct-core" }
+otlsp-server = { path = "../otlsp-server" }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -23,7 +24,9 @@ eyre = { workspace = true }
 dotenv = { workspace = true }
 
 axum = { workspace = true }
+axum-macros = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
+futures = { workspace = true }
 url = { workspace = true }
 
 tracing = { workspace = true }
