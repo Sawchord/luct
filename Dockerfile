@@ -11,7 +11,7 @@ RUN cargo build -p luct-extension --release --locked --target wasm32-unknown-unk
 # Build the extension
 FROM alpine:3.23.3 AS extension-packager
 
-RUN apk add python3=3.12.12-r0 tree
+RUN apk add python3=3.12.13-r0 tree
 WORKDIR /usr/src
 
 RUN wget -c https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.117/wasm-bindgen-0.2.117-x86_64-unknown-linux-musl.tar.gz -O - | tar -xz
