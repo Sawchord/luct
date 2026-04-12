@@ -30,6 +30,7 @@ futures = { workspace = true }
 # Util
 thiserror = { workspace = true }
 tracing = { workspace = true }
+tracing-wasm = { workspace = true }
 
 # Wasm
 web-sys = { workspace = true }

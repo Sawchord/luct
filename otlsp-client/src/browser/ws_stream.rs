@@ -1,4 +1,4 @@
-use crate::{console_log, error::OtlspError};
+use crate::error::OtlspError;
 use js_sys::{ArrayBuffer, JsString, Promise, Uint8Array};
 use std::{
     cell::RefCell,
@@ -45,7 +45,7 @@ impl WsStream {
         let input_buffer = Rc::new(RefCell::new(VecDeque::<u8>::new()));
 
         let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
-        console_log!("Connecting to: {:?}", request_string);
+        tracing::debug!("Connecting to: {:?}", request_string);
 
         let websocket = WebSocket::new(&request_string).unwrap();
         websocket.set_binary_type(BinaryType::Arraybuffer);
@@ -56,21 +56,20 @@ impl WsStream {
         let waker_cloned = waker.clone();
         let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
             if let Ok(abuf) = e.data().dyn_into::<ArrayBuffer>() {
-                //console_log!("received arraybuffer: {:?}", abuf);
                 let array = Uint8Array::new(&abuf);
                 let len = array.byte_length() as usize;
-                console_log!("ArrayBuffer received {} bytes", len);
+                tracing::trace!("ArrayBuffer received {} bytes", len);
 
                 if len > 0 {
                     cloned_buffer.borrow_mut().extend(array.to_vec());
                     Self::wake_all(&waker_cloned);
                 }
             } else if let Ok(blob) = e.data().dyn_into::<Blob>() {
-                console_log!("received Blob: {:?}", blob);
+                tracing::trace!("received Blob: {:?}", blob);
             } else if let Ok(txt) = e.data().dyn_into::<JsString>() {
-                console_log!("received Text: {:?}", txt);
+                tracing::trace!("received Text: {:?}", txt);
             } else {
-                console_log!("received Unknown: {:?}", e.data());
+                tracing::trace!("received Unknown: {:?}", e.data());
             }
         });
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
@@ -107,7 +106,7 @@ impl WsStream {
 
         let opened = Promise::new(&mut |ok, err| {
             let onopen_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
-                console_log!("Opened websocket connection: {:?}", e.data().as_string());
+                tracing::debug!("Opened websocket connection: {:?}", e.data().as_string());
                 ok.call0(&JsValue::null()).unwrap();
             });
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
@@ -147,13 +146,13 @@ impl WsStream {
         for w in waker.drain(..) {
             w.wake()
         }
-        console_log!("Woked")
+        tracing::trace!("wake_all called")
     }
 }
 
 impl io::Read for WsStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        console_log!("Reading from WsStream");
+        tracing::trace!("Reading from ws stream");
 
         let mut input = self.input_buffer.borrow_mut();
         let new_bytes_len = std::cmp::min(buf.len(), input.len());
@@ -165,13 +164,13 @@ impl io::Read for WsStream {
         // If there were no bytes in the input buffer, but the connection is still open,
         // we need to return an interrupted error
         if new_bytes_len == 0 && !self.is_closed.load(Ordering::Relaxed) {
-            console_log!("WsStream would block");
+            tracing::trace!("ws stream read: would block");
             Err(io::Error::new(
                 io::ErrorKind::WouldBlock,
                 "No new data available".to_string(),
             ))
         } else {
-            console_log!("WsStream read {} bytes", new_bytes_len);
+            tracing::trace!("ws stream read {} bytes", new_bytes_len);
             Ok(new_bytes_len)
         }
     }
@@ -179,8 +178,6 @@ impl io::Read for WsStream {
 
 impl io::Write for WsStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        console_log!("Writing to WsStream {} bytes", buf.len());
-
         self.websocket
             .send_with_js_u8_array(&Uint8Array::from(buf))
             .map_err(|err| {
@@ -190,18 +187,23 @@ impl io::Write for WsStream {
                         .unwrap_or("Failed to send to websocket".to_string()),
                 )
             })?;
+
+        tracing::trace!("ws stream wrote {} bytes", buf.len());
         Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
         // FIXME: We would need to wait until the websocket has sent all the data
         // There seems to be no way of acquiring this information
+        tracing::warn!("Called flush which is not implemented");
         Ok(())
     }
 }
 
 impl Drop for WsStream {
     fn drop(&mut self) {
+        tracing::debug!("Closing ws stream");
+
         // Need to close the WS stream, to make sure that onmessage will never be called again
         self.websocket.close().unwrap();
 

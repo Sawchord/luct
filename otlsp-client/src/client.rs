@@ -88,7 +88,7 @@ impl OtlspClientBuilder {
         // Send connection to the web-sys executor
         wasm_bindgen_futures::spawn_local(async move {
             if let Err(err) = connection.await {
-                console_log!("Connection failed: {:?}", err)
+                tracing::error!("Connection failed: {:?}", err)
             }
         });
 
