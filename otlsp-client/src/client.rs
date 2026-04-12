@@ -1,6 +1,5 @@
 use crate::{
     browser::{async_stream::AsyncStream, ws_stream::WsStream},
-    console_log,
     error::OtlspError,
 };
 use hyper::{body::Body, client::conn::http1::SendRequest};
@@ -98,47 +97,62 @@ impl OtlspClientBuilder {
 
 #[cfg(test)]
 mod tests {
-    // #![allow(dead_code)]
-    // use super::*;
-    // use http_body_util::BodyExt;
-    // use hyper::{
-    //     Request,
-    //     body::{Buf, Bytes},
-    // };
-    // use wasm_bindgen_test::wasm_bindgen_test;
-    // use x509_cert::der::DecodePem;
+    use super::*;
+    use http_body_util::BodyExt;
+    use hyper::{Request, body::Buf};
+    use tracing::Level;
+    use tracing_wasm::{ConsoleConfig, WASMLayerConfigBuilder};
+    use wasm_bindgen_test::wasm_bindgen_test;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
+    fn tracing() {
+        tracing_wasm::set_as_global_default_with_config(
+            WASMLayerConfigBuilder::default()
+                .set_max_level(Level::TRACE)
+                .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
+                .build(),
+        );
+    }
+
     // NOTE: This test requires setup that can be found in the e2e test directory
-    // #[wasm_bindgen_test]
-    // async fn e2e_test() {
-    //     let mut sender = OtlspClientBuilder::new(Url::parse("ws://127.0.0.1:3000").unwrap())
-    //         .with_webpki_roots()
-    //         .with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
-    //         .handshake(
-    //             Url::parse("https://localhost:8080").unwrap(),
-    //             //Url::parse("https://google.com:443").unwrap(),
-    //         )
-    //         .await
-    //         .unwrap();
+    #[wasm_bindgen_test]
+    async fn smoke_test() {
+        tracing();
 
-    //     console_log!("Still alive");
+        let mut sender =
+            OtlspClientBuilder::new(Url::parse("https://node.luct.dev/otlsp").unwrap())
+                .with_webpki_roots()
+                //.with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
+                .handshake(Url::parse("https://tuscolo2026h2.skylight.geomys.org").unwrap())
+                .await
+                .unwrap();
 
-    //     let req = Request::builder()
-    //         .uri("/")
-    //         .method("GET")
-    //         .body("".to_string())
-    //         .unwrap();
+        tracing::info!("Still alive");
 
-    //     console_log!("Still alive");
-    //     let res = sender.send_request(req).await.unwrap();
+        // TODO: Set user agent, host
+        let req = Request::builder()
+            //.uri("/tile/0/000")
+            .uri("/checkpoint")
+            .method("GET")
+            .body("".to_string())
+            .unwrap();
 
-    //     assert_eq!(res.status(), 200);
-    //     let mut response = res.collect().await.unwrap().aggregate();
-    //     let response = response.copy_to_bytes(response.remaining()).to_vec();
+        tracing::info!("Still alive");
+        let res = sender.send_request(req).await.unwrap();
 
-    //     const TEXT: &str = include_str!("../e2e-test/data/test.txt");
-    //     assert_eq!(Bytes::from(TEXT), response);
-    //     console_log!("{}", String::from_utf8_lossy(&response));
-    // }
+        //assert_eq!(res.status(), 200);
+        let status = res.status();
+        //let mut response = res.collect().await.unwrap().aggregate();
+        //let response = response.copy_to_bytes(response.remaining()).to_vec();
+        let mut response = res.collect().await.unwrap().to_bytes();
+        let response = response.copy_to_bytes(response.remaining()).to_vec();
+
+        //const TEXT: &str = include_str!("../e2e-test/data/test.txt");
+        //assert_eq!(Bytes::from(TEXT), response);
+        tracing::info!("Status: {}", status);
+        //console_log!("{}", String::from_utf8_lossy(&response));
+        tracing::info!("{}", String::from_utf8_lossy(&response));
+
+        panic!();
+    }
 }
