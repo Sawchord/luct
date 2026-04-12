@@ -9,7 +9,9 @@ mod otlsp;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
-    dotenv::dotenv()?;
+    if dotenv::dotenv().is_ok() {
+        tracing::info!("Loaded .env directory");
+    }
 
     let _args = Args::parse();
 

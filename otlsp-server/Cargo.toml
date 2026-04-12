@@ -22,4 +22,3 @@ tokio = { workspace = true }
 url = { workspace = true }
 
 tracing = { workspace = true }
-pretty_env_logger = { workspace = true }
