@@ -14,11 +14,17 @@ pub(crate) struct OtlspClientConfig {
     pub(crate) agent: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct OtlspClientBuilder {
     connection_timeout: Option<Duration>,
     proxy_url: Option<Url>,
     agent: Option<String>,
+}
+
+impl OtlspClient {
+    pub fn builder() -> OtlspClientBuilder {
+        OtlspClientBuilder::default()
+    }
 }
 
 impl From<OtlspClientBuilder> for OtlspClientConfig {

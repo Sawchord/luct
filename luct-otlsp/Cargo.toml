@@ -27,3 +27,7 @@ web-time = { workspace = true }
 [dev-dependencies]
 wasm-bindgen-test = { workspace = true }
 tracing-wasm = { workspace = true }
+
+luct-core = { path = "../luct-core" }
+
+serde_json = { workspace = true }
