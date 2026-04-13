@@ -1,27 +1,19 @@
 pub use crate::config::OtlspClientBuilder;
-use crate::config::OtlspClientConfig;
-use hyper::client::conn::http1::SendRequest;
+use crate::{config::OtlspClientConfig, connection::OtlspConnection};
 use luct_client::{Client, ClientError, reqwest::ReqwestClient};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, RwLock},
 };
 use url::{Host, Url};
-use web_time::Instant;
 
 mod config;
 mod connection;
 
-#[derive(Debug)]
-struct OtlspConnection {
-    time: Instant,
-    sender: SendRequest<String>,
-}
-
 #[derive(Debug, Clone)]
 pub struct OtlspClient {
-    config: OtlspClientConfig,
-    connections: HashMap<Host, Arc<Mutex<OtlspConnection>>>,
+    config: Arc<OtlspClientConfig>,
+    connections: Arc<RwLock<HashMap<Host, Arc<Mutex<OtlspConnection>>>>>,
     fallback: ReqwestClient,
 }
 
@@ -31,6 +23,10 @@ impl Client for OtlspClient {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Arc<String>), ClientError> {
+        let Some(proxy_url) = &self.config.proxy_url else {
+            return self.fallback.get(url, params).await;
+        };
+
         todo!()
     }
 
@@ -39,6 +35,16 @@ impl Client for OtlspClient {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Arc<Vec<u8>>), ClientError> {
+        let Some(proxy_url) = &self.config.proxy_url else {
+            return self.fallback.get_bin(url, params).await;
+        };
+
+        todo!()
+    }
+}
+
+impl OtlspClient {
+    fn get_connection(&self, url: &Url) -> Result<Arc<Mutex<OtlspConnection>>, ClientError> {
         todo!()
     }
 }

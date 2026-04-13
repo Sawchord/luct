@@ -68,6 +68,7 @@ pub enum ClientError {
     #[error("Failed to validate an audit path: {0}")]
     AuditProofError(ProofValidationError),
 
+    // TODO: Turn this into a Box<dyn std::error::Error>
     #[error("Failed to connect to host: {0}")]
     ConnectionError(String),
 

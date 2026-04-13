@@ -1,14 +1,17 @@
 use crate::OtlspClient;
 use luct_client::reqwest::ReqwestClient;
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 use url::Url;
 use web_time::Duration;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct OtlspClientConfig {
-    connection_timeout: Duration,
-    proxy_url: Option<Url>,
-    agent: String,
+    pub(crate) connection_timeout: Duration,
+    pub(crate) proxy_url: Option<Url>,
+    pub(crate) agent: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -35,8 +38,8 @@ impl OtlspClientBuilder {
         let config: OtlspClientConfig = self.into();
         OtlspClient {
             fallback: ReqwestClient::new(&config.agent),
-            config,
-            connections: HashMap::new(),
+            config: Arc::new(config),
+            connections: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
