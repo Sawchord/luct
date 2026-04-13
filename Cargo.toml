@@ -5,6 +5,7 @@ members = [
     "luct-client",
     "luct-core",
     "luct-node",
+    "luct-otlsp",
     "luct-server",
     "luct-scanner",
     "luct-store",

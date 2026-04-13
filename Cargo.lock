@@ -1627,6 +1627,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "luct-otlsp"
+version = "0.0.0"
+
+[[package]]
 name = "luct-scanner"
 version = "0.0.0"
 dependencies = [
