@@ -23,11 +23,18 @@ impl Client for OtlspClient {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Arc<String>), ClientError> {
-        let Some(proxy_url) = &self.config.proxy_url else {
+        if self.config.proxy_url.is_some() {
             return self.fallback.get(url, params).await;
         };
 
-        todo!()
+        let connection = self.get_connection(url).await?;
+        let request = connection.lock().unwrap().get(url, params)?;
+        request.await.map(|(status, bytes)| {
+            (
+                status,
+                Arc::new(String::from_utf8_lossy(&bytes).to_string()),
+            )
+        })
     }
 
     async fn get_bin(
@@ -35,16 +42,30 @@ impl Client for OtlspClient {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Arc<Vec<u8>>), ClientError> {
-        let Some(proxy_url) = &self.config.proxy_url else {
+        if self.config.proxy_url.is_some() {
             return self.fallback.get_bin(url, params).await;
         };
 
-        todo!()
+        let connection = self.get_connection(url).await?;
+        let request = connection.lock().unwrap().get(url, params)?;
+        request
+            .await
+            .map(|(status, bytes)| (status, Arc::new(bytes)))
     }
 }
 
 impl OtlspClient {
-    fn get_connection(&self, url: &Url) -> Result<Arc<Mutex<OtlspConnection>>, ClientError> {
+    async fn get_connection(&self, url: &Url) -> Result<Arc<Mutex<OtlspConnection>>, ClientError> {
+        let Some(domain) = url.host() else {
+            return Err(ClientError::ConnectionError("Invalid url".to_string()));
+        };
+
+        let conns = self.connections.read().unwrap();
+        if let Some(connection) = conns.get(&domain.to_owned())
+            && !connection.lock().unwrap().has_timed_out()
+        {
+            return Ok(connection.clone());
+        }
         todo!()
     }
 }

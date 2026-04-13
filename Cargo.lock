@@ -1630,6 +1630,8 @@ dependencies = [
 name = "luct-otlsp"
 version = "0.0.0"
 dependencies = [
+ "futures",
+ "http-body-util",
  "hyper",
  "luct-client",
  "otlsp-client",

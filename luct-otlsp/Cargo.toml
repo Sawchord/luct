@@ -16,6 +16,9 @@ otlsp-client = { path = "../otlsp-client" }
 
 hyper = { workspace = true }
 url = { workspace = true }
+http-body-util = { workspace = true }
+
+futures = { workspace = true }
 
 tracing = { workspace = true }
 

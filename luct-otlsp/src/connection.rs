@@ -1,7 +1,9 @@
 use std::sync::Arc;
 
 use crate::config::OtlspClientConfig;
-use hyper::{Request, Response, body::Incoming, client::conn::http1::SendRequest};
+use futures::FutureExt;
+use http_body_util::BodyExt;
+use hyper::{Request, client::conn::http1::SendRequest};
 use luct_client::ClientError;
 use otlsp_client::OtlspClientBuilder;
 use url::Url;
@@ -53,20 +55,48 @@ impl OtlspConnection {
         &mut self,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> Result<impl Future<Output = Result<Response<Incoming>, hyper::Error>>, ClientError> {
+    ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), ClientError>> + use<>, ClientError>
+    {
         if Some(self.host.as_str()) != url.host_str() {
             return Err(ClientError::ConnectionError(
                 "Url mismatch with the connection".to_string(),
             ));
         }
 
-        let req = Request::builder()
+        let request = Request::builder()
             // TODO: Add headers for host, agent and params
             .uri("url")
             .method("GET")
             .body("".to_string())
             .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
 
-        Ok(self.sender.send_request(req))
+        // NOTE: This is technically not correct, since we might just wait as long
+        // as we want before actually polling the future returned here
+        // Nonetheless, we make this access here, since we do not want to keep
+        // a reference to self in the future
+        self.last_access = Instant::now();
+
+        // NOTE: This is not written as a simple async function, because we don't want
+        // to keep the mut self reference. This struct is used in a mutex, and we don't
+        // want to hold the mutex across an await, but rather release it and then await
+        // the future
+        let req = self.sender.send_request(request).then(|response| {
+            // TODO: Implement error handling here
+            let Ok(response) = response else { todo!() };
+
+            let status = response.status().as_u16();
+            response.collect().map(move |response| {
+                let Ok(response) = response else { todo!() };
+                let response: Vec<u8> = response.to_bytes().into();
+
+                Ok((status, response))
+            })
+        });
+
+        Ok(req)
+    }
+
+    pub(crate) fn has_timed_out(&self) -> bool {
+        Instant::now() - self.last_access > self.config.connection_timeout
     }
 }
