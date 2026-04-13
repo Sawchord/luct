@@ -1629,6 +1629,16 @@ dependencies = [
 [[package]]
 name = "luct-otlsp"
 version = "0.0.0"
+dependencies = [
+ "hyper",
+ "luct-client",
+ "otlsp-client",
+ "tracing",
+ "tracing-wasm",
+ "url",
+ "wasm-bindgen-test",
+ "web-time",
+]
 
 [[package]]
 name = "luct-scanner"

@@ -30,7 +30,6 @@ futures = { workspace = true }
 # Util
 thiserror = { workspace = true }
 tracing = { workspace = true }
-tracing-wasm = { workspace = true }
 
 # Wasm
 web-sys = { workspace = true }
@@ -48,3 +47,4 @@ rustls-pki-types = { version = "1", default-features = false, features = [
 
 [dev-dependencies]
 wasm-bindgen-test = { workspace = true }
+tracing-wasm = { workspace = true }

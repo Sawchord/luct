@@ -11,3 +11,16 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
+luct-client = { path = "../luct-client" }
+otlsp-client = { path = "../otlsp-client" }
+
+hyper = { workspace = true }
+url = { workspace = true }
+
+tracing = { workspace = true }
+
+web-time = { workspace = true }
+
+[dev-dependencies]
+wasm-bindgen-test = { workspace = true }
+tracing-wasm = { workspace = true }
