@@ -1,7 +1,5 @@
-use std::sync::Arc;
-
 use crate::config::OtlspClientConfig;
-use futures::FutureExt;
+use futures::{FutureExt, TryFutureExt};
 use http_body_util::BodyExt;
 use hyper::{
     Request,
@@ -10,6 +8,7 @@ use hyper::{
 };
 use luct_client::ClientError;
 use otlsp_client::OtlspClientBuilder;
+use std::sync::Arc;
 use url::Url;
 use web_time::Instant;
 
@@ -25,9 +24,7 @@ pub(crate) struct OtlspConnection {
 
 impl OtlspConnection {
     pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, ClientError> {
-        let Some(proxy_url) = &config.proxy_url else {
-            return Err(ClientError::ConnectionError("Proxy Url unset".to_string()));
-        };
+        let proxy_url = config.proxy_url.as_ref().expect("Proxy url unset");
 
         let Some(host) = url.host_str() else {
             return Err(ClientError::ConnectionError(
@@ -41,7 +38,7 @@ impl OtlspConnection {
             .with_webpki_roots()
             .handshake(url.clone())
             .await
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
 
         tracing::debug!(
             "Created new proxy connection to {} via proxy {}",
@@ -63,11 +60,7 @@ impl OtlspConnection {
         params: &[(&str, &str)],
     ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), ClientError>> + use<>, ClientError>
     {
-        if Some(self.host.as_str()) != url.host_str() {
-            return Err(ClientError::ConnectionError(
-                "Url mismatch with the connection".to_string(),
-            ));
-        }
+        assert_eq!(Some(self.host.as_str()), url.host_str());
 
         let mut url = url.clone();
 
@@ -100,26 +93,29 @@ impl OtlspConnection {
         // to keep the mut self reference. This struct is used in a mutex, and we don't
         // want to hold the mutex across an await, but rather release it and then await
         // the future
-        let req = self.sender.send_request(request).then(|response| {
-            // TODO: Implement error handling here
-            let Ok(response) = response else { todo!() };
+        let request = self
+            .sender
+            .send_request(request)
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))
+            .and_then(|response| {
+                let status = response.status().as_u16();
+                response.collect().map(move |response| {
+                    let response: Vec<u8> = response
+                        .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?
+                        .to_bytes()
+                        .into();
 
-            let status = response.status().as_u16();
-            response.collect().map(move |response| {
-                let Ok(response) = response else { todo!() };
-                let response: Vec<u8> = response.to_bytes().into();
+                    tracing::debug!(
+                        "Received {} bytes from request (status: {})",
+                        response.len(),
+                        status
+                    );
 
-                tracing::debug!(
-                    "Received {} bytes from request (status: {})",
-                    response.len(),
-                    status
-                );
+                    Ok((status, response))
+                })
+            });
 
-                Ok((status, response))
-            })
-        });
-
-        Ok(req)
+        Ok(request)
     }
 
     pub(crate) fn has_timed_out(&self) -> bool {

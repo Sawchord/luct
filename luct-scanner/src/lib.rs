@@ -218,7 +218,7 @@ pub struct ScannerBuilder {
     logs: Vec<CtLogConfig>,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ScannerError {
     #[error("Invalid certificate: {0}")]
     CertificateError(#[from] CertificateError),

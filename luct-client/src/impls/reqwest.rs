@@ -38,7 +38,7 @@ impl Client for ReqwestClient {
         let data = response
             .text()
             .await
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
 
         Ok((status, Arc::new(data)))
     }
@@ -54,7 +54,7 @@ impl Client for ReqwestClient {
         let data = response
             .bytes()
             .await
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
 
         Ok((status, Arc::new(data.to_vec())))
     }
@@ -67,6 +67,6 @@ impl ReqwestClient {
             .query(params)
             .send()
             .await
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))
     }
 }

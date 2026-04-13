@@ -3,7 +3,7 @@ use luct_core::{
     tiling::{ParseCheckpointError, TilingError},
     tree::ProofValidationError,
 };
-use std::{fmt::Debug, sync::Arc};
+use std::{error::Error, fmt::Debug, sync::Arc};
 use thiserror::Error;
 use url::Url;
 
@@ -51,7 +51,7 @@ pub trait Client: Debug {
     // TODO(Submission support): Post calls for submission support
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Error)]
+#[derive(Debug, Clone, Error)]
 pub enum ClientError {
     #[error("The version of the log is not supported by this client")]
     UnsupportedVersion,
@@ -68,9 +68,11 @@ pub enum ClientError {
     #[error("Failed to validate an audit path: {0}")]
     AuditProofError(ProofValidationError),
 
-    // TODO: Turn this into a Box<dyn std::error::Error>
     #[error("Failed to connect to host: {0}")]
     ConnectionError(String),
+
+    #[error("Failed to connect to host: {0}")]
+    ConnectionErrorStd(Arc<dyn Error + Send + Sync>),
 
     #[error("Request to {url} returned error: {code}: {msg}")]
     ResponseError { url: String, code: u16, msg: String },
