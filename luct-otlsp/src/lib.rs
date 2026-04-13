@@ -23,7 +23,7 @@ impl Client for OtlspClient {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Arc<String>), ClientError> {
-        if self.config.proxy_url.is_some() {
+        if self.config.proxy_url.is_none() {
             return self.fallback.get(url, params).await;
         };
 
@@ -42,7 +42,7 @@ impl Client for OtlspClient {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Arc<Vec<u8>>), ClientError> {
-        if self.config.proxy_url.is_some() {
+        if self.config.proxy_url.is_none() {
             return self.fallback.get_bin(url, params).await;
         };
 
@@ -64,9 +64,11 @@ impl OtlspClient {
         if let Some(connection) = self.connections.read().unwrap().get(&domain)
             && !connection.lock().unwrap().has_timed_out()
         {
+            tracing::trace!("Reusing existing connection to {}", url);
             return Ok(connection.clone());
         }
 
+        tracing::trace!("Establishing new connection to {}", url);
         let connection = OtlspConnection::new(self.config.clone(), url.clone()).await?;
         let connection = Arc::new(Mutex::new(connection));
         self.connections
@@ -90,14 +92,6 @@ mod test {
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    const ARCHE2026H1: &str = "{
-          \"description\": \"Google 'Arche2026h1' log\",
-          \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEZ+3YKoZTMruov4cmlImbk4MckBNzEdCyMuHlwGgJ8BUrzFLlR5U0619xDDXIXespkpBgCNVQAkhMTTXakM6KMg==\",
-          \"url\": \"https://arche2026h1.staging.ct.transparency.dev/\",
-          \"tile_url\": \"https://storage.googleapis.com/static-ct-staging-arche2026h1-bucket/\",
-          \"mmd\": 60
-        }";
-
     const SYC2027H2: &str = "{
           \"description\": \"Let's Encrypt 'Sycamore2027h2'\",
           \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEK+2zy2UWRMIyC2jU46+rj8UsyMjLsQIr1Y/6ClbdpWGthUb8y3Maf4zfAZTWW+AH9wAWPLRL5vmtz7Zkh2f2nA==\",
@@ -109,6 +103,8 @@ mod test {
     #[wasm_bindgen_test]
     async fn get_checkpoint() {
         tracing();
+
+        tracing::trace!("Test");
 
         let client = get_client(SYC2027H2);
         let _ = client.get_checkpoint().await.unwrap();

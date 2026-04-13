@@ -3,7 +3,11 @@ use std::sync::Arc;
 use crate::config::OtlspClientConfig;
 use futures::FutureExt;
 use http_body_util::BodyExt;
-use hyper::{Request, client::conn::http1::SendRequest};
+use hyper::{
+    Request,
+    client::conn::http1::SendRequest,
+    header::{HOST, HeaderValue, USER_AGENT},
+};
 use luct_client::ClientError;
 use otlsp_client::OtlspClientBuilder;
 use url::Url;
@@ -30,6 +34,8 @@ impl OtlspConnection {
                 "Invalid destination url".to_string(),
             ));
         };
+
+        tracing::trace!("Creating otlsp connection to {} via {}", url, proxy_url);
 
         let sender = OtlspClientBuilder::new(proxy_url.clone())
             .with_webpki_roots()
@@ -63,10 +69,24 @@ impl OtlspConnection {
             ));
         }
 
+        let mut url = url.clone();
+
+        for (key, value) in params {
+            url.query_pairs_mut().append_pair(key, value);
+        }
+
         let request = Request::builder()
-            // TODO: Add headers for host, agent and params
-            .uri("url")
+            .uri(url.as_str())
             .method("GET")
+            // Add headers for host, agent and params
+            .header(
+                HOST,
+                HeaderValue::from_str(&self.host).expect("Invalid host string"),
+            )
+            .header(
+                USER_AGENT,
+                HeaderValue::from_str(&self.config.agent).expect("Invalid user agent string "),
+            )
             .body("".to_string())
             .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
 
@@ -88,6 +108,12 @@ impl OtlspConnection {
             response.collect().map(move |response| {
                 let Ok(response) = response else { todo!() };
                 let response: Vec<u8> = response.to_bytes().into();
+
+                tracing::debug!(
+                    "Received {} bytes from request (status: {})",
+                    response.len(),
+                    status
+                );
 
                 Ok((status, response))
             })
