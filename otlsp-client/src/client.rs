@@ -11,10 +11,6 @@ use std::sync::Arc;
 use url::Url;
 use x509_cert::{Certificate, der::Encode};
 
-// TODO: Check that starvations etc can't happen
-// TODO: Replace unwraps with specific errors
-// TODO: Try to get error response bodys
-
 pub struct OtlspClientBuilder {
     proxy: Url,
     roots: Vec<TrustAnchor<'static>>,
@@ -35,19 +31,23 @@ impl OtlspClientBuilder {
 
     pub fn with_root_cert(mut self, cert: Certificate) -> Self {
         self.roots.push(TrustAnchor {
-            subject: cert.tbs_certificate.subject.to_der().unwrap().into(),
+            subject: cert
+                .tbs_certificate
+                .subject
+                .to_der()
+                .expect("Failed to parse DER for tbs_certificate")
+                .into(),
             subject_public_key_info: cert
                 .tbs_certificate
                 .subject_public_key_info
                 .to_der()
-                .unwrap()
+                .expect("Failed to parse DER for subject_public_key_info")
                 .into(),
             name_constraints: None,
         });
         self
     }
 
-    // TODO: Remove unwraps and return OtlspError instead
     pub async fn handshake<B>(self, dst: Url) -> Result<SendRequest<B>, OtlspError>
     where
         B: Body + 'static,
@@ -56,22 +56,21 @@ impl OtlspClientBuilder {
     {
         // Set up client config, using rustcrypto as webpki roots (again with rustcrypto)
         let config = ClientConfig::builder_with_provider(rustls_rustcrypto::provider().into())
-            .with_protocol_versions(&[&rustls::version::TLS13])
-            .unwrap()
+            .with_protocol_versions(&[&rustls::version::TLS13])?
             .with_webpki_verifier(
                 WebPkiServerVerifier::builder_with_provider(
                     RootCertStore { roots: self.roots }.into(),
                     rustls_rustcrypto::provider().into(),
                 )
-                .build()
-                .unwrap(),
+                .build()?,
             )
             .with_no_client_auth();
 
-        let server_name = ServerName::try_from(dst.host_str().unwrap())
-            .unwrap()
-            .to_owned();
-        let conn = ClientConnection::new(Arc::new(config), server_name).unwrap();
+        let server_name =
+            ServerName::try_from(dst.host_str().ok_or(OtlspError::InvalidDnsNameError)?)
+                .map_err(|_| OtlspError::InvalidDnsNameError)?
+                .to_owned();
+        let conn = ClientConnection::new(Arc::new(config), server_name)?;
 
         // Setup the underlying websocket stream
         let ws_stream = WsStream::new(self.proxy, dst).await?;
@@ -81,8 +80,7 @@ impl OtlspClientBuilder {
         let tls = StreamOwned::new(conn, ws_stream);
         let (sender, connection) =
             hyper::client::conn::http1::handshake::<_, B>(AsyncStream { stream: tls, waker })
-                .await
-                .unwrap();
+                .await?;
 
         // Send connection to the web-sys executor
         wasm_bindgen_futures::spawn_local(async move {
@@ -124,6 +122,7 @@ mod tests {
                 .with_webpki_roots()
                 //.with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
                 .handshake(Url::parse("https://tuscolo2026h2.skylight.geomys.org").unwrap())
+                //.handshake(Url::parse("https://google.com").unwrap())
                 .await
                 .unwrap();
 
@@ -150,7 +149,6 @@ mod tests {
         //const TEXT: &str = include_str!("../e2e-test/data/test.txt");
         //assert_eq!(Bytes::from(TEXT), response);
         tracing::info!("Status: {}", status);
-        //console_log!("{}", String::from_utf8_lossy(&response));
         tracing::info!("{}", String::from_utf8_lossy(&response));
 
         panic!();

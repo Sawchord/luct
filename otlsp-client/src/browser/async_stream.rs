@@ -74,13 +74,13 @@ impl hyper::rt::Write for AsyncStream {
 
     fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         // TODO: Implement
-        tracing::warn!("Called pool_flush which is not implemented");
+        tracing::warn!("Called poll_flush which is not implemented");
         Poll::Ready(Ok(()))
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         // TODO: Implement
-        tracing::warn!("Called pool_shutdown which is not implemented");
+        tracing::warn!("Called poll_shutdown which is not implemented");
         Poll::Ready(Ok(()))
     }
 }

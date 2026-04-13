@@ -54,8 +54,8 @@ impl WsStream {
 
         let cloned_buffer = input_buffer.clone();
         let waker_cloned = waker.clone();
-        let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
-            if let Ok(abuf) = e.data().dyn_into::<ArrayBuffer>() {
+        let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+            if let Ok(abuf) = event.data().dyn_into::<ArrayBuffer>() {
                 let array = Uint8Array::new(&abuf);
                 let len = array.byte_length() as usize;
                 tracing::trace!("ArrayBuffer received {} bytes", len);
@@ -64,12 +64,12 @@ impl WsStream {
                     cloned_buffer.borrow_mut().extend(array.to_vec());
                     Self::wake_all(&waker_cloned);
                 }
-            } else if let Ok(blob) = e.data().dyn_into::<Blob>() {
+            } else if let Ok(blob) = event.data().dyn_into::<Blob>() {
                 tracing::trace!("received Blob: {:?}", blob);
-            } else if let Ok(txt) = e.data().dyn_into::<JsString>() {
+            } else if let Ok(txt) = event.data().dyn_into::<JsString>() {
                 tracing::trace!("received Text: {:?}", txt);
             } else {
-                tracing::trace!("received Unknown: {:?}", e.data());
+                tracing::trace!("received Unknown: {:?}", event.data());
             }
         });
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
@@ -77,7 +77,8 @@ impl WsStream {
         // Initialize on_close to set the is_closed atomic bool to true
         let is_closed = Rc::new(AtomicBool::new(false));
         let is_closed_clone = is_closed.clone();
-        let onclose_callback = Closure::<dyn FnMut(_)>::new(move |_: MessageEvent| {
+        let onclose_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+            tracing::debug!("Received close event: {:?}", event.data());
             is_closed_clone.store(true, Ordering::Relaxed);
         });
         websocket.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
@@ -105,19 +106,18 @@ impl WsStream {
         let mut error_cb = None;
 
         let opened = Promise::new(&mut |ok, err| {
-            let onopen_callback = Closure::<dyn FnMut(_)>::new(move |e: MessageEvent| {
-                tracing::debug!("Opened websocket connection: {:?}", e.data().as_string());
+            let onopen_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+                tracing::debug!(
+                    "Opened websocket connection: {:?}",
+                    event.data().as_string()
+                );
                 ok.call0(&JsValue::null()).unwrap();
             });
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             open_cb = Some(onopen_callback);
 
-            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |_e: MessageEvent| {
-                err.call1(
-                    &JsValue::null(),
-                    &JsValue::from("Failed to open the connection"),
-                )
-                .unwrap();
+            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+                err.call1(&JsValue::null(), &event.data()).unwrap();
             });
             websocket.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
             error_cb = Some(onerror_callback)
