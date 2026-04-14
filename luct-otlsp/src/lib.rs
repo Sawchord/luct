@@ -1,5 +1,6 @@
 pub use crate::config::OtlspClientBuilder;
 use crate::{config::OtlspClientConfig, connection::OtlspConnection};
+use futures::TryFutureExt;
 use luct_client::{Client, ClientError, reqwest::ReqwestClient};
 use std::{
     collections::HashMap,
@@ -28,7 +29,9 @@ impl Client for OtlspClient {
         };
 
         let connection = self.get_connection(url).await?;
-        let request = connection.lock().unwrap().get(url, params)?;
+        let request = Self::request(connection, url, params)?;
+
+        // NOTE: The lock on connection is already dropped here
         request.await.map(|(status, bytes)| {
             (
                 status,
@@ -47,7 +50,9 @@ impl Client for OtlspClient {
         };
 
         let connection = self.get_connection(url).await?;
-        let request = connection.lock().unwrap().get(url, params)?;
+        let request = Self::request(connection, url, params)?;
+
+        // NOTE: The lock on connection is already dropped here
         request
             .await
             .map(|(status, bytes)| (status, Arc::new(bytes)))
@@ -69,7 +74,9 @@ impl OtlspClient {
         }
 
         tracing::trace!("Establishing new connection to {}", url);
-        let connection = OtlspConnection::new(self.config.clone(), url.clone()).await?;
+        let connection = OtlspConnection::new(self.config.clone(), url.clone())
+            .await
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
         let connection = Arc::new(Mutex::new(connection));
         self.connections
             .write()
@@ -77,6 +84,19 @@ impl OtlspClient {
             .insert(domain, connection.clone());
 
         Ok(connection)
+    }
+
+    fn request(
+        connection: Arc<Mutex<OtlspConnection>>,
+        url: &Url,
+        params: &[(&str, &str)],
+    ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), ClientError>>, ClientError> {
+        connection
+            .lock()
+            .unwrap()
+            .get(url, params)
+            .map(|fut| fut.map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err))))
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))
     }
 }
 

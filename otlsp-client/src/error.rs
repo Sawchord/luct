@@ -1,4 +1,4 @@
-use hyper::Error as HyperError;
+use hyper::{Error as HyperError, http::Error as HttpError};
 use rustls::{Error as RustlsError, server::VerifierBuilderError};
 use std::sync::Arc;
 use thiserror::Error;
@@ -14,6 +14,9 @@ pub enum OtlspError {
     #[error("HTTP error: {0}")]
     Http(Arc<HyperError>),
 
+    #[error("HTTP error: {0}")]
+    HttpBody(Arc<HttpError>),
+
     #[error("Error building certificate verifier: {0}")]
     VerifierBuilderError(#[from] VerifierBuilderError),
 
@@ -24,5 +27,11 @@ pub enum OtlspError {
 impl From<HyperError> for OtlspError {
     fn from(error: HyperError) -> Self {
         Self::Http(Arc::new(error))
+    }
+}
+
+impl From<HttpError> for OtlspError {
+    fn from(error: HttpError) -> Self {
+        Self::HttpBody(Arc::new(error))
     }
 }

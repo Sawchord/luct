@@ -6,13 +6,10 @@ use hyper::{
     client::conn::http1::SendRequest,
     header::{HOST, HeaderValue, USER_AGENT},
 };
-use luct_client::ClientError;
-use otlsp_client::OtlspClientBuilder;
+use otlsp_client::{OtlspClientBuilder, OtlspError};
 use std::sync::Arc;
 use url::Url;
 use web_time::Instant;
-
-// TODO: Use OTLSP errors here and do the conversion one level up
 
 #[derive(Debug)]
 pub(crate) struct OtlspConnection {
@@ -23,13 +20,11 @@ pub(crate) struct OtlspConnection {
 }
 
 impl OtlspConnection {
-    pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, ClientError> {
+    pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, OtlspError> {
         let proxy_url = config.proxy_url.as_ref().expect("Proxy url unset");
 
         let Some(host) = url.host_str() else {
-            return Err(ClientError::ConnectionError(
-                "Invalid destination url".to_string(),
-            ));
+            return Err(OtlspError::Unreachable("Cannot-be-a-base url".to_string()));
         };
 
         tracing::trace!("Creating otlsp connection to {} via {}", url, proxy_url);
@@ -37,8 +32,7 @@ impl OtlspConnection {
         let sender = OtlspClientBuilder::new(proxy_url.clone())
             .with_webpki_roots()
             .handshake(url.clone())
-            .await
-            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
+            .await?;
 
         tracing::debug!(
             "Created new proxy connection to {} via proxy {}",
@@ -58,8 +52,7 @@ impl OtlspConnection {
         &mut self,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), ClientError>> + use<>, ClientError>
-    {
+    ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), OtlspError>> + use<>, OtlspError> {
         assert_eq!(Some(self.host.as_str()), url.host_str());
 
         let mut url = url.clone();
@@ -80,8 +73,7 @@ impl OtlspConnection {
                 USER_AGENT,
                 HeaderValue::from_str(&self.config.agent).expect("Invalid user agent string "),
             )
-            .body("".to_string())
-            .map_err(|err| ClientError::ConnectionError(err.to_string()))?;
+            .body("".to_string())?;
 
         // NOTE: This is technically not correct, since we might just wait as long
         // as we want before actually polling the future returned here
@@ -96,14 +88,11 @@ impl OtlspConnection {
         let request = self
             .sender
             .send_request(request)
-            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))
+            .map_err(OtlspError::from)
             .and_then(|response| {
                 let status = response.status().as_u16();
                 response.collect().map(move |response| {
-                    let response: Vec<u8> = response
-                        .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?
-                        .to_bytes()
-                        .into();
+                    let response: Vec<u8> = response?.to_bytes().into();
 
                     tracing::debug!(
                         "Received {} bytes from request (status: {})",
