@@ -26,7 +26,23 @@ impl Destination {
     }
 }
 
-pub async fn handle_connection(destination: Url, ws: WebSocketUpgrade) -> Response {
+pub async fn handle_connection<F>(destination: Url, ws: WebSocketUpgrade, access: F) -> Response
+where
+    F: Fn(&Url) -> bool,
+{
+    // Check access
+    if !access(&destination) {
+        tracing::debug!(
+            "Connection request rejected since {:?} is not target enabled URL",
+            destination
+        );
+
+        return Response::builder()
+            .status(400)
+            .body(Body::from("Requested destination is not enabled"))
+            .unwrap();
+    }
+
     // Connect to destination
     let stream = match (destination.host(), destination.port_or_known_default()) {
         (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,

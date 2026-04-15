@@ -1,6 +1,5 @@
 use crate::{conf::Config, state::NodeState};
 use axum::{
-    body::Body,
     extract::{Query, State, WebSocketUpgrade},
     response::Response,
 };
@@ -44,23 +43,14 @@ pub(crate) async fn handle_otlsp_connection(
 ) -> Response {
     tracing::trace!("Received a new connection request to {:?}", destination);
 
-    if !config
-        .otlsp_urls()
-        .iter()
-        .any(|url| is_valid_destination(url, destination.dst()))
-    {
-        tracing::debug!(
-            "Connection request rejected since {:?} is not target enabled URL",
-            destination
-        );
+    let has_access = |destination: &Url| {
+        config
+            .otlsp_urls()
+            .iter()
+            .any(|url| is_valid_destination(url, destination))
+    };
 
-        return Response::builder()
-            .status(400)
-            .body(Body::from("Requested destination is not enabled"))
-            .unwrap();
-    }
-
-    handle_connection(destination.dst().clone(), ws).await
+    handle_connection(destination.dst().clone(), ws, has_access).await
 }
 
 /// Test whether the [`Url`] `dst` is valid against the [`Url`] `dst`
