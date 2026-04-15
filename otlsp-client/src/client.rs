@@ -99,18 +99,10 @@ mod tests {
     use http_body_util::BodyExt;
     use hyper::{Request, body::Buf};
     use tracing::Level;
-    use tracing_wasm::{ConsoleConfig, WASMLayerConfigBuilder};
+    use tracing_subscriber::{Registry, layer::SubscriberExt};
+    use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
     use wasm_bindgen_test::wasm_bindgen_test;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
-
-    fn tracing() {
-        tracing_wasm::set_as_global_default_with_config(
-            WASMLayerConfigBuilder::default()
-                .set_max_level(Level::TRACE)
-                .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
-                .build(),
-        );
-    }
 
     // NOTE: This test requires setup that can be found in the e2e test directory
     #[wasm_bindgen_test]
@@ -152,5 +144,16 @@ mod tests {
         tracing::info!("{}", String::from_utf8_lossy(&response));
 
         panic!();
+    }
+
+    fn tracing() {
+        let _ = tracing::subscriber::set_global_default(
+            Registry::default().with(WASMLayer::new(
+                WASMLayerConfigBuilder::default()
+                    .set_max_level(Level::TRACE)
+                    .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
+                    .build(),
+            )),
+        );
     }
 }

@@ -106,7 +106,8 @@ mod test {
     use luct_client::CtClient;
     use luct_core::CtLogConfig;
     use tracing::Level;
-    use tracing_wasm::{ConsoleConfig, WASMLayerConfigBuilder};
+    use tracing_subscriber::{Registry, layer::SubscriberExt};
+    use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
     use url::Url;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -134,11 +135,13 @@ mod test {
     // TODO: Test with parameters
 
     fn tracing() {
-        tracing_wasm::set_as_global_default_with_config(
+        let _ = tracing::subscriber::set_global_default(
+            Registry::default().with(WASMLayer::new(
             WASMLayerConfigBuilder::default()
                 .set_max_level(Level::TRACE)
                 .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
                 .build(),
+            )),
         );
     }
 
