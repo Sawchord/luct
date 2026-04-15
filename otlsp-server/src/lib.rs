@@ -15,6 +15,8 @@ use tokio::{
 };
 use url::{Host, Url};
 
+const FRAME_SIZE: usize = 1500;
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Destination {
     to: Url,
@@ -65,25 +67,41 @@ where
     };
     tracing::debug!("TCP stream to target established");
 
+    // TODO: Make size configurable
+    let (to_server_tx, mut to_server_rx) =
+        tokio::sync::mpsc::channel::<Option<Result<Message, Error>>>(100);
+    let (to_client_tx, mut to_client_rx) =
+        tokio::sync::mpsc::channel::<(tokio::io::Result<usize>, [u8; 1500])>(100);
+
     // TODO: Close WS with a reason
-    // TODO: Check on results
-    // TODO: Separate TCP and WS sides and connect them with a bounded channel
     ws.on_upgrade(async move |mut ws: WebSocket| {
-        let mut buf = [0; 1500];
+        let mut buf = [0; FRAME_SIZE];
 
         loop {
             select! {
+                biased;
+
                 // Handle receiving data from the web socket side
-                data = ws.recv() => {
-                    if !handle_websocket_receive(data, &mut ws, &mut stream, &destination).await {
+                data = to_server_rx.recv() => {
+                    if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination).await {
                         break;
                     }
                 },
                 // Handle receiving data from the tcp socket side
-                read = stream.read(&mut buf) => {
-                    if !handle_tcp_stream_receive(read, &buf, &mut ws, &mut stream, &destination).await {
+                read = to_client_rx.recv() => {
+                    if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination).await {
                         break;
                     }
+                },
+                read = stream.read(&mut buf) => {
+                    to_client_tx.send((read, buf))
+                    .await
+                    .expect("to_client_rx dropped unexpectedly");
+                }
+                data = ws.recv() => {
+                    to_server_tx.send(data)
+                    .await
+                    .expect("to_client_rx dropped unexpectedly");
                 },
             }
         }
@@ -140,19 +158,22 @@ async fn handle_websocket_receive(
 }
 
 async fn handle_tcp_stream_receive(
-    read: tokio::io::Result<usize>,
-    buf: &[u8],
+    read: Option<(tokio::io::Result<usize>, [u8; FRAME_SIZE])>,
     ws: &mut WebSocket,
     _stream: &mut TcpStream,
     _destination: &Url,
 ) -> bool {
     match read {
-        Err(err) => {
+        None => {
+            let _ = ws.send(Message::Close(None)).await;
+            false
+        }
+        Some((Err(err), _)) => {
             tracing::warn!("Error while reading TCP stream: {:?}", err);
             let _ = ws.send(Message::Close(None)).await;
             false
         }
-        Ok(read) => {
+        Some((Ok(read), buf)) => {
             tracing::trace!("Read {} bytes of data", read);
 
             if read == 0 {
