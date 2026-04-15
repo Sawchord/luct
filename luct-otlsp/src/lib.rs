@@ -104,7 +104,7 @@ impl OtlspClient {
 mod test {
     use crate::OtlspClient;
     use luct_client::CtClient;
-    use luct_core::CtLogConfig;
+    use luct_core::{CtLogConfig, tiling::TileId, tree::NodeKey};
     use tracing::Level;
     use tracing_subscriber::{Registry, layer::SubscriberExt};
     use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
@@ -125,22 +125,32 @@ mod test {
     async fn get_checkpoint() {
         tracing();
 
-        tracing::trace!("Test");
-
         let client = get_client(SYC2027H2);
         let _ = client.get_checkpoint().await.unwrap();
     }
 
-    // TODO: Test getting a tile
+    #[wasm_bindgen_test]
+    async fn get_tile() {
+        tracing();
+
+        let client = get_client(SYC2027H2);
+
+        let _ = client
+            .get_tile(TileId::from_node_key(&NodeKey::leaf(1), 1000).unwrap())
+            .await
+            .unwrap();
+        let _ = client.get_checkpoint().await.unwrap();
+    }
+
     // TODO: Test with parameters
 
     fn tracing() {
         let _ = tracing::subscriber::set_global_default(
             Registry::default().with(WASMLayer::new(
-            WASMLayerConfigBuilder::default()
-                .set_max_level(Level::TRACE)
-                .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
-                .build(),
+                WASMLayerConfigBuilder::default()
+                    .set_max_level(Level::TRACE)
+                    .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
+                    .build(),
             )),
         );
     }
