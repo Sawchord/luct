@@ -97,53 +97,61 @@ impl OtlspClientBuilder {
 mod tests {
     use super::*;
     use http_body_util::BodyExt;
-    use hyper::{Request, body::Buf};
+    use hyper::{Request, body::Buf, header::HOST};
     use tracing::Level;
     use tracing_subscriber::{Registry, layer::SubscriberExt};
     use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
     use wasm_bindgen_test::wasm_bindgen_test;
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
-    // NOTE: This test requires setup that can be found in the e2e test directory
     #[wasm_bindgen_test]
     async fn smoke_test() {
         tracing();
+
+        let (status, response) =
+            get_request("https://tuscolo2026h2.skylight.geomys.org", "/checkpoint")
+                .await
+                .unwrap();
+
+        tracing::info!("Status: {}", status);
+        tracing::info!("{}", String::from_utf8_lossy(&response));
+    }
+
+    #[wasm_bindgen_test]
+    async fn error_test() {
+        tracing();
+
+        // This url is not a log and therefore will not be enabled in on a proxy
+        let (status, response) = get_request("https://google.com", "/").await.unwrap();
+
+        tracing::info!("Status: {}", status);
+        tracing::info!("{}", String::from_utf8_lossy(&response));
+    }
+
+    async fn get_request(url: &str, path: &str) -> Result<(u16, Vec<u8>), OtlspError> {
+        let url = Url::parse(url).unwrap();
+        let host = url.host_str().unwrap().to_string();
 
         let mut sender =
             OtlspClientBuilder::new(Url::parse("https://node.luct.dev/otlsp").unwrap())
                 .with_webpki_roots()
                 //.with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
-                .handshake(Url::parse("https://tuscolo2026h2.skylight.geomys.org").unwrap())
-                //.handshake(Url::parse("https://google.com").unwrap())
-                .await
-                .unwrap();
+                .handshake(url)
+                .await?;
 
-        tracing::info!("Still alive");
-
-        // TODO: Set user agent, host
         let req = Request::builder()
-            //.uri("/tile/0/000")
-            .uri("/checkpoint")
+            .uri(path)
+            .header(HOST, host)
             .method("GET")
-            .body("".to_string())
-            .unwrap();
+            .body("".to_string())?;
 
-        tracing::info!("Still alive");
-        let res = sender.send_request(req).await.unwrap();
+        let res = sender.send_request(req).await?;
 
-        //assert_eq!(res.status(), 200);
-        let status = res.status();
-        //let mut response = res.collect().await.unwrap().aggregate();
-        //let response = response.copy_to_bytes(response.remaining()).to_vec();
-        let mut response = res.collect().await.unwrap().to_bytes();
+        let status = res.status().as_u16();
+        let mut response = res.collect().await?.to_bytes();
         let response = response.copy_to_bytes(response.remaining()).to_vec();
 
-        //const TEXT: &str = include_str!("../e2e-test/data/test.txt");
-        //assert_eq!(Bytes::from(TEXT), response);
-        tracing::info!("Status: {}", status);
-        tracing::info!("{}", String::from_utf8_lossy(&response));
-
-        panic!();
+        Ok((status, response))
     }
 
     fn tracing() {
