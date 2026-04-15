@@ -1,4 +1,4 @@
-use crate::conf::Config;
+use crate::{conf::Config, state::NodeState};
 use axum::{
     body::Body,
     extract::{Query, State, WebSocketUpgrade},
@@ -38,14 +38,14 @@ impl Config {
 
 #[debug_handler]
 pub(crate) async fn handle_otlsp_connection(
-    config: State<(Config, Vec<Url>)>,
+    config: State<NodeState>,
     destination: Query<Destination>,
     ws: WebSocketUpgrade,
 ) -> Response {
     tracing::trace!("Received a new connection request to {:?}", destination);
 
     if !config
-        .1
+        .otlsp_urls()
         .iter()
         .any(|url| is_valid_destination(url, destination.dst()))
     {

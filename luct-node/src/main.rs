@@ -1,4 +1,4 @@
-use crate::{args::Args, conf::Config, otlsp::handle_otlsp_connection};
+use crate::{args::Args, conf::Config, otlsp::handle_otlsp_connection, state::NodeState};
 use axum::{Router, routing::get};
 use clap::Parser;
 use tracing_subscriber::EnvFilter;
@@ -6,6 +6,7 @@ use tracing_subscriber::EnvFilter;
 mod args;
 mod conf;
 mod otlsp;
+mod state;
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
@@ -28,17 +29,18 @@ async fn main() -> eyre::Result<()> {
         .await
         .unwrap();
 
-    let logs = config.get_otlsp_urls()?;
+    tracing::info!("Serving requests at {}", config.endpoint_addr);
+    let state = NodeState::new(config)?;
 
     let router = Router::new();
-    let router = if let Some(otlsp_path) = &config.otlsp_path {
+    let router = if let Some(otlsp_path) = &state.config().otlsp_path {
         router.route(otlsp_path, get(handle_otlsp_connection))
     } else {
         router
     };
-    let router = router.with_state((config.clone(), logs));
 
-    tracing::info!("Serving requests at {}", config.endpoint_addr,);
+    let router = router.with_state(state);
+
     axum::serve(listener, router).await.unwrap();
     Ok(())
 }

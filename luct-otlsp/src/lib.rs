@@ -121,6 +121,13 @@ mod test {
           \"mmd\": 60
         }";
 
+    const _SOLERA2027H1: &str = "{
+          \"description\": \"Google 'Solera2027h1' log'\",
+          \"key\": \"MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEKLDCw61qHAIp9mt8+QBx92gqIAhp3QhqS6h+bogJAe/FwaCSxMyb2H5xAO2SArXJnzm5vdBGifOcS5SXRZMP9Q==\",
+          \"url\": \"https://ct.googleapis.com/logs/eu1/solera2027h1/\",
+          \"mmd\": 86400
+        }";
+
     #[wasm_bindgen_test]
     async fn get_checkpoint() {
         tracing();

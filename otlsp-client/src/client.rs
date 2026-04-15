@@ -122,10 +122,9 @@ mod tests {
         tracing();
 
         // This url is not a log and therefore will not be enabled in on a proxy
-        let (status, response) = get_request("https://google.com", "/").await.unwrap();
-
-        tracing::info!("Status: {}", status);
-        tracing::info!("{}", String::from_utf8_lossy(&response));
+        let result = get_request("https://google.com", "/").await;
+        let _s = "Failed to connect".to_string();
+        assert!(matches!(result, Err(OtlspError::Unreachable(_s))));
     }
 
     async fn get_request(url: &str, path: &str) -> Result<(u16, Vec<u8>), OtlspError> {
