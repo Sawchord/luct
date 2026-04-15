@@ -40,10 +40,11 @@ pub(crate) struct WsStream {
 }
 
 impl WsStream {
-    pub async fn new(proxy: Url, dst: Url) -> Result<Self, OtlspError> {
+    pub async fn new(proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
         let waker = Rc::new(RefCell::new(vec![]));
         let input_buffer = Rc::new(RefCell::new(VecDeque::<u8>::new()));
 
+        dst.set_path("");
         let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
         tracing::debug!("Connecting to: {:?}", request_string);
 

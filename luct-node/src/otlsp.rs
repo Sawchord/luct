@@ -27,6 +27,11 @@ impl Config {
                 logs.iter()
                     .filter_map(|log| log.config().tile_url().clone()),
             )
+            // Remove the paths, we need to have access to the entire paths
+            .map(|mut url| {
+                url.set_path("");
+                url
+            })
             .collect();
 
         tracing::info!("Enabled {} urls", urls.len());
