@@ -22,10 +22,9 @@ pub(crate) struct OtlspConnection {
 impl OtlspConnection {
     pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, OtlspError> {
         let proxy_url = config.proxy_url.as_ref().expect("Proxy url unset");
-
-        let Some(host) = url.host_str() else {
-            return Err(OtlspError::Unreachable("Cannot-be-a-base url".to_string()));
-        };
+        let host = url
+            .host_str()
+            .ok_or(OtlspError::Unreachable("Cannot-be-a-base url".to_string()))?;
 
         tracing::trace!("Creating otlsp connection to {} via {}", url, proxy_url);
 

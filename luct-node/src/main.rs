@@ -34,6 +34,7 @@ async fn main() -> eyre::Result<()> {
 
     let router = Router::new();
     let router = if let Some(otlsp_path) = &state.config().otlsp_path {
+        tracing::info!("Serving otlsp endpoint at {}", otlsp_path);
         router.route(otlsp_path, get(handle_otlsp_connection))
     } else {
         router
