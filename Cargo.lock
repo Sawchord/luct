@@ -1852,6 +1852,10 @@ dependencies = [
 ]
 
 [[package]]
+name = "otlsp-core"
+version = "0.0.0"
+
+[[package]]
 name = "otlsp-server"
 version = "0.0.0"
 dependencies = [
