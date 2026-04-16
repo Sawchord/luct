@@ -99,3 +99,15 @@ impl From<OtlspErrorCode> for ErrorKind {
         }
     }
 }
+
+impl From<u16> for OtlspErrorCode {
+    fn from(value: u16) -> Self {
+        Self(value)
+    }
+}
+
+impl From<OtlspErrorCode> for u16 {
+    fn from(value: OtlspErrorCode) -> Self {
+        value.0
+    }
+}

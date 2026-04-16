@@ -3,10 +3,11 @@ use axum::{
     body::Body,
     extract::{
         WebSocketUpgrade,
-        ws::{Message, WebSocket},
+        ws::{CloseFrame, Message, WebSocket},
     },
     response::Response,
 };
+use otlsp_core::OtlspErrorCode;
 use serde::{Deserialize, Serialize};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
@@ -52,21 +53,25 @@ where
         (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
         (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
         _ => {
-            tracing::debug!("Failed to parse destination");
+            tracing::debug!("Failed to parse destination {}", destination);
             return Response::builder()
                 .status(400)
                 .body(Body::from("Failed to parse destination"))
                 .unwrap();
         }
     };
-    let Ok(mut stream) = stream else {
-        tracing::debug!("Failed to connect to server");
-        return Response::builder()
-            .status(400)
-            .body(Body::from("Failed to connect to destination"))
-            .unwrap();
-    };
+
+    ws.on_upgrade(async move |mut ws: WebSocket| {
+        let mut stream = match stream {
+            Err(err) => {
+                tracing::debug!("Failed to connect to connection: {}", destination);
+                let _ = ws.send(Message::Close(Some(close_msg_from_error(err)))).await; 
+                return;
+            },
+            Ok(stream) => stream,
+        };
     tracing::debug!("TCP stream to target established");
+    
 
     // TODO: Make size configurable
     let (to_server_tx, mut to_server_rx) =
@@ -76,7 +81,6 @@ where
 
     // TODO: Close WS with a reason
     // TODO: Error handling in the ws.send calls
-    ws.on_upgrade(async move |mut ws: WebSocket| {
         let _ = ws.send(Message::Text("accept".into())).await;
         tracing::debug!("OTLSP connection accepted");
 
@@ -190,5 +194,18 @@ async fn handle_tcp_stream_receive(
                 true
             }
         }
+    }
+}
+
+fn close_msg_from_error(error: std::io::Error) -> CloseFrame {
+    let code = OtlspErrorCode::from(error.kind());
+    let reason = error
+        .into_inner()
+        .map(|err| format!("{}", err))
+        .unwrap_or_default();
+
+    CloseFrame {
+        code: code.into(),
+        reason: reason.into(),
     }
 }
