@@ -1,8 +1,5 @@
-use std::io::{self, ErrorKind};
-
 use axum::{
     Error,
-    body::Body,
     extract::{
         WebSocketUpgrade,
         ws::{CloseFrame, Message, WebSocket},
@@ -11,6 +8,7 @@ use axum::{
 };
 use otlsp_core::OtlspErrorCode;
 use serde::{Deserialize, Serialize};
+use std::io::{self, ErrorKind};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -34,22 +32,25 @@ impl Destination {
 // TODO: Url parsing should happen here, such that we can do better error handling on bad url
 pub async fn handle_connection<F>(destination: Url, ws: WebSocketUpgrade, access: F) -> Response
 where
-    F: Fn(&Url) -> bool,
+    F: Fn(Url) -> bool + Send + 'static,
 {
-    // Check access
-    if !access(&destination) {
-        tracing::debug!(
-            "Connection request rejected since {:?} is not target enabled URL",
-            destination
-        );
-
-        return Response::builder()
-            .status(400)
-            .body(Body::from("Requested destination is not enabled"))
-            .unwrap();
-    }
-
     ws.on_upgrade(async move |mut ws: WebSocket| {
+        // Check access
+        if !access(destination.clone()) {
+            tracing::debug!(
+                "Connection request rejected since {:?} is not target enabled URL",
+                destination
+            );
+
+            let _ = ws
+                .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
+                    ErrorKind::PermissionDenied,
+                    format!("Destination {} is disabled by proxy", destination),
+                )))))
+                .await;
+            return;
+        }
+
         // Connect to destination
         let stream = match (destination.host(), destination.port_or_known_default()) {
             (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,

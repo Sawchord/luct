@@ -48,11 +48,11 @@ pub(crate) async fn handle_otlsp_connection(
 ) -> Response {
     tracing::trace!("Received a new connection request to {:?}", destination);
 
-    let has_access = |destination: &Url| {
+    let has_access = move |destination: Url| {
         config
             .otlsp_urls()
             .iter()
-            .any(|url| is_valid_destination(url, destination))
+            .any(|url| is_valid_destination(url, &destination))
     };
 
     handle_connection(destination.dst().clone(), ws, has_access).await
