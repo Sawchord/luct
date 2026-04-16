@@ -98,6 +98,7 @@ mod tests {
     use super::*;
     use http_body_util::BodyExt;
     use hyper::{Request, body::Buf, header::HOST};
+    use std::io::ErrorKind;
     use tracing::Level;
     use tracing_subscriber::{Registry, layer::SubscriberExt};
     use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
@@ -123,8 +124,14 @@ mod tests {
 
         // This url is not a log and therefore will not be enabled in on a proxy
         let result = get_request("https://google.com", "/").await;
-        let _s = "Failed to connect".to_string();
-        assert!(matches!(result, Err(OtlspError::Unreachable(_s))));
+
+        match result {
+            Err(OtlspError::Tcp(err)) => {
+                let kind = err.kind();
+                assert_eq!(kind, ErrorKind::PermissionDenied);
+            }
+            a => panic!("Unexpected result {:?}", a),
+        };
     }
 
     async fn get_request(url: &str, path: &str) -> Result<(u16, Vec<u8>), OtlspError> {

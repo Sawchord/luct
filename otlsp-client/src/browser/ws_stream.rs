@@ -1,5 +1,6 @@
 use crate::error::OtlspError;
 use js_sys::{ArrayBuffer, JsString, Promise, Uint8Array};
+use otlsp_core::OtlspErrorCode;
 use std::{
     cell::RefCell,
     collections::VecDeque,
@@ -11,7 +12,7 @@ use std::{
 use url::Url;
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
 use wasm_bindgen_futures::JsFuture;
-use web_sys::{BinaryType, Blob, MessageEvent, WebSocket};
+use web_sys::{BinaryType, Blob, CloseEvent, MessageEvent, WebSocket};
 
 #[derive(Debug, Clone)]
 pub(crate) struct WsStream {
@@ -111,15 +112,16 @@ impl WsStream {
         let opened = Promise::new(&mut |ok, err| {
             let err_clone = err.clone();
             let onerror_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-                tracing::warn!("Error while opening websocket: {:?}", event);
-                err_clone.call1(&JsValue::null(), &event.data()).unwrap();
+                tracing::warn!("Error while opening websocket");
+                err_clone.call1(&JsValue::null(), &event).unwrap();
             });
+
             websocket.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
             error_cb = Some(onerror_callback);
 
             let onclose_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-                tracing::warn!("Websocket closed unexpectedly: {:?}", event);
-                err.call1(&JsValue::null(), &event.data()).unwrap();
+                tracing::warn!("Websocket closed unexpectedly");
+                err.call1(&JsValue::null(), &event).unwrap();
             });
             websocket.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
             close_cb = Some(onclose_callback);
@@ -155,22 +157,23 @@ impl WsStream {
             message_cb = Some(onmessage_callback);
         });
 
-        // Await the promise and check the errors
-        match JsFuture::from(opened).await {
-            Ok(_) => (),
-            Err(err) => {
-                tracing::warn!("Failed to establish websocket connection: {:?}", err);
-                return Err(OtlspError::Unreachable(
-                    err.as_string().unwrap_or("Failed to connect".to_string()),
-                ));
-            }
-        };
+        // Await the promise
+        let result = JsFuture::from(opened).await;
 
         // Unset the callbacks
         websocket.set_onerror(None);
         websocket.set_onclose(None);
         websocket.set_onopen(None);
         websocket.set_onmessage(None);
+
+        // Check for errors
+        result.map_err(|err| {
+            tracing::warn!("Failed to establish websocket connection");
+            match err.dyn_into::<CloseEvent>().ok() {
+                None => OtlspError::Unknown,
+                Some(err) => close_event_to_io_err(err).into(),
+            }
+        })?;
 
         Ok(())
     }
@@ -248,4 +251,11 @@ impl Drop for WsStream {
         self.is_closed.store(true, Ordering::SeqCst);
         Self::wake_all(&self.waker);
     }
+}
+
+fn close_event_to_io_err(close: CloseEvent) -> io::Error {
+    let code = OtlspErrorCode::from(close.code());
+    let reason = close.reason();
+
+    io::Error::new(code.into(), reason)
 }

@@ -104,6 +104,7 @@ js-sys = { version = "0.3" }
 web-sys = { version = "0.3", features = [
     "BinaryType",
     "Blob",
+    "CloseEvent",
     "ErrorEvent",
     "FileReader",
     "MessageEvent",
