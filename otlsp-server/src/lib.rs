@@ -157,7 +157,8 @@ async fn handle_websocket_receive(
 ) -> bool {
     match data {
         None => {
-            tracing::debug!("Shutting down connction to {:?}", destination);
+            tracing::warn!("Channel to server closed unexpectedly");
+
             let _ = stream.shutdown().await;
             false
         }
@@ -204,13 +205,16 @@ async fn handle_tcp_stream_receive(
 ) -> bool {
     match read {
         None => {
+            tracing::warn!("Channel to client closed unexpectedly");
+
             let _ = ws.send(Message::Close(None)).await;
             false
         }
-        // TODO: Put error into close message
         Some((Err(err), _)) => {
             tracing::warn!("Error while reading TCP stream: {:?}", err);
-            let _ = ws.send(Message::Close(None)).await;
+            let _ = ws
+                .send(Message::Close(Some(io_error_to_close_msg(err))))
+                .await;
             false
         }
         Some((Ok(read), buf)) => {

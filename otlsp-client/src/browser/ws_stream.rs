@@ -4,9 +4,8 @@ use otlsp_core::OtlspErrorCode;
 use std::{
     cell::RefCell,
     collections::VecDeque,
-    io,
+    io::{self},
     rc::Rc,
-    sync::atomic::{AtomicBool, Ordering},
     task::Waker,
 };
 use url::Url;
@@ -25,7 +24,12 @@ pub(crate) struct WsStream {
     /// wake channels, if there is new data available
     waker: Rc<RefCell<Vec<Waker>>>,
 
-    is_closed: Rc<AtomicBool>,
+    /// State of the connection
+    ///
+    /// `None` indicates it is still open
+    /// `Some(Ok(()))` indicates it closed without error
+    /// `Some(Err(...))` is an error that needs to be propagated to the upper layers
+    connection_status: Rc<RefCell<Option<io::Result<()>>>>,
 
     /// Handle to the onmessage callback function.
     ///
@@ -76,12 +80,20 @@ impl WsStream {
         });
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
 
-        // Initialize on_close to set the is_closed atomic bool to true
-        let is_closed = Rc::new(AtomicBool::new(false));
-        let is_closed_clone = is_closed.clone();
+        let connection_status = Rc::new(RefCell::new(None));
+        let connection_status_clone = connection_status.clone();
+        let waker_cloned = waker.clone();
+
         let onclose_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
             tracing::debug!("Received close event: {:?}", event.data());
-            is_closed_clone.store(true, Ordering::Relaxed);
+
+            let mut connection_status = connection_status_clone.borrow_mut();
+            *connection_status = match event.dyn_into::<CloseEvent>().ok() {
+                None => Some(Ok(())),
+                Some(close) => Some(Err(close_event_to_io_err(close))),
+            };
+
+            Self::wake_all(&waker_cloned);
         });
         websocket.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
 
@@ -89,7 +101,7 @@ impl WsStream {
             websocket,
             input_buffer,
             waker,
-            is_closed,
+            connection_status,
             #[allow(clippy::arc_with_non_send_sync)]
             _onmessage: Rc::new(onmessage_callback),
             #[allow(clippy::arc_with_non_send_sync)]
@@ -190,6 +202,10 @@ impl WsStream {
 
 impl io::Read for WsStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
         tracing::trace!("Reading from ws stream");
 
         let mut input = self.input_buffer.borrow_mut();
@@ -199,14 +215,24 @@ impl io::Read for WsStream {
             buf[idx] = byte;
         }
 
-        // If there were no bytes in the input buffer, but the connection is still open,
-        // we need to return an interrupted error
-        if new_bytes_len == 0 && !self.is_closed.load(Ordering::Relaxed) {
-            tracing::trace!("ws stream read: would block");
-            Err(io::Error::new(
-                io::ErrorKind::WouldBlock,
-                "No new data available".to_string(),
-            ))
+        if new_bytes_len == 0 {
+            match self.connection_status.borrow_mut().take() {
+                // Connection closed without error
+                Some(Ok(())) => Ok(0),
+                // There was an error, transmit it to upper layer
+                Some(Err(err)) => {
+                    tracing::trace!("ws stream read: sending error {} to upper layer", err);
+                    Err(err)
+                }
+                // Connection is still open, send a would block
+                None => {
+                    tracing::trace!("ws stream read: would block");
+                    Err(io::Error::new(
+                        io::ErrorKind::WouldBlock,
+                        "No new data available".to_string(),
+                    ))
+                }
+            }
         } else {
             tracing::trace!("ws stream read {} bytes", new_bytes_len);
             Ok(new_bytes_len)
@@ -219,7 +245,7 @@ impl io::Write for WsStream {
         self.websocket
             .send_with_js_u8_array(&Uint8Array::from(buf))
             .map_err(|err| {
-                std::io::Error::new(
+                io::Error::new(
                     io::ErrorKind::BrokenPipe,
                     err.as_string()
                         .unwrap_or("Failed to send to websocket".to_string()),
@@ -248,7 +274,8 @@ impl Drop for WsStream {
         self.websocket.close().unwrap();
 
         // Set the stream to closed, then wake up all the wakers, so they read the EOF
-        self.is_closed.store(true, Ordering::SeqCst);
+        *self.connection_status.borrow_mut() = Some(Ok(()));
+
         Self::wake_all(&self.waker);
     }
 }
