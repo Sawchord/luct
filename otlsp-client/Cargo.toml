@@ -11,6 +11,8 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
+otlsp-core = { path = "../otlsp-core" }
+
 # HTTP
 hyper = { workspace = true }
 hyper-util = { workspace = true }

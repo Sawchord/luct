@@ -1835,6 +1835,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "js-sys",
+ "otlsp-core",
  "rustls",
  "rustls-pki-types",
  "rustls-rustcrypto",
@@ -1860,8 +1861,7 @@ name = "otlsp-server"
 version = "0.0.0"
 dependencies = [
  "axum",
- "clap",
- "eyre",
+ "otlsp-core",
  "serde",
  "tokio",
  "toml 0.9.12+spec-1.1.0",
