@@ -1,12 +1,15 @@
 use hyper::{Error as HyperError, http::Error as HttpError};
 use rustls::{Error as RustlsError, server::VerifierBuilderError};
-use std::sync::Arc;
+use std::{io, sync::Arc};
 use thiserror::Error;
 
 #[derive(Debug, Clone, Error)]
 pub enum OtlspError {
     #[error("Network unreachable: {0}")]
     Unreachable(String),
+
+    #[error("TCP stream error: {0}")]
+    Tcp(Arc<io::Error>),
 
     #[error("TLS error: {0}")]
     Tls(#[from] RustlsError),
@@ -22,6 +25,9 @@ pub enum OtlspError {
 
     #[error("Invalid dns name")]
     InvalidDnsNameError,
+
+    #[error("Unknown error")]
+    Unknown,
 }
 
 impl From<HyperError> for OtlspError {
@@ -33,5 +39,11 @@ impl From<HyperError> for OtlspError {
 impl From<HttpError> for OtlspError {
     fn from(error: HttpError) -> Self {
         Self::HttpBody(Arc::new(error))
+    }
+}
+
+impl From<io::Error> for OtlspError {
+    fn from(error: io::Error) -> Self {
+        Self::Tcp(Arc::new(error))
     }
 }
