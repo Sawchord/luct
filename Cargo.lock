@@ -1620,6 +1620,7 @@ dependencies = [
  "js-sys",
  "luct-client",
  "luct-core",
+ "luct-otlsp",
  "luct-scanner",
  "luct-store",
  "serde-wasm-bindgen",
@@ -1688,6 +1689,7 @@ dependencies = [
  "serde_json",
  "thiserror 2.0.18",
  "tracing",
+ "url",
  "web-time",
 ]
 

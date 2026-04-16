@@ -26,6 +26,7 @@ tracing = { workspace = true }
 lru = { workspace = true }
 
 web-time = { workspace = true }
+url = { workspace = true }
 
 [features]
 default = []
