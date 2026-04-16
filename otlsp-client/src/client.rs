@@ -119,20 +119,22 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    async fn error_test() {
+    async fn permission_denied_test() {
         tracing();
 
         // This url is not a log and therefore will not be enabled in on a proxy
         let result = get_request("https://google.com", "/").await;
-
-        match result {
-            Err(OtlspError::Tcp(err)) => {
-                let kind = err.kind();
-                assert_eq!(kind, ErrorKind::PermissionDenied);
-            }
-            a => panic!("Unexpected result {:?}", a),
-        };
+        assert_error(result, ErrorKind::PermissionDenied);
     }
+
+    // #[wasm_bindgen_test]
+    // async fn invalid_url_test() {
+    //     tracing();
+
+    //     // This url is not fully qualified and should therefore be rejected
+    //     let result = get_request("google.com", "/").await;
+    //     assert_error(result, ErrorKind::InvalidInput);
+    // }
 
     async fn get_request(url: &str, path: &str) -> Result<(u16, Vec<u8>), OtlspError> {
         let url = Url::parse(url).unwrap();
@@ -169,5 +171,15 @@ mod tests {
                     .build(),
             )),
         );
+    }
+
+    fn assert_error(result: Result<(u16, Vec<u8>), OtlspError>, error: ErrorKind) {
+        match result {
+            Err(OtlspError::Tcp(err)) => {
+                let kind = err.kind();
+                assert_eq!(kind, error);
+            }
+            a => panic!("Unexpected result {:?}", a),
+        };
     }
 }

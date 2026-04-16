@@ -55,7 +55,7 @@ pub(crate) async fn handle_otlsp_connection(
             .any(|url| is_valid_destination(url, &destination))
     };
 
-    handle_connection(destination.dst().clone(), ws, has_access).await
+    handle_connection(destination.0, ws, has_access).await
 }
 
 /// Test whether the [`Url`] `dst` is valid against the [`Url`] `dst`

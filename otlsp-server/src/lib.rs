@@ -20,21 +20,38 @@ const FRAME_SIZE: usize = 1500;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Destination {
-    to: Url,
+    to: String,
 }
 
 impl Destination {
-    pub fn dst(&self) -> &Url {
+    pub fn dst(&self) -> &str {
         &self.to
     }
 }
 
 // TODO: Url parsing should happen here, such that we can do better error handling on bad url
-pub async fn handle_connection<F>(destination: Url, ws: WebSocketUpgrade, access: F) -> Response
+pub async fn handle_connection<F>(
+    destination: Destination,
+    ws: WebSocketUpgrade,
+    access: F,
+) -> Response
 where
     F: Fn(Url) -> bool + Send + 'static,
 {
     ws.on_upgrade(async move |mut ws: WebSocket| {
+        let destination = destination.dst();
+        let Ok(destination) = Url::parse(destination) else {
+            tracing::debug!("Failed to parse destination url {}", destination);
+
+            let _ = ws
+                .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
+                    ErrorKind::InvalidInput,
+                    format!("Destination url {} could not be parsed", destination),
+                )))))
+                .await;
+            return;
+        };
+
         // Check access
         if !access(destination.clone()) {
             tracing::debug!(
