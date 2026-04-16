@@ -66,11 +66,11 @@ impl WsStream {
                     Self::wake_all(&waker_cloned);
                 }
             } else if let Ok(blob) = event.data().dyn_into::<Blob>() {
-                tracing::trace!("received Blob: {:?}", blob);
+                tracing::warn!("received unexpected Blob: {:?}", blob);
             } else if let Ok(txt) = event.data().dyn_into::<JsString>() {
-                tracing::trace!("received Text: {:?}", txt);
+                tracing::warn!("received unexpected Text: {:?}", txt);
             } else {
-                tracing::trace!("received Unknown: {:?}", event.data());
+                tracing::warn!("received unexpected Unknown: {:?}", event.data());
             }
         });
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
@@ -129,7 +129,6 @@ impl WsStream {
                     "Opened websocket connection: {:?}",
                     event.data().as_string()
                 );
-                ok.call0(&JsValue::null()).unwrap();
             });
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             open_cb = Some(onopen_callback);
@@ -160,6 +159,7 @@ impl WsStream {
         match JsFuture::from(opened).await {
             Ok(_) => (),
             Err(err) => {
+                tracing::warn!("Failed to establish websocket connection: {:?}", err);
                 return Err(OtlspError::Unreachable(
                     err.as_string().unwrap_or("Failed to connect".to_string()),
                 ));
@@ -228,9 +228,11 @@ impl io::Write for WsStream {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        // FIXME: We would need to wait until the websocket has sent all the data
-        // There seems to be no way of acquiring this information
-        tracing::warn!("Called flush which is not implemented");
+        // NOTE: The Javascript engine has buffered the data
+        // We do not have any way of checking, whether it has already arrived.
+        // However, the data will still be sent out even if we drop WsStream, as long
+        // the connection to the server persists.
+        // Therefore for our purposes, we can consider the data flushed.
         Ok(())
     }
 }
