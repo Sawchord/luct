@@ -1,3 +1,5 @@
+use std::io::{self, ErrorKind};
+
 use axum::{
     Error,
     body::Body,
@@ -47,32 +49,47 @@ where
             .unwrap();
     }
 
-    // Connect to destination
-    let stream = match (destination.host(), destination.port_or_known_default()) {
-        (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,
-        (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
-        (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
-        _ => {
-            tracing::debug!("Failed to parse destination {}", destination);
-            return Response::builder()
-                .status(400)
-                .body(Body::from("Failed to parse destination"))
-                .unwrap();
-        }
-    };
-
     ws.on_upgrade(async move |mut ws: WebSocket| {
-        let mut stream = match stream {
+        // Connect to destination
+        let stream = match (destination.host(), destination.port_or_known_default()) {
+            (Some(Host::Domain(domain)), Some(port)) => TcpStream::connect((domain, port)).await,
+            (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
+            (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
+            _ => {
+                tracing::debug!("Failed to parse destination {}", destination);
+                let _ = ws
+                    .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
+                        ErrorKind::InvalidInput,
+                        format!(
+                            "Destination {} cannot be parsed as OTLSP destionation",
+                            destination
+                        ),
+                    )))))
+                    .await;
+                return;
+            }
+        };
+
+        let stream = match stream {
             Err(err) => {
                 tracing::debug!("Failed to connect to connection: {}", destination);
-                let _ = ws.send(Message::Close(Some(close_msg_from_error(err)))).await; 
+                let _ = ws
+                    .send(Message::Close(Some(io_error_to_close_msg(err))))
+                    .await;
                 return;
-            },
+            }
             Ok(stream) => stream,
         };
-    tracing::debug!("TCP stream to target established");
-    
+        tracing::debug!("TCP stream to target established");
 
+        let _ = ws.send(Message::Text("accept".into())).await;
+        tracing::debug!("OTLSP connection accepted");
+
+        connection_loop(ws, stream, destination).await;
+    })
+}
+
+async fn connection_loop(mut ws: WebSocket, mut stream: TcpStream, destination: Url) {
     // TODO: Make size configurable
     let (to_server_tx, mut to_server_rx) =
         tokio::sync::mpsc::channel::<Option<Result<Message, Error>>>(100);
@@ -81,40 +98,37 @@ where
 
     // TODO: Close WS with a reason
     // TODO: Error handling in the ws.send calls
-        let _ = ws.send(Message::Text("accept".into())).await;
-        tracing::debug!("OTLSP connection accepted");
 
-        let mut buf = [0; FRAME_SIZE];
+    let mut buf = [0; FRAME_SIZE];
 
-        loop {
-            select! {
-                biased;
+    loop {
+        select! {
+            biased;
 
-                // Handle receiving data from the web socket side
-                data = to_server_rx.recv() => {
-                    if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination).await {
-                        break;
-                    }
-                },
-                // Handle receiving data from the tcp socket side
-                read = to_client_rx.recv() => {
-                    if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination).await {
-                        break;
-                    }
-                },
-                read = stream.read(&mut buf) => {
-                    to_client_tx.send((read, buf))
-                    .await
-                    .expect("to_client_rx dropped unexpectedly");
+            // Handle receiving data from the web socket side
+            data = to_server_rx.recv() => {
+                if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination).await {
+                    break;
                 }
-                data = ws.recv() => {
-                    to_server_tx.send(data)
-                    .await
-                    .expect("to_client_rx dropped unexpectedly");
-                },
+            },
+            // Handle receiving data from the tcp socket side
+            read = to_client_rx.recv() => {
+                if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination).await {
+                    break;
+                }
+            },
+            read = stream.read(&mut buf) => {
+                to_client_tx.send((read, buf))
+                .await
+                .expect("to_client_rx dropped unexpectedly");
             }
+            data = ws.recv() => {
+                to_server_tx.send(data)
+                .await
+                .expect("to_client_rx dropped unexpectedly");
+            },
         }
-    })
+    }
 }
 
 async fn handle_websocket_receive(
@@ -132,7 +146,6 @@ async fn handle_websocket_receive(
         Some(data) => match data {
             Err(err) => {
                 tracing::warn!("Error while reading from websocket: {:?}", err);
-                //let _ = ws.send(Message::Close(None)).await;
                 let _ = stream.shutdown().await;
                 false
             }
@@ -140,7 +153,6 @@ async fn handle_websocket_receive(
                 Message::Binary(bytes) => {
                     tracing::trace!("Received {} bytes of data from websocket", bytes.len());
                     let _ = stream.write_all(&bytes).await;
-                    //tracing::trace!("Forwarded {} bytes", bytes.len());
                     true
                 }
                 Message::Close(_) => {
@@ -177,6 +189,7 @@ async fn handle_tcp_stream_receive(
             let _ = ws.send(Message::Close(None)).await;
             false
         }
+        // TODO: Put error into close message
         Some((Err(err), _)) => {
             tracing::warn!("Error while reading TCP stream: {:?}", err);
             let _ = ws.send(Message::Close(None)).await;
@@ -197,7 +210,7 @@ async fn handle_tcp_stream_receive(
     }
 }
 
-fn close_msg_from_error(error: std::io::Error) -> CloseFrame {
+fn io_error_to_close_msg(error: io::Error) -> CloseFrame {
     let code = OtlspErrorCode::from(error.kind());
     let reason = error
         .into_inner()
