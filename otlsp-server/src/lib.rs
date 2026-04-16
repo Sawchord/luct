@@ -75,7 +75,11 @@ where
         tokio::sync::mpsc::channel::<(tokio::io::Result<usize>, [u8; 1500])>(100);
 
     // TODO: Close WS with a reason
+    // TODO: Error handling in the ws.send calls
     ws.on_upgrade(async move |mut ws: WebSocket| {
+        let _ = ws.send(Message::Text("accept".into())).await;
+        tracing::debug!("OTLSP connection accepted");
+
         let mut buf = [0; FRAME_SIZE];
 
         loop {

@@ -105,8 +105,25 @@ impl WsStream {
         // These are here to hold the closures until the promise is resolved
         let mut open_cb = None;
         let mut error_cb = None;
+        let mut message_cb = None;
+        let mut close_cb = None;
 
         let opened = Promise::new(&mut |ok, err| {
+            let err_clone = err.clone();
+            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+                tracing::warn!("Error while opening websocket: {:?}", event);
+                err_clone.call1(&JsValue::null(), &event.data()).unwrap();
+            });
+            websocket.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
+            error_cb = Some(onerror_callback);
+
+            let onclose_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+                tracing::warn!("Websocket closed unexpectedly: {:?}", event);
+                err.call1(&JsValue::null(), &event.data()).unwrap();
+            });
+            websocket.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
+            close_cb = Some(onclose_callback);
+
             let onopen_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
                 tracing::debug!(
                     "Opened websocket connection: {:?}",
@@ -117,11 +134,26 @@ impl WsStream {
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             open_cb = Some(onopen_callback);
 
-            let onerror_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-                err.call1(&JsValue::null(), &event.data()).unwrap();
+            let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
+                tracing::debug!(
+                    "Opened websocket connection: {:?}",
+                    event.data().as_string()
+                );
+                if let Ok(str) = event.data().dyn_into::<JsString>()
+                    && str == "accept"
+                {
+                    tracing::debug!(
+                        "Websocket connection opened: {:?}",
+                        event.data().as_string()
+                    );
+                    ok.call0(&JsValue::null()).unwrap();
+                } else {
+                    tracing::warn!("Ignoring unknown data");
+                }
+                ok.call0(&JsValue::null()).unwrap();
             });
-            websocket.set_onerror(Some(onerror_callback.as_ref().unchecked_ref()));
-            error_cb = Some(onerror_callback)
+            websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
+            message_cb = Some(onmessage_callback);
         });
 
         // Await the promise and check the errors
@@ -135,8 +167,10 @@ impl WsStream {
         };
 
         // Unset the callbacks
-        websocket.set_onopen(None);
         websocket.set_onerror(None);
+        websocket.set_onclose(None);
+        websocket.set_onopen(None);
+        websocket.set_onmessage(None);
 
         Ok(())
     }
