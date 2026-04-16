@@ -15,8 +15,9 @@ crate-type = ["cdylib"]
 
 [dependencies]
 luct-core = { path = "../../luct-core" }
-luct-scanner = { path = "../../luct-scanner" }
 luct-client = { path = "../../luct-client" }
+luct-otlsp = { path = "../../luct-otlsp" }
+luct-scanner = { path = "../../luct-scanner" }
 luct-store = { path = "../../luct-store" }
 
 serde_json = { workspace = true }

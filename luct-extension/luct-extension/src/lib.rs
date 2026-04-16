@@ -3,8 +3,9 @@
 use crate::store::BrowserStore;
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
-use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
+use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{CertificateChain, log_list::v3::LogList};
+use luct_otlsp::OtlspClient;
 use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, ScannerConfig, SctReport};
 use std::sync::Arc;
 use tracing::Level;
@@ -42,7 +43,7 @@ pub fn start() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Scanner {
-    scanner: CtScanner<RequestDeduplicationClient<ReqwestClient>>,
+    scanner: CtScanner<RequestDeduplicationClient<OtlspClient>>,
 }
 
 #[wasm_bindgen]
@@ -53,7 +54,18 @@ impl Scanner {
         let logs = log_list.currently_active_logs();
 
         let config = ScannerConfig::new();
-        let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
+
+        let client = match config.otlsp_url() {
+            Some(url) => OtlspClient::builder()
+                .proxy_url(url.clone())
+                .connection_timeout(*config.otlsp_connection_timeout())
+                .agent(USER_AGENT.to_string())
+                .build(),
+
+            None => OtlspClient::builder().agent(USER_AGENT.to_string()).build(),
+        };
+        let client = RequestDeduplicationClient::new(client);
+
         let sct_report_cache = Box::new(
             BrowserStore::<[u8; 32], SctReport>::new_local_store("report".to_string())
                 .expect("Failed to initialize SCT report cache"),
