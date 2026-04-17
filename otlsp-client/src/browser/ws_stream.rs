@@ -97,6 +97,7 @@ impl WsStream {
         });
         websocket.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
 
+        Self::wake_all(&waker);
         Ok(Self {
             websocket,
             input_buffer,
