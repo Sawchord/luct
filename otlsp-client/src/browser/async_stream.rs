@@ -3,21 +3,14 @@ use futures::io;
 use hyper::rt::ReadBufCursor;
 use rustls::{ClientConnection, StreamOwned};
 use std::{
-    cell::RefCell,
     io::{ErrorKind, Read, Write},
     pin::Pin,
-    rc::Rc,
-    task::{Context, Poll, Waker},
+    task::{Context, Poll},
 };
 use url::Url;
 
-// TODO: Likely, we can remove the waker reference since
-// we can just access WsStream directly
 #[derive(Debug)]
-pub(crate) struct AsyncStream {
-    pub(crate) stream: StreamOwned<ClientConnection, WsStream>,
-    pub(crate) waker: Rc<RefCell<Vec<Waker>>>,
-}
+pub(crate) struct AsyncStream(StreamOwned<ClientConnection, WsStream>);
 
 impl AsyncStream {
     pub(crate) async fn new(
@@ -28,11 +21,9 @@ impl AsyncStream {
         // Setup the underlying websocket stream
         let ws_stream = WsStream::new(proxy, dst).await?;
 
-        let waker = ws_stream.waker();
-
         // Initiate the connection
         let stream = StreamOwned::new(conn, ws_stream);
-        Ok(Self { stream, waker })
+        Ok(Self(stream))
     }
 }
 
@@ -45,7 +36,7 @@ impl hyper::rt::Read for AsyncStream {
         let mut buf = [0u8; 1500];
 
         // Try to read the inner stream
-        match self.stream.read(&mut buf) {
+        match self.0.read(&mut buf) {
             // If we got data back, we return it
             Ok(read) => {
                 // TODO: Handle situation where read+buf has not enough space
@@ -57,7 +48,7 @@ impl hyper::rt::Read for AsyncStream {
             // such that the task gets woken up if the WsStream receives new bytes
             Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                 tracing::trace!("async read: stream would block");
-                self.waker.borrow_mut().push(cx.waker().clone());
+                self.0.sock.enqueue_waker(cx);
                 Poll::Pending
             }
             // Other errors are being returned verbatim
@@ -75,14 +66,14 @@ impl hyper::rt::Write for AsyncStream {
         cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<Result<usize, io::Error>> {
-        match self.stream.write_all(buf) {
+        match self.0.write_all(buf) {
             Ok(()) => {
                 tracing::trace!("async stream wrote {} bytes", buf.len());
                 Poll::Ready(Ok(buf.len()))
             }
             Err(err) if err.kind() == io::ErrorKind::WouldBlock => {
                 tracing::trace!("async write: stream would block");
-                self.waker.borrow_mut().push(cx.waker().clone());
+                self.0.sock.enqueue_waker(cx);
                 Poll::Pending
             }
             Err(err) => {
@@ -99,10 +90,10 @@ impl hyper::rt::Write for AsyncStream {
     }
 
     fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
-        match self.stream.sock.close() {
+        match self.0.sock.close() {
             Err(err) if err.kind() == ErrorKind::WouldBlock => {
                 tracing::debug!("poll_shutdown: waiting on close");
-                self.waker.borrow_mut().push(cx.waker().clone());
+                self.0.sock.enqueue_waker(cx);
                 Poll::Pending
             }
             result => {

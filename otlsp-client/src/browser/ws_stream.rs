@@ -6,7 +6,7 @@ use std::{
     collections::VecDeque,
     io::{self, ErrorKind},
     rc::Rc,
-    task::Waker,
+    task::{Context, Waker},
 };
 use url::Url;
 use wasm_bindgen::{JsCast, JsValue, prelude::Closure};
@@ -110,8 +110,8 @@ impl WsStream {
         })
     }
 
-    pub fn waker(&self) -> Rc<RefCell<Vec<Waker>>> {
-        self.waker.clone()
+    pub fn enqueue_waker(&self, cx: &Context<'_>) {
+        self.waker.borrow_mut().push(cx.waker().clone());
     }
 
     /// Set up the connection or error out
@@ -139,25 +139,18 @@ impl WsStream {
             websocket.set_onclose(Some(onclose_callback.as_ref().unchecked_ref()));
             close_cb = Some(onclose_callback);
 
-            let onopen_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-                tracing::debug!(
-                    "Opened websocket connection: {:?}",
-                    event.data().as_string()
-                );
+            let onopen_callback = Closure::<dyn FnMut(_)>::new(move |_event: MessageEvent| {
+                tracing::debug!("Websocket open event called",);
             });
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             open_cb = Some(onopen_callback);
 
             let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-                tracing::debug!(
-                    "Opened websocket connection: {:?}",
-                    event.data().as_string()
-                );
                 if let Ok(str) = event.data().dyn_into::<JsString>()
                     && str == "accept"
                 {
                     tracing::debug!(
-                        "Websocket connection opened: {:?}",
+                        "Websocket connection established: {:?}",
                         event.data().as_string()
                     );
                     ok.call0(&JsValue::null()).unwrap();
