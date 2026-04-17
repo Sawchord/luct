@@ -80,7 +80,6 @@ eyre = { version = "0.6" }
 thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10", features = ["chacha"] }
-async-oneshot = { version = "0.5" }
 itertools = { version = "0.14" }
 lru = { version = "0.17" }
 

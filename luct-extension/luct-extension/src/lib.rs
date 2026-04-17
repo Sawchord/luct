@@ -34,7 +34,7 @@ pub fn start() -> Result<(), JsValue> {
 
     tracing_wasm::set_as_global_default_with_config(
         WASMLayerConfigBuilder::default()
-            .set_max_level(Level::INFO)
+            .set_max_level(Level::DEBUG)
             .build(),
     );
 

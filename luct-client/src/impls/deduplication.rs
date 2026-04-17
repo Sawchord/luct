@@ -1,5 +1,5 @@
 use crate::{Client, ClientError};
-use async_oneshot::{Sender, oneshot};
+use futures::channel::oneshot::{Sender, channel};
 use std::{
     collections::BTreeMap,
     fmt,
@@ -102,7 +102,7 @@ impl<C: Client> RequestDeduplicationClient<C> {
         let (rx, request) = {
             let mut requests = self.requests.lock().unwrap();
 
-            let (tx, rx) = oneshot::<Response>();
+            let (tx, rx) = channel::<Response>();
             match requests.get_mut(&key) {
                 Some(ongoing_requests) => {
                     ongoing_requests.push(tx);
@@ -133,7 +133,7 @@ impl<C: Client> RequestDeduplicationClient<C> {
                             senders.len()
                         );
 
-                        for mut tx in senders {
+                        for tx in senders {
                             tx.send(response.clone()).unwrap();
                         }
                     };
