@@ -4,7 +4,7 @@ use otlsp_core::OtlspErrorCode;
 use std::{
     cell::RefCell,
     collections::VecDeque,
-    io::{self},
+    io::{self, ErrorKind},
     rc::Rc,
     task::Waker,
 };
@@ -190,6 +190,23 @@ impl WsStream {
         Ok(())
     }
 
+    pub(crate) fn close(&self) -> io::Result<()> {
+        self.websocket
+            .close_with_code(1000)
+            .expect("Failed to close websocket");
+
+        match self.connection_status.borrow_mut().take() {
+            Some(status) => status,
+            None => {
+                tracing::trace!("ws stream close: would block");
+                Err(io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    "Waiting on shutdown".to_string(),
+                ))
+            }
+        }
+    }
+
     /// Wake all wakers in the list
     fn wake_all(waker: &Rc<RefCell<Vec<Waker>>>) {
         let mut waker = waker.borrow_mut();
@@ -268,21 +285,20 @@ impl io::Write for WsStream {
 
 impl Drop for WsStream {
     fn drop(&mut self) {
-        tracing::debug!("Closing ws stream");
-
-        // Need to close the WS stream, to make sure that onmessage will never be called again
-        self.websocket.close().unwrap();
-
-        // Set the stream to closed, then wake up all the wakers, so they read the EOF
-        *self.connection_status.borrow_mut() = Some(Ok(()));
-
-        Self::wake_all(&self.waker);
+        tracing::debug!("Dropping ws stream");
     }
 }
 
 fn close_event_to_io_err(close: CloseEvent) -> io::Error {
     let code = OtlspErrorCode::from(close.code());
-    let reason = close.reason();
 
-    io::Error::new(code.into(), reason)
+    let reason = close.reason();
+    let kind: ErrorKind = code.clone().into();
+
+    match kind {
+        ErrorKind::Other => {
+            io::Error::other(format!("Websocket error[{}]: {}", u16::from(code), reason))
+        }
+        kind => io::Error::new(kind, reason),
+    }
 }

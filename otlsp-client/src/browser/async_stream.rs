@@ -4,12 +4,14 @@ use hyper::rt::ReadBufCursor;
 use rustls::{ClientConnection, StreamOwned};
 use std::{
     cell::RefCell,
-    io::{Read, Write},
+    io::{ErrorKind, Read, Write},
     pin::Pin,
     rc::Rc,
     task::{Context, Poll, Waker},
 };
 
+// TODO: Likely, we can remove the waker reference since
+// we can just access WsStream directly
 #[derive(Debug)]
 pub(crate) struct AsyncStream {
     pub(crate) stream: StreamOwned<ClientConnection, WsStream>,
@@ -78,9 +80,17 @@ impl hyper::rt::Write for AsyncStream {
         Poll::Ready(Ok(()))
     }
 
-    fn poll_shutdown(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
-        // TODO: Implement
-        tracing::warn!("Called poll_shutdown which is not implemented");
-        Poll::Ready(Ok(()))
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+        match self.stream.sock.close() {
+            Err(err) if err.kind() == ErrorKind::WouldBlock => {
+                tracing::debug!("poll_shutdown: waiting on close");
+                self.waker.borrow_mut().push(cx.waker().clone());
+                Poll::Pending
+            }
+            result => {
+                tracing::debug!("poll_shutdown: shutting down with status {:?}", result);
+                Poll::Ready(result)
+            }
+        }
     }
 }
