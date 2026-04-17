@@ -1,4 +1,4 @@
-use crate::browser::ws_stream::WsStream;
+use crate::{OtlspError, browser::ws_stream::WsStream};
 use futures::io;
 use hyper::rt::ReadBufCursor;
 use rustls::{ClientConnection, StreamOwned};
@@ -9,6 +9,7 @@ use std::{
     rc::Rc,
     task::{Context, Poll, Waker},
 };
+use url::Url;
 
 // TODO: Likely, we can remove the waker reference since
 // we can just access WsStream directly
@@ -16,6 +17,23 @@ use std::{
 pub(crate) struct AsyncStream {
     pub(crate) stream: StreamOwned<ClientConnection, WsStream>,
     pub(crate) waker: Rc<RefCell<Vec<Waker>>>,
+}
+
+impl AsyncStream {
+    pub(crate) async fn new(
+        conn: ClientConnection,
+        proxy: Url,
+        dst: Url,
+    ) -> Result<Self, OtlspError> {
+        // Setup the underlying websocket stream
+        let ws_stream = WsStream::new(proxy, dst).await?;
+
+        let waker = ws_stream.waker();
+
+        // Initiate the connection
+        let stream = StreamOwned::new(conn, ws_stream);
+        Ok(Self { stream, waker })
+    }
 }
 
 impl hyper::rt::Read for AsyncStream {

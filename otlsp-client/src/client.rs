@@ -1,11 +1,6 @@
-use crate::{
-    browser::{async_stream::AsyncStream, ws_stream::WsStream},
-    error::OtlspError,
-};
+use crate::{browser::async_stream::AsyncStream, error::OtlspError};
 use hyper::{body::Body, client::conn::http1::SendRequest};
-use rustls::{
-    ClientConfig, ClientConnection, RootCertStore, StreamOwned, client::WebPkiServerVerifier,
-};
+use rustls::{ClientConfig, ClientConnection, RootCertStore, client::WebPkiServerVerifier};
 use rustls_pki_types::{ServerName, TrustAnchor};
 use std::sync::Arc;
 use url::Url;
@@ -72,15 +67,8 @@ impl OtlspClientBuilder {
                 .to_owned();
         let conn = ClientConnection::new(Arc::new(config), server_name)?;
 
-        // Setup the underlying websocket stream
-        let ws_stream = WsStream::new(self.proxy, dst).await?;
-
-        // Initiate the connection
-        let waker = ws_stream.waker();
-        let tls = StreamOwned::new(conn, ws_stream);
-        let (sender, connection) =
-            hyper::client::conn::http1::handshake::<_, B>(AsyncStream { stream: tls, waker })
-                .await?;
+        let stream = AsyncStream::new(conn, self.proxy, dst).await?;
+        let (sender, connection) = hyper::client::conn::http1::handshake::<_, B>(stream).await?;
 
         // Send connection to the web-sys executor
         wasm_bindgen_futures::spawn_local(async move {
