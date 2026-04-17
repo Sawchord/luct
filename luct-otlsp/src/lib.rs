@@ -1,10 +1,10 @@
 pub use crate::config::OtlspClientBuilder;
 use crate::{config::OtlspClientConfig, connection::OtlspConnection};
-use futures::TryFutureExt;
+use futures::lock::Mutex;
 use luct_client::{Client, ClientError, reqwest::ReqwestClient};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, RwLock},
+    sync::{Arc, RwLock},
 };
 use url::{Host, Url};
 
@@ -29,15 +29,11 @@ impl Client for OtlspClient {
         };
 
         let connection = self.get_connection(url).await?;
-        let request = Self::request(connection, url, params)?;
-
-        // NOTE: The lock on connection is already dropped here
-        request.await.map(|(status, bytes)| {
-            (
-                status,
-                Arc::new(String::from_utf8_lossy(&bytes).to_string()),
-            )
-        })
+        let (status, response) = Self::request(&connection, url, params).await?;
+        Ok((
+            status,
+            Arc::new(String::from_utf8_lossy(&response).to_string()),
+        ))
     }
 
     async fn get_bin(
@@ -50,12 +46,8 @@ impl Client for OtlspClient {
         };
 
         let connection = self.get_connection(url).await?;
-        let request = Self::request(connection, url, params)?;
-
-        // NOTE: The lock on connection is already dropped here
-        request
-            .await
-            .map(|(status, bytes)| (status, Arc::new(bytes)))
+        let (status, response) = Self::request(&connection, url, params).await?;
+        Ok((status, Arc::new(response)))
     }
 }
 
@@ -66,8 +58,9 @@ impl OtlspClient {
         };
         let domain = domain.to_owned();
 
-        if let Some(connection) = self.connections.read().unwrap().get(&domain)
-            && !connection.lock().unwrap().has_timed_out()
+        let connection = self.connections.read().unwrap().get(&domain).cloned();
+        if let Some(connection) = connection
+            && !connection.lock().await.has_timed_out()
         {
             tracing::trace!("Reusing existing connection to {}", url);
             return Ok(connection.clone());
@@ -86,17 +79,18 @@ impl OtlspClient {
         Ok(connection)
     }
 
-    fn request(
-        connection: Arc<Mutex<OtlspConnection>>,
+    async fn request(
+        connection: &Arc<Mutex<OtlspConnection>>,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), ClientError>>, ClientError> {
-        connection
+    ) -> Result<(u16, Vec<u8>), ClientError> {
+        let response = connection
             .lock()
-            .unwrap()
-            .get(url, params)
-            .map(|fut| fut.map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err))))
-            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))
+            .await
+            .get_async(url, params)
+            .await
+            .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
+        Ok(response)
     }
 }
 

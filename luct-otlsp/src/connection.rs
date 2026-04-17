@@ -1,5 +1,4 @@
 use crate::config::OtlspClientConfig;
-use futures::{FutureExt, TryFutureExt};
 use http_body_util::BodyExt;
 use hyper::{
     Request,
@@ -47,11 +46,11 @@ impl OtlspConnection {
         })
     }
 
-    pub(crate) fn get(
+    pub(crate) async fn get_async(
         &mut self,
         url: &Url,
         params: &[(&str, &str)],
-    ) -> Result<impl Future<Output = Result<(u16, Vec<u8>), OtlspError>> + use<>, OtlspError> {
+    ) -> Result<(u16, Vec<u8>), OtlspError> {
         assert_eq!(Some(self.host.as_str()), url.host_str());
 
         let mut url = url.clone();
@@ -78,32 +77,20 @@ impl OtlspConnection {
         // as we want before actually polling the future returned here
         // Nonetheless, we make this access here, since we do not want to keep
         // a reference to self in the future
+
+        let response = self.sender.send_request(request).await?;
+        let status = response.status().as_u16();
+        let response: Vec<u8> = response.collect().await?.to_bytes().into();
+
+        tracing::debug!(
+            "Received {} bytes from request (status: {})",
+            response.len(),
+            status
+        );
+
         self.last_access = Instant::now();
 
-        // NOTE: This is not written as a simple async function, because we don't want
-        // to keep the mut self reference. This struct is used in a mutex, and we don't
-        // want to hold the mutex across an await, but rather release it and then await
-        // the future
-        let request = self
-            .sender
-            .send_request(request)
-            .map_err(OtlspError::from)
-            .and_then(|response| {
-                let status = response.status().as_u16();
-                response.collect().map(move |response| {
-                    let response: Vec<u8> = response?.to_bytes().into();
-
-                    tracing::debug!(
-                        "Received {} bytes from request (status: {})",
-                        response.len(),
-                        status
-                    );
-
-                    Ok((status, response))
-                })
-            });
-
-        Ok(request)
+        Ok((status, response))
     }
 
     pub(crate) fn has_timed_out(&self) -> bool {
