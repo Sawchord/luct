@@ -9,7 +9,7 @@ members = [
     "luct-server",
     "luct-scanner",
     "luct-store",
-    "luct-extension/luct-extension",
+    "luct-extension",
     "otlsp-core",
     "otlsp-client",
     "otlsp-server",

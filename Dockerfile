@@ -16,8 +16,8 @@ WORKDIR /usr/src
 
 RUN wget -c https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.117/wasm-bindgen-0.2.117-x86_64-unknown-linux-musl.tar.gz -O - | tar -xz
 
-COPY ./luct-extension/luct ./luct
-COPY ./luct-extension/zip.py .
+COPY ./extension/luct ./luct
+COPY ./extension/zip.py .
 COPY --from=wasm-builder /usr/src/target/wasm32-unknown-unknown/release/luct_extension.wasm .
 RUN sha256sum luct_extension.wasm
 

@@ -20,7 +20,7 @@ const USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     " (https://github.com/Sawchord/luct/)"
 );
-const LOG_LIST: &str = include_str!("../../luct-extension/luct/assets/log_list.json");
+const LOG_LIST: &str = include_str!("../../extension/luct/assets/log_list.json");
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
