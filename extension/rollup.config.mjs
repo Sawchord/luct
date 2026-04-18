@@ -3,6 +3,8 @@ import resolve from "@rollup/plugin-node-resolve";
 import livereload from "rollup-plugin-livereload";
 import serve from "rollup-plugin-serve";
 import css from "rollup-plugin-css-only";
+import postcss from 'rollup-plugin-postcss'
+import preprocess from 'svelte-preprocess'
 
 const PROD = !process.env.ROLLUP_WATCH;
 
@@ -16,8 +18,10 @@ export default {
     },
     plugins: [
         svelte({
+            preprocess: preprocess(),
             compilerOptions: { dev: !PROD },
         }),
+        postcss(),
         css({ output: "bundle.css" }),
         resolve(),
         !PROD &&
