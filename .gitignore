@@ -1,3 +1,7 @@
 **/target
 **/pkg
 luct.xpi
+node_modules
+
+# For now, until we figure out repro builds for svelte
+package-lock.json
