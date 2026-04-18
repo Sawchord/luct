@@ -1,6 +1,6 @@
 <script>
     import "bulma/bulma.sass";
-    import "@fortawesome/fontawesome-free/js/all.js";
+    import "./style.sass";
 
     import Expandable from "./Components/Expandable.svelte";
 </script>

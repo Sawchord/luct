@@ -5,6 +5,7 @@ import serve from "rollup-plugin-serve";
 import css from "rollup-plugin-css-only";
 import postcss from 'rollup-plugin-postcss'
 import { sveltePreprocess } from 'svelte-preprocess'
+import copy from "rollup-plugin-copy";
 
 const PROD = !process.env.ROLLUP_WATCH;
 
@@ -23,6 +24,13 @@ export default {
         }),
         postcss(),
         css({ output: "bundle.css" }),
+        copy({
+            targets: [{
+                src: "node_modules/font-awesome/fonts",
+                dest: "luct/assets"
+            }]
+
+        }),
         resolve(),
         !PROD &&
         serve({
