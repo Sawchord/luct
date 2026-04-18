@@ -6,6 +6,7 @@
         "build": "rollup -c"
     },
     "dependencies": {
+        "@fortawesome/fontawesome-free": "^7.2.0",
         "bulma": "^0.9.4"
     },
     "devDependencies": {

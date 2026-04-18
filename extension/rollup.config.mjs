@@ -4,7 +4,7 @@ import livereload from "rollup-plugin-livereload";
 import serve from "rollup-plugin-serve";
 import css from "rollup-plugin-css-only";
 import postcss from 'rollup-plugin-postcss'
-import preprocess from 'svelte-preprocess'
+import { sveltePreprocess } from 'svelte-preprocess'
 
 const PROD = !process.env.ROLLUP_WATCH;
 
@@ -18,7 +18,7 @@ export default {
     },
     plugins: [
         svelte({
-            preprocess: preprocess(),
+            preprocess: sveltePreprocess(),
             compilerOptions: { dev: !PROD },
         }),
         postcss(),
