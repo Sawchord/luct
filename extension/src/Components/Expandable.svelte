@@ -9,19 +9,19 @@
     }
 </script>
 
-<ul>
-    <li>
-        <!-- svelte-ignore a11y-click-events-have-key-events -->
-        <!-- svelte-ignore a11y-no-static-element-interactions -->
-        <span on:click={click}>
-            {name}
-            {open}
-            {#if open}
-                <i class="fa fa-angle-down"></i>
-            {:else}
-                <i class="fa fa-angle-right"></i>
-            {/if}
-        </span>
+<li>
+    <!-- svelte-ignore a11y-click-events-have-key-events -->
+    <!-- svelte-ignore a11y-no-static-element-interactions -->
+    <span on:click={click}>
+        <b> {name} </b>
+
+        {#if open}
+            <i class="fa fa-angle-down"></i>
+        {:else}
+            <i class="fa fa-angle-right"></i>
+        {/if}
+    </span>
+    <span hidden={!open}>
         <slot></slot>
-    </li>
-</ul>
+    </span>
+</li>
