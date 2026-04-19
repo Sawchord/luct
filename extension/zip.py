@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 # Source: https://fekir.info/post/reproducible-zip-archives/
 
-import os
+import os, hashlib
 from zipfile import ZipFile, ZipInfo, ZIP_DEFLATED, ZIP_STORED
 
 if __name__ == '__main__':
     zipf = ZipFile('luct.xpi', 'w', ZIP_DEFLATED) 
-    path = 'luct'
+    zippath = 'luct'
 
     for root, dirs, files in sorted(os.walk('luct')):
         # for d in sorted(dirs):
@@ -20,13 +20,16 @@ if __name__ == '__main__':
         #     info.CRC = 0 # unclear why necessary for directories, maybe a bug?
         #     zipf.mkdir(info)
         for f in sorted(files):
-            with open(os.path.join(root, f), 'rb') as data:
+            filepath = os.path.join(root, f)
+            with open(filepath, 'rb') as data:
+                digest = hashlib.file_digest(data, "sha256")
+
                 info = ZipInfo(
-                        filename=os.path.relpath(os.path.join(root, f),path),
+                        filename=os.path.relpath(filepath, zippath),
                         date_time=(1980, 1, 1, 12, 1, 0)
                        )
                 info.external_attr = 0o100644 << 16
                 info.create_system = 3 # unx=3 vs fat=0
                 info.compress_type = ZIP_DEFLATED
                 zipf.writestr(info, data.read())
-                print("Compressed file: " + os.path.join(root, f))
+                print("Compressed file: " + filepath + " (" + digest.hexdigest() + ")")
