@@ -1,5 +1,4 @@
 <script>
-    import "bulma/bulma.sass";
     import "./style.sass";
 
     import Expandable from "./Components/Expandable.svelte";

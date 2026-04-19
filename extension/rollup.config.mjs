@@ -19,10 +19,16 @@ export default {
     },
     plugins: [
         svelte({
-            preprocess: sveltePreprocess(),
+            preprocess: sveltePreprocess({
+                scss: {
+                    input: ['./style.sass'],
+                },
+            }),
             compilerOptions: { dev: !PROD },
         }),
-        postcss(),
+        postcss({
+            extract: true,
+        }),
         css({ output: "bundle.css" }),
         copy({
             targets: [{
