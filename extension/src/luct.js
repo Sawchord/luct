@@ -1,5 +1,6 @@
+import "./style.sass";
 import Sidebar from "./Sidebar.svelte";
 
-const sidebar = new Sidebar({ target: document.body })
-
-export default sidebar;
+export function sidebar() {
+    new Sidebar({ target: document.body })
+}

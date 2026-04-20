@@ -13,8 +13,8 @@ export default {
     input: "src/luct.js",
     output: {
         sourcemap: !PROD,
-        format: "iife",
-        name: "sidebar",
+        format: "es",
+        name: "luct",
         file: "luct/assets/bundle.js",
     },
     plugins: [
