@@ -23,6 +23,7 @@ if __name__ == '__main__':
             filepath = os.path.join(root, f)
             with open(filepath, 'rb') as data:
                 digest = hashlib.file_digest(data, "sha256")
+                data.seek(0, 0)
 
                 info = ZipInfo(
                         filename=os.path.relpath(filepath, zippath),
@@ -32,4 +33,4 @@ if __name__ == '__main__':
                 info.create_system = 3 # unx=3 vs fat=0
                 info.compress_type = ZIP_DEFLATED
                 zipf.writestr(info, data.read())
-                print("Compressed file: " + filepath + " (" + digest.hexdigest() + ")")
+                print("Compressing [" + digest.hexdigest()[0:12] + "] " +  filepath)
