@@ -1,5 +1,5 @@
 <script>
-    import Report from "./Components/Report.svelte";
+    import Report from "./components/Report.svelte";
 
     let windowId;
     let tabId;
