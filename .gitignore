@@ -1,7 +1,13 @@
 **/target
 **/pkg
+**/fonts
+**/node_modules
+
+*.wasm
 luct.xpi
-node_modules
+bundle.js
+bundle.css
+bundle.js.map
 
 # For now, until we figure out repro builds for svelte
 package-lock.json
