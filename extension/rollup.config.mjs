@@ -33,7 +33,7 @@ export default {
         copy({
             targets: [{
                 src: "node_modules/font-awesome/fonts",
-                dest: "luct/assets"
+                dest: "luct/"
             }]
 
         }),
