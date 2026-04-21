@@ -1,6 +1,7 @@
 <script>
     import Expandable from "./Expandable.svelte";
     import TimeDisplay from "./TimeDisplay.svelte";
+    import UrlDisplay from "./UrlDisplay.svelte";
 
     //export let report;
 </script>
@@ -19,7 +20,8 @@
             <ul>
                 <li><b> CA: </b> <span> Test </span></li>
                 <li>
-                    <Expandable name="Fingerprint">
+                    <Expandable>
+                        <b slot="name"> Fingerprint</b>
                         <ul>
                             <li>aa:bb:cc:dd</li>
                         </ul>
@@ -39,14 +41,14 @@
                 </li>
 
                 <li>
-                    <Expandable name="Contains 2 scts"></Expandable>
+                    <Expandable>
+                        <b slot="name"> Contains 2 scts</b>
+                    </Expandable>
                 </li>
                 <li>
-                    <Expandable name="Used by 1 domains">
-                        <ul>
-                            <li>wikipedia.org</li>
-                        </ul>
-                    </Expandable>
+                    <UrlDisplay
+                        urls={["wikipedia.org", "test.com", "luct.dev"]}
+                    />
                 </li>
             </ul>
         </div>

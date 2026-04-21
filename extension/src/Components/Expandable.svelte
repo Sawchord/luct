@@ -13,7 +13,7 @@
     <!-- svelte-ignore a11y-click-events-have-key-events -->
     <!-- svelte-ignore a11y-no-static-element-interactions -->
     <span on:click={click}>
-        <b> {name} </b>
+        <slot name="name"></slot>
 
         {#if open}
             <i class="fa fa-angle-down"></i>
