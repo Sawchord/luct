@@ -2,4 +2,4 @@
     export let time;
 </script>
 
-<time>{time.toLocaleString()}</time>
+<time>{new Date(time).toLocaleString()}</time>

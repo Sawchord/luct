@@ -1,5 +1,4 @@
 <script>
-    export let name;
     let open = false;
 
     function click() {

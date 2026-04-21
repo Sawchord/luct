@@ -3,7 +3,11 @@
     import TimeDisplay from "./TimeDisplay.svelte";
     import UrlDisplay from "./UrlDisplay.svelte";
 
-    //export let report;
+    export let report;
+
+    if (report.status === "safe") {
+        console.log("TODO: Icon");
+    }
 </script>
 
 <div class="card">
@@ -23,20 +27,20 @@
                     <Expandable>
                         <b slot="name"> Fingerprint</b>
                         <ul>
-                            <li>aa:bb:cc:dd</li>
+                            <li>{report.report.fingerprint}</li>
                         </ul>
                     </Expandable>
                 </li>
                 <li>
                     <b> Not valid before: </b>
                     <span>
-                        <TimeDisplay time={new Date()} />
+                        <TimeDisplay time={report.report.not_before} />
                     </span>
                 </li>
                 <li>
                     <b> Not valid after: </b>
                     <span>
-                        <TimeDisplay time={new Date()} />
+                        <TimeDisplay time={report.report.not_after} />
                     </span>
                 </li>
 
@@ -46,9 +50,7 @@
                     </Expandable>
                 </li>
                 <li>
-                    <UrlDisplay
-                        urls={["wikipedia.org", "test.com", "luct.dev"]}
-                    />
+                    <UrlDisplay urls={report.urls} />
                 </li>
             </ul>
         </div>
