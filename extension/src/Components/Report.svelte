@@ -1,28 +1,31 @@
 <script>
     import Expandable from "./Expandable.svelte";
+    import SctDisplay from "./SctDisplay.svelte";
+    import SctsDisplay from "./SctsDisplay.svelte";
     import TimeDisplay from "./TimeDisplay.svelte";
     import UrlDisplay from "./UrlDisplay.svelte";
 
     export let report;
 
+    var icon = "";
     if (report.status === "safe") {
-        console.log("TODO: Icon");
+        icon = "fa fa-check";
     }
 </script>
 
 <div class="card">
     <header class="card-header">
-        <p class="card-header-title">"wikipedia.org"</p>
+        <p class="card-header-title">{report.report.cert_subject}</p>
         <button class="card-header-icon" aria-label="more options">
-            <span id="check-outer" class="icon">
-                <i id="check-inner" class="fa" aria-hidden="true"></i>
+            <span class="icon has-text-success">
+                <i class={icon} aria-hidden="true"></i>
             </span>
         </button>
     </header>
     <div class="card-content">
         <div class="content">
             <ul>
-                <li><b> CA: </b> <span> Test </span></li>
+                <li><b> CA: </b> <span>{report.report.ca_issuer}</span></li>
                 <li>
                     <Expandable>
                         <b slot="name"> Fingerprint</b>
@@ -45,9 +48,7 @@
                 </li>
 
                 <li>
-                    <Expandable>
-                        <b slot="name"> Contains 2 scts</b>
-                    </Expandable>
+                    <SctsDisplay scts={report.report.scts} />
                 </li>
                 <li>
                     <UrlDisplay urls={report.urls} />

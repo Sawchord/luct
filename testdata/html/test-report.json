@@ -1,9 +1,9 @@
 {
     "report": {
-        "ca_issuer": "CN=ISRG Root X1,O=Internet Security Research Group,C=US",
+        "ca_issuer": "Internet Security Research Group",
         "ca_subject": "CN=ISRG Root X1,O=Internet Security Research Group,C=US",
         "cert_issuer": "CN=E8,O=Let's Encrypt,C=US",
-        "cert_subject": "CN=*.wikipedia.org",
+        "cert_subject": "*.wikipedia.org",
         "fingerprint": "34:61:AA:F3:0B:87:E6:FF:B7:49:69:AE:7A:96:EF:A4:E8:E1:C6:A2:A3:9A:21:3E:D3:AB:D5:D1:7D:E9:27:9F",
         "not_before": "2026-02-06T22:41:32+01:00",
         "not_after": "2026-05-07T23:41:31+02:00",
