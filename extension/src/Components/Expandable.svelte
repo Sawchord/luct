@@ -3,7 +3,6 @@
 
     function click() {
         open = !open;
-        console.log("Click" + open);
         return true;
     }
 </script>

@@ -21,7 +21,7 @@
     "sidebar_action": {
         "default_icon": "assets/icons/luct_safe.svg",
         "default_title": "luCT",
-        "default_panel": "sidebar/sidebar.html"
+        "default_panel": "sidebar/sidebar2.html"
     },
     "permissions": [
         "webRequest",

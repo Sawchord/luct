@@ -5,7 +5,7 @@
 </script>
 
 <Expandable>
-    <b slot="name"> Used by {urls.length} domains</b>
+    <b slot="name"> Used by {urls.length} urls</b>
     <ul>
         {#each urls as url}
             <li>{url}</li>
