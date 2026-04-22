@@ -26,6 +26,7 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     }
 
     fn key_from_str(&self, key: &str) -> Option<K> {
+        // TODO: Check that the prefix matches, return None
         K::deserialize_key(&key[self.prefix.len() + 1..])
     }
 

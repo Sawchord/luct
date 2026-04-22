@@ -29,7 +29,6 @@ impl Destination {
     }
 }
 
-// TODO: Url parsing should happen here, such that we can do better error handling on bad url
 pub async fn handle_connection<F>(
     destination: Destination,
     ws: WebSocketUpgrade,
