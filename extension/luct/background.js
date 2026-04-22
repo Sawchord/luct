@@ -92,7 +92,7 @@ log(`Loading luCT extension`)
 init().then(load_scanner).then(setup_tab_actions).then(add_listener)
 
 function load_scanner() {
-    fetch(browser.runtime.getURL('assets/log_list.json'))
+    fetch(browser.runtime.getURL('logs/log_list.json'))
         .then(res => {
             res.text().then((logs) => {
                 log('parsed log');
