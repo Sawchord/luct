@@ -1,12 +1,12 @@
 use crate::{
-    store::{AsyncStore, Hashable, Store},
+    store::{AsyncStoreRead, Hashable, StoreRead},
     tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
 
 impl<N, L, V> Tree<N, L, V>
 where
-    N: Store<NodeKey, HashOutput>,
+    N: StoreRead<NodeKey, HashOutput>,
     V: Hashable,
 {
     /// This follows RFC 9162 2.1.4.1
@@ -38,7 +38,7 @@ where
 
 impl<N, L, V> Tree<N, L, V>
 where
-    N: AsyncStore<NodeKey, HashOutput>,
+    N: AsyncStoreRead<NodeKey, HashOutput>,
     V: Hashable,
 {
     pub async fn get_consistency_proof_async(

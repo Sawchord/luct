@@ -2,7 +2,7 @@ use crate::{HashOutput, log::ScannerLogInner};
 use lru::LruCache;
 use luct_client::Client;
 use luct_core::{
-    store::{AsyncStore, Hashable, MemoryStore},
+    store::{AsyncStoreRead, Hashable, MemoryStore},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
@@ -147,11 +147,7 @@ impl<C> TileFetchStore<C> {
     }
 }
 
-impl<C: Client> AsyncStore<NodeKey, HashOutput> for TileFetchStore<C> {
-    async fn insert(&self, _: NodeKey, _: HashOutput) {
-        unimplemented!("It is not possible to insert nodes in a tile fetch store")
-    }
-
+impl<C: Client> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<C> {
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // First, try to get the node from the cache

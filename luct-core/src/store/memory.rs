@@ -1,4 +1,6 @@
-use crate::store::{AsyncStore, IndexedStore, OrderedStoreRead, StoreRead, StoreWrite};
+use crate::store::{
+    AsyncStoreRead, AsyncStoreWrite, IndexedStoreRead, OrderedStoreRead, StoreRead, StoreWrite,
+};
 use std::{
     collections::BTreeMap,
     sync::{Arc, RwLock},
@@ -44,7 +46,7 @@ impl<K: Ord + Clone, V: Clone> OrderedStoreRead<K, V> for MemoryStore<K, V> {
     }
 }
 
-impl<V: Clone> IndexedStore<V> for MemoryStore<u64, V> {
+impl<V: Clone> IndexedStoreRead<V> for MemoryStore<u64, V> {
     fn insert_indexed(&self, value: V) -> u64 {
         let mut store = self.0.write().unwrap();
 
@@ -60,16 +62,18 @@ impl<V: Clone> IndexedStore<V> for MemoryStore<u64, V> {
     }
 }
 
-impl<K: Ord, V: Clone> AsyncStore<K, V> for MemoryStore<K, V> {
-    async fn insert(&self, key: K, value: V) {
-        self.0.write().unwrap().insert(key, value);
-    }
-
+impl<K: Ord, V: Clone> AsyncStoreRead<K, V> for MemoryStore<K, V> {
     async fn get(&self, key: K) -> Option<V> {
         self.0.read().unwrap().get(&key).cloned()
     }
 
     async fn len(&self) -> usize {
         self.0.read().unwrap().len()
+    }
+}
+
+impl<K: Ord, V: Clone> AsyncStoreWrite<K, V> for MemoryStore<K, V> {
+    async fn insert(&self, key: K, value: V) {
+        self.0.write().unwrap().insert(key, value);
     }
 }

@@ -3,7 +3,7 @@ use crate::tree::HashOutput;
 mod r#async;
 mod memory;
 
-pub use crate::store::r#async::AsyncStore;
+pub use crate::store::r#async::{AsyncStore, AsyncStoreRead, AsyncStoreWrite};
 pub use crate::store::memory::MemoryStore;
 
 /// Trait indicating that an object can be hased with respect to the CT protocol
@@ -73,7 +73,7 @@ where
 /// Extension to regular [`Stores`](Store), which use an index as a key
 ///
 /// The main difference is, that the key is a [`u64`] and the store determines the key when inserting
-pub trait IndexedStore<V>: StoreRead<u64, V> {
+pub trait IndexedStoreRead<V>: StoreRead<u64, V> {
     /// Insert a value into the store and return the index
     ///
     /// # Arguments:

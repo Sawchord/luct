@@ -1,4 +1,4 @@
-use crate::store::{Hashable, IndexedStore, Store};
+use crate::store::{Hashable, IndexedStoreRead, Store};
 pub use crate::tree::{
     consistency::ConsistencyProof,
     inclusion::AuditProof,
@@ -71,7 +71,7 @@ impl<N, L, V> Tree<N, L, V> {
 impl<N, L, V> Tree<N, L, V>
 where
     N: Store<NodeKey, HashOutput>,
-    L: IndexedStore<V>,
+    L: IndexedStoreRead<V>,
     V: Hashable,
 {
     pub fn insert_entry(&self, entry: V) {
