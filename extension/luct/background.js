@@ -1,4 +1,4 @@
-import init, { Scanner } from './assets/wasm/luct_extension.js';
+import init, { Scanner } from './wasm/luct_extension.js';
 
 let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }

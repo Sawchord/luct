@@ -38,7 +38,7 @@ COPY --from=wasm-builder /usr/src/target/wasm32-unknown-unknown/release/luct_ext
 RUN sha256sum luct_extension.wasm
 
 # Generate the bindings for the wasm
-RUN ./wasm-bindgen-0.2.117-x86_64-unknown-linux-musl/wasm-bindgen luct_extension.wasm --no-typescript --target web --out-dir luct/assets/wasm
+RUN ./wasm-bindgen-0.2.117-x86_64-unknown-linux-musl/wasm-bindgen luct_extension.wasm --no-typescript --target web --out-dir luct/wasm
 RUN tree luct
 
 # Create the zip archive

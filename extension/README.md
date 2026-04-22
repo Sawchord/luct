@@ -30,7 +30,7 @@ cargo install wasm-pack wasm-opt
 From `extension/luct` run the following commands:
 
 ```
-wasm-pack build ../../luct-extension --out-dir ../extension/luct/assets/wasm/ --target web --no-opt --no-typescript
+wasm-pack build ../../luct-extension --out-dir ../extension/luct/wasm/ --target web --no-opt --no-typescript
 ```
 
 ### Javascript side
