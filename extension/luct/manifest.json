@@ -15,11 +15,11 @@
         "type": "module"
     },
     "page_action": {
-        "default_icon": "assets/icons/luct_unsafe.svg",
+        "default_icon": "icons/luct_unsafe.svg",
         "browser_style": true
     },
     "sidebar_action": {
-        "default_icon": "assets/icons/luct_safe.svg",
+        "default_icon": "icons/luct_safe.svg",
         "default_title": "luCT",
         "default_panel": "sidebar/sidebar.html"
     },

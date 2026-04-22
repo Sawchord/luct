@@ -78,10 +78,10 @@ class TabSecurity {
     async update_page_action() {
         log(this)
         if (this.get_status() === "safe") {
-            await browser.pageAction.setIcon({ tabId: this.tabId, path: "assets/icons/luct_safe.svg" })
+            await browser.pageAction.setIcon({ tabId: this.tabId, path: "icons/luct_safe.svg" })
             await browser.pageAction.show(this.tabId);
         } else {
-            await browser.pageAction.setIcon({ tabId: this.tabId, path: "assets/icons/luct_unsafe.svg" })
+            await browser.pageAction.setIcon({ tabId: this.tabId, path: "icons/luct_unsafe.svg" })
             await browser.pageAction.show(this.tabId);
         }
     }
