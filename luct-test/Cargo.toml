@@ -11,3 +11,4 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
+luct-core = { path = "../luct-core" }

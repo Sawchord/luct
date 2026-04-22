@@ -13,7 +13,7 @@ use std::{
 #[derive(Debug, Clone)]
 pub struct MemoryStore<K, V>(Arc<RwLock<BTreeMap<K, V>>>);
 
-impl<K: Ord, V> Default for MemoryStore<K, V> {
+impl<K, V> Default for MemoryStore<K, V> {
     fn default() -> Self {
         Self(Arc::new(RwLock::new(BTreeMap::new())))
     }
@@ -29,7 +29,7 @@ impl<K: Ord, V: Clone> StoreRead<K, V> for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord, V: Clone> StoreWrite<K, V> for MemoryStore<K, V> {
+impl<K: Ord, V> StoreWrite<K, V> for MemoryStore<K, V> {
     fn insert(&self, key: K, value: V) {
         self.0.write().unwrap().insert(key, value);
     }

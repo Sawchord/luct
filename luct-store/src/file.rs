@@ -73,6 +73,9 @@ impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for Filesyst
     }
 }
 
+// FIXME: If the storage loop panics for some reason, such as badly implemented traits,
+// there will never be an answer for the blocked threat.
+// Instead, we should panic the whole program
 fn start_storage_loop<K: StringStoreKey, V: StringStoreValue>(
     rx: Receiver<StoreRequest<K, V>>,
     path: PathBuf,
@@ -186,4 +189,27 @@ impl<V> Answer<V> {
     }
 }
 
-// TODO: Unittests of FilesystemStore using tempdir
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use luct_test::store::store_test;
+    use tempdir::TempDir;
+
+    impl StringStoreValue for String {
+        fn serialize_value(&self) -> String {
+            self.clone()
+        }
+
+        fn deserialize_value(value: &str) -> Option<Self> {
+            Some(value.to_string())
+        }
+    }
+
+    #[test]
+    fn filesystem_store() {
+        let dir = TempDir::new("filesystem_store").unwrap();
+
+        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        store_test(store);
+    }
+}

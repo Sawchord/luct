@@ -18,6 +18,11 @@ serde_json = { workspace = true, optional = true }
 
 hex = { workspace = true }
 
+[dev-dependencies]
+luct-test = { path = "../luct-test" }
+
+tempdir = { workspace = true }
+
 [features]
 default = ["filesystem"]
 filesystem = ["dep:serde", "dep:serde_json"]
