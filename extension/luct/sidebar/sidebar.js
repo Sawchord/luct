@@ -1,2 +1,2 @@
-import { sidebar } from '../assets/bundle.js';
+import { sidebar } from '../ui/bundle.js';
 sidebar();

@@ -12,10 +12,10 @@ const PROD = !process.env.ROLLUP_WATCH;
 export default {
     input: "src/luct.js",
     output: {
-        sourcemap: !PROD,
+        sourcemap: true,
         format: "es",
         name: "luct",
-        file: "luct/assets/bundle.js",
+        file: "luct/ui/bundle.js",
     },
     plugins: [
         svelte({
