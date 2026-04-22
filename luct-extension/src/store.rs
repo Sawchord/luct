@@ -1,4 +1,4 @@
-use luct_core::store::{OrderedStore, Store};
+use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
 use luct_store::{StringStoreKey, StringStoreValue};
 use std::marker::PhantomData;
 use web_sys::{Storage, window};
@@ -61,19 +61,7 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for BrowserStore<K, V> {
-    fn insert(&self, key: K, value: V) {
-        let key = self.get_key_string(&key);
-        let val = value.serialize_value();
-
-        self.storage
-            .set_item(&key, &val)
-            .expect("Failed to insert value into local store");
-
-        self.inc_count();
-        self.set_last(&key);
-    }
-
+impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for BrowserStore<K, V> {
     fn get(&self, key: &K) -> Option<V> {
         let key = self.get_key_string(key);
 
@@ -88,7 +76,21 @@ impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for BrowserStore<K, V> 
     }
 }
 
-impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStore<K, V> for BrowserStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K, V> {
+    fn insert(&self, key: K, value: V) {
+        let key = self.get_key_string(&key);
+        let val = value.serialize_value();
+
+        self.storage
+            .set_item(&key, &val)
+            .expect("Failed to insert value into local store");
+
+        self.inc_count();
+        self.set_last(&key);
+    }
+}
+
+impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for BrowserStore<K, V> {
     fn last(&self) -> Option<(K, V)> {
         let key = self
             .storage

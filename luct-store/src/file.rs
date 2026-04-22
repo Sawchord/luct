@@ -1,4 +1,4 @@
-use luct_core::store::{OrderedStore, Store};
+use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -32,19 +32,7 @@ impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for FilesystemStore<K, V> {
-    fn insert(&self, key: K, value: V) {
-        let answer = Answer::new();
-        self.tx
-            .send(StoreRequest::Insert {
-                key,
-                value,
-                answer: answer.clone(),
-            })
-            .unwrap();
-        answer.await_answer()
-    }
-
+impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for FilesystemStore<K, V> {
     fn get(&self, key: &K) -> Option<V> {
         let answer = Answer::new();
         self.tx
@@ -63,7 +51,21 @@ impl<K: StringStoreKey, V: StringStoreValue> Store<K, V> for FilesystemStore<K, 
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> OrderedStore<K, V> for FilesystemStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStore<K, V> {
+    fn insert(&self, key: K, value: V) {
+        let answer = Answer::new();
+        self.tx
+            .send(StoreRequest::Insert {
+                key,
+                value,
+                answer: answer.clone(),
+            })
+            .unwrap();
+        answer.await_answer()
+    }
+}
+
+impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for FilesystemStore<K, V> {
     fn last(&self) -> Option<(K, V)> {
         let answer = Answer::new();
         self.tx.send(StoreRequest::Last(answer.clone())).unwrap();
