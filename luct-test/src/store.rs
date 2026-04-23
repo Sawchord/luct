@@ -1,4 +1,4 @@
-use luct_core::store::{OrderedStore, Store};
+use luct_core::store::{OrderedStore, SearchableStore, Store};
 
 /// Basic store test that tests abillity to store and retreive items
 pub fn store_test<S: Store<u64, String>>(store: S) {
@@ -73,12 +73,30 @@ pub fn ordered_store_test<S: OrderedStore<u64, String>>(store: S) {
     assert_eq!(store.last(), Some((2, "two".to_string())));
 }
 
-// TODO: Iterator store test
-// -- Insert elements out of order
-// -- Check that iteration works in correct order
-// -- Remove some elements
-// -- Check that order is presereved
+pub fn searchable_store_test<S: SearchableStore<u64, String> + Store<u64, String>>(store: S) {
+    assert!(store.is_empty());
 
+    // Insert some element out of ourder
+    store.insert(4, "four".to_string());
+    store.insert(3, "three".to_string());
+    store.insert(2, "two".to_string());
+
+    // Check that the search scanns through the store correcty
+    let mut idx = 2;
+    store.filter(|key, _| {
+        assert_eq!(key, &idx);
+        idx += 1;
+        true
+    });
+
+    // Find a specific element
+    let find = store.find(|key, _| key == &3);
+    assert_eq!(find, Some((3, "three".to_string())));
+
+    assert!(store.delete(&3));
+    let find = store.find(|key, _| key == &3);
+    assert_eq!(find, None);
+}
 // TODO: Multistore test?
 
 #[cfg(test)]
