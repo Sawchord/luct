@@ -61,6 +61,35 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStor
     }
 }
 
+impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for FilesystemStoreNew<K, V> {
+    fn last(&self) -> Option<(K, V)> {
+        let _lock = self.access.lock().unwrap();
+
+        let paths = std::fs::read_dir(&self.path).ok()?;
+
+        // Read the directory to file keys
+        let mut keys = paths
+            .filter_map(|path| match path {
+                Ok(dir_entry) => Some(K::deserialize_key(
+                    &dir_entry.file_name().into_string().unwrap(),
+                ))
+                .flatten(),
+                Err(_) => None,
+            })
+            .collect::<Vec<_>>();
+
+        // Sort
+        keys.sort();
+
+        // If the last one exists, try to read the value
+        let key = keys.last().cloned()?;
+        let data = std::fs::read_to_string(self.path.join(key.serialize_key())).ok()?;
+        let val = V::deserialize_value(&data)?;
+
+        Some((key, val))
+    }
+}
+
 #[derive(Clone)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
@@ -277,5 +306,13 @@ mod tests {
 
         let store = FilesystemStoreNew::<u64, String>::new(dir.path().to_owned());
         store_test(store);
+    }
+
+    #[test]
+    fn filesystem_ordered_store_new() {
+        let dir = TempDir::new("filesystem_store").unwrap();
+
+        let store = FilesystemStoreNew::<u64, String>::new(dir.path().to_owned());
+        ordered_store_test(store);
     }
 }
