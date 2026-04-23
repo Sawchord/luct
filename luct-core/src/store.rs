@@ -96,7 +96,7 @@ pub trait AppendableStore<K: Ord, V>: OrderedStoreRead<K, V> {
 
 /// Extension to a [`OrderedStoreRead`], that allows looking through the store to look for specific
 /// entries,
-pub trait SearchableStore<K: Ord, V>: OrderedStoreRead<K, V> {
+pub trait SearchableStoreRead<K: Ord, V>: OrderedStoreRead<K, V> {
     /// Search for all entries in the store, that fulfill a certain predicate
     ///
     /// Note that the elements are being searched through in the order specified by [`Ord`] of key
@@ -127,4 +127,13 @@ pub trait SearchableStore<K: Ord, V>: OrderedStoreRead<K, V> {
             None
         }
     }
+}
+
+pub trait SearchableStore<K: Ord, V>: SearchableStoreRead<K, V> + StoreWrite<K, V> {}
+
+impl<K, V, T> SearchableStore<K, V> for T
+where
+    K: Ord,
+    T: SearchableStoreRead<K, V> + StoreWrite<K, V>,
+{
 }

@@ -1,4 +1,4 @@
-use luct_core::store::{OrderedStoreRead, SearchableStore, StoreRead, StoreWrite};
+use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -96,7 +96,7 @@ impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for Filesyst
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> SearchableStore<K, V> for FilesystemStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> SearchableStoreRead<K, V> for FilesystemStore<K, V> {
     fn filter<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Vec<(K, V)> {
         let _lock = self.access.lock().unwrap();
         let Some(keys) = self.get_sorted_keys() else {

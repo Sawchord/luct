@@ -1,6 +1,6 @@
 use crate::store::{
-    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStore, StoreRead,
-    StoreWrite,
+    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
+    StoreRead, StoreWrite,
 };
 use std::{
     collections::BTreeMap,
@@ -83,7 +83,7 @@ impl<K: Ord, V: Clone> AsyncStoreWrite<K, V> for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord + Clone, V: Clone> SearchableStore<K, V> for MemoryStore<K, V> {
+impl<K: Ord + Clone, V: Clone> SearchableStoreRead<K, V> for MemoryStore<K, V> {
     fn filter<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Vec<(K, V)> {
         self.0
             .read()

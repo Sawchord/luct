@@ -73,7 +73,7 @@ pub fn ordered_store_test<S: OrderedStore<u64, String>>(store: S) {
     assert_eq!(store.last(), Some((2, "two".to_string())));
 }
 
-pub fn searchable_store_test<S: SearchableStore<u64, String> + Store<u64, String>>(store: S) {
+pub fn searchable_store_test<S: SearchableStore<u64, String>>(store: S) {
     assert!(store.is_empty());
 
     // Insert some element out of ourder
@@ -97,6 +97,7 @@ pub fn searchable_store_test<S: SearchableStore<u64, String> + Store<u64, String
     let find = store.find(|key, _| key == &3);
     assert_eq!(find, None);
 }
+
 // TODO: Multistore test?
 
 #[cfg(test)]
