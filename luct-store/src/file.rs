@@ -9,6 +9,8 @@ use std::{
 
 use crate::{StringStoreKey, StringStoreValue};
 
+// TODO: Log errors
+
 #[derive(Clone)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
@@ -29,10 +31,9 @@ impl<K, V> FilesystemStore<K, V> {
 impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for FilesystemStore<K, V> {
     fn get(&self, key: &K) -> Option<V> {
         let _lock = self.access.lock().unwrap();
-        match std::fs::read_to_string(self.path.join(key.serialize_key())) {
-            Ok(data) => V::deserialize_value(&data),
-            Err(_) => None,
-        }
+        let data = std::fs::read_to_string(self.path.join(key.serialize_key())).ok()?;
+        let value = V::deserialize_value(&data)?;
+        Some(value)
     }
 
     fn len(&self) -> usize {
