@@ -13,6 +13,55 @@ use std::{
 use crate::{StringStoreKey, StringStoreValue};
 
 #[derive(Clone)]
+pub struct FilesystemStoreNew<K, V> {
+    _kv: PhantomData<(K, V)>,
+    path: PathBuf,
+    access: Arc<Mutex<()>>,
+}
+
+impl<K, V> FilesystemStoreNew<K, V> {
+    pub fn new(path: PathBuf) -> FilesystemStoreNew<K, V> {
+        Self {
+            _kv: PhantomData,
+            path,
+            access: Arc::new(Mutex::new(())),
+        }
+    }
+}
+
+impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for FilesystemStoreNew<K, V> {
+    fn get(&self, key: &K) -> Option<V> {
+        let _lock = self.access.lock().unwrap();
+        match std::fs::read_to_string(self.path.join(key.serialize_key())) {
+            Ok(data) => V::deserialize_value(&data),
+            Err(_) => None,
+        }
+    }
+
+    fn len(&self) -> usize {
+        let _lock = self.access.lock().unwrap();
+        match std::fs::read_dir(&self.path) {
+            Ok(paths) => paths.count(),
+            Err(_) => 0,
+        }
+    }
+}
+
+impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStoreNew<K, V> {
+    fn insert(&self, key: K, value: V) {
+        let _lock = self.access.lock().unwrap();
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(self.path.join(key.serialize_key()))
+        {
+            file.write_all(value.serialize_value().as_bytes()).unwrap()
+        }
+    }
+}
+
+#[derive(Clone)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
     _path: PathBuf,
@@ -93,7 +142,8 @@ fn start_storage_loop<K: StringStoreKey, V: StringStoreValue>(
                 }
                 Ok(StoreRequest::Insert { key, value, answer }) => {
                     if let Ok(mut file) = OpenOptions::new()
-                        .create_new(true)
+                        .create(true)
+                        .truncate(true)
                         .write(true)
                         .open(path.join(key.serialize_key()))
                     {
@@ -192,7 +242,7 @@ impl<V> Answer<V> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_test::store::store_test;
+    use luct_test::store::{ordered_store_test, store_test};
     use tempdir::TempDir;
 
     impl StringStoreValue for String {
@@ -210,6 +260,22 @@ mod tests {
         let dir = TempDir::new("filesystem_store").unwrap();
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        store_test(store);
+    }
+
+    #[test]
+    fn filesystem_ordered_store() {
+        let dir = TempDir::new("filesystem_store").unwrap();
+
+        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        ordered_store_test(store);
+    }
+
+    #[test]
+    fn filesystem_store_new() {
+        let dir = TempDir::new("filesystem_store_new").unwrap();
+
+        let store = FilesystemStoreNew::<u64, String>::new(dir.path().to_owned());
         store_test(store);
     }
 }
