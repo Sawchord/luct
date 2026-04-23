@@ -73,7 +73,7 @@ where
 /// Extension to regular [`Stores`](Store), which use an index as a key
 ///
 /// The main difference is, that the key is a [`u64`] and the store determines the key when inserting
-pub trait IndexedStoreRead<V>: StoreRead<u64, V> {
+pub trait AppendableStore<K: Ord, V>: OrderedStoreRead<K, V> {
     /// Insert a value into the store and return the index
     ///
     /// # Arguments:
@@ -81,5 +81,5 @@ pub trait IndexedStoreRead<V>: StoreRead<u64, V> {
     ///
     /// # Returns:
     /// - the index of the new value. This is the key under which the value can later be retreived
-    fn insert_indexed(&self, value: V) -> u64;
+    fn append(&self, value: V) -> K;
 }
