@@ -94,6 +94,7 @@ mod tests {
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
+    #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn smoke_test() {
         tracing();
 
@@ -107,6 +108,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn permission_denied_test() {
         tracing();
 
