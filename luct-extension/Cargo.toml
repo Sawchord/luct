@@ -47,3 +47,8 @@ getrandom = { version = "0.2", features = ["js"] }
 
 tracing = { workspace = true }
 tracing-wasm = { workspace = true }
+
+[dev-dependencies]
+luct-test = { path = "../luct-test" }
+
+wasm-bindgen-test = { workspace = true }

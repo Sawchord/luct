@@ -1611,6 +1611,7 @@ dependencies = [
  "luct-otlsp",
  "luct-scanner",
  "luct-store",
+ "luct-test",
  "serde-wasm-bindgen",
  "serde_json",
  "tracing",
@@ -1618,6 +1619,7 @@ dependencies = [
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
+ "wasm-bindgen-test",
  "web-sys",
  "web-time",
 ]

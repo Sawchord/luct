@@ -110,3 +110,24 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for Br
 }
 
 // TODO: Unit tests for browser local store
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use luct_test::store::store_test;
+    use wasm_bindgen_test::wasm_bindgen_test;
+
+    wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn browser_store() {
+        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        store_test(store);
+    }
+
+    // #[test]
+    // fn filesystem_ordered_store() {
+    //     let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+    //     ordered_store_test(store);
+    // }
+}
