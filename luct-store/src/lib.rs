@@ -71,6 +71,16 @@ impl StringStoreValue for () {
     }
 }
 
+impl StringStoreValue for String {
+    fn serialize_value(&self) -> String {
+        self.clone()
+    }
+
+    fn deserialize_value(value: &str) -> Option<Self> {
+        Some(value.to_string())
+    }
+}
+
 impl StringStoreValue for SignedTreeHead {
     fn serialize_value(&self) -> String {
         serde_json::to_string(self).unwrap()

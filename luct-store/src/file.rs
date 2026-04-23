@@ -93,16 +93,6 @@ mod tests {
     use luct_test::store::{ordered_store_test, store_test};
     use tempdir::TempDir;
 
-    impl StringStoreValue for String {
-        fn serialize_value(&self) -> String {
-            self.clone()
-        }
-
-        fn deserialize_value(value: &str) -> Option<Self> {
-            Some(value.to_string())
-        }
-    }
-
     #[test]
     fn filesystem_store() {
         let dir = TempDir::new("filesystem_store").unwrap();
