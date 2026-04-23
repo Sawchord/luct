@@ -82,11 +82,19 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K
         let key = self.get_key_string(&key);
         let val = value.serialize_value();
 
+        if self
+            .storage
+            .get_item(&key)
+            .expect("Failed to retreive value into local store")
+            .is_none()
+        {
+            self.inc_count();
+        }
+
         self.storage
             .set_item(&key, &val)
             .expect("Failed to insert value into local store");
 
-        self.inc_count();
         self.set_last(&key);
     }
 }
