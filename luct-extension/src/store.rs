@@ -1,3 +1,4 @@
+use js_sys::Object;
 use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
 use luct_store::{StringStoreKey, StringStoreValue};
 use std::marker::PhantomData;
@@ -101,16 +102,17 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K
 
 impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for BrowserStore<K, V> {
     fn last(&self) -> Option<(K, V)> {
-        let key = self
-            .storage
-            .get_item(&self.last_key())
-            .expect("Failed to retrieve last key")?;
+        let key = Object::keys(&self.storage)
+            .iter()
+            .filter_map(|key| key.as_string())
+            .filter_map(|key| self.key_from_str(&key))
+            .max()?;
+
+        let key_str = self.get_key_string(&key);
         let val = self
             .storage
-            .get_item(&key)
+            .get_item(&key_str)
             .expect("Failed to retreive last element of store")?;
-
-        let key = self.key_from_str(&key)?;
         let val = V::deserialize_value(&val)?;
 
         Some((key, val))
