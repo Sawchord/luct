@@ -27,7 +27,10 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     }
 
     fn key_from_str(&self, key: &str) -> Option<K> {
-        // TODO: Check that the prefix matches, return None
+        if !key.starts_with(&self.prefix) || key.chars().nth(self.prefix.len()) != Some('/') {
+            return None;
+        }
+
         K::deserialize_key(&key[self.prefix.len() + 1..])
     }
 
@@ -50,16 +53,6 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
         self.storage
             .set_item(&self.count_key(), &(count + 1).to_string())
             .expect("Failed to set count");
-    }
-
-    fn last_key(&self) -> String {
-        format!("{}#last", self.prefix)
-    }
-
-    fn set_last(&self, key: &str) {
-        self.storage
-            .set_item(&self.last_key(), key)
-            .expect("Failed to set last value")
     }
 }
 
@@ -95,8 +88,6 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K
         self.storage
             .set_item(&key, &val)
             .expect("Failed to insert value into local store");
-
-        self.set_last(&key);
     }
 }
 
