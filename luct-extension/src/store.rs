@@ -117,15 +117,34 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for Br
     }
 }
 
-// TODO: Unit tests for browser local store
-
 #[cfg(test)]
 mod test {
     use super::*;
     use luct_test::store::{ordered_store_test, store_test};
+    use tracing::Level;
+    use tracing_subscriber::{Registry, layer::SubscriberExt};
+    use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
     use wasm_bindgen_test::wasm_bindgen_test;
 
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+    #[wasm_bindgen_test]
+    fn browser_store() {
+        clear_storage();
+        tracing();
+
+        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        store_test(store);
+    }
+
+    #[wasm_bindgen_test]
+    fn browser_ordered_store() {
+        clear_storage();
+        tracing();
+
+        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        ordered_store_test(store);
+    }
 
     // Clears the storage before starting a test
     fn clear_storage() {
@@ -138,17 +157,14 @@ mod test {
             .unwrap();
     }
 
-    #[wasm_bindgen_test]
-    fn browser_store() {
-        clear_storage();
-        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
-        store_test(store);
-    }
-
-    #[wasm_bindgen_test]
-    fn filesystem_ordered_store() {
-        clear_storage();
-        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
-        ordered_store_test(store);
+    fn tracing() {
+        let _ = tracing::subscriber::set_global_default(
+            Registry::default().with(WASMLayer::new(
+                WASMLayerConfigBuilder::default()
+                    .set_max_level(Level::TRACE)
+                    .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
+                    .build(),
+            )),
+        );
     }
 }

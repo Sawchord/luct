@@ -51,4 +51,5 @@ tracing-wasm = { workspace = true }
 [dev-dependencies]
 luct-test = { path = "../luct-test" }
 
+tracing-subscriber = { workspace = true }
 wasm-bindgen-test = { workspace = true }
