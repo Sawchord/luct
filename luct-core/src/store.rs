@@ -106,9 +106,9 @@ pub trait SearchableStore<K: Ord, V>: OrderedStoreRead<K, V> {
     ///
     /// # Returns
     /// - An array of key-value pairs, for which `pred` holds true
-    fn filter<F: FnOnce(&K, &V) -> bool>(&self, pred: F) -> Vec<(K, V)>;
+    fn filter<F: FnMut(&K, &V) -> bool>(&self, pred: F) -> Vec<(K, V)>;
 
-    fn find<F: FnOnce(&K, &V) -> bool>(&self, pred: F) -> Option<(K, V)> {
+    fn find<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Option<(K, V)> {
         let mut found = false;
 
         let vals = self.filter(|key, value| {
