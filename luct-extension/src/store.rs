@@ -1,5 +1,5 @@
 use js_sys::Object;
-use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
+use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite};
 use luct_store::{StringStoreKey, StringStoreValue};
 use std::marker::PhantomData;
 use web_sys::{Storage, window};
@@ -137,10 +137,30 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for Br
     }
 }
 
+impl<K: StringStoreKey + Ord, V: StringStoreValue> SearchableStoreRead<K, V>
+    for BrowserStore<K, V>
+{
+    fn filter<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Vec<(K, V)> {
+        Object::keys(&self.storage)
+            .iter()
+            .filter_map(|key| key.as_string())
+            .filter_map(|key| self.key_from_str(&key))
+            .filter_map(|key| {
+                self.storage
+                    .get_item(&self.get_key_string(&key))
+                    .expect("Failed to reteive element from store")
+                    .map(|data| (key, data))
+            })
+            .filter_map(|(key, data)| V::deserialize_value(&data).map(|val| (key, val)))
+            .filter(|(key, val)| pred(key, val))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;
-    use luct_test::store::{ordered_store_test, store_test};
+    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
     use tracing::Level;
     use tracing_subscriber::{Registry, layer::SubscriberExt};
     use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
@@ -164,6 +184,15 @@ mod test {
 
         let store = BrowserStore::new_local_store("test".to_string()).unwrap();
         ordered_store_test(store);
+    }
+
+    #[wasm_bindgen_test]
+    fn browser_searchable_store() {
+        clear_storage();
+        tracing();
+
+        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        searchable_store_test(store);
     }
 
     // Clears the storage before starting a test
