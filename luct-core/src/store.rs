@@ -41,6 +41,16 @@ pub trait StoreWrite<K, V> {
     /// - `key`: the key associated with the value
     /// - `value`: the value itself
     fn insert(&self, key: K, value: V);
+
+    /// Remove a value from the store
+    ///
+    /// # Arguments
+    /// - `key`: the key to be removed
+    ///
+    /// # Returns
+    /// - `true` if the key existed and has been removed
+    /// - `false` otherwise
+    fn delete(&self, key: &K) -> bool;
 }
 
 /// The [`Store`] trait is a basic key-value store trait

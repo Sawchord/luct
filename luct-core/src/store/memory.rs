@@ -33,6 +33,10 @@ impl<K: Ord, V> StoreWrite<K, V> for MemoryStore<K, V> {
     fn insert(&self, key: K, value: V) {
         self.0.write().unwrap().insert(key, value);
     }
+
+    fn delete(&self, key: &K) -> bool {
+        self.0.write().unwrap().remove(key).is_some()
+    }
 }
 
 impl<K: Ord + Clone, V: Clone> OrderedStoreRead<K, V> for MemoryStore<K, V> {

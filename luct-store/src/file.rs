@@ -57,6 +57,11 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStor
             file.write_all(value.serialize_value().as_bytes()).unwrap()
         }
     }
+
+    fn delete(&self, key: &K) -> bool {
+        let _lock = self.access.lock().unwrap();
+        std::fs::remove_file(self.path.join(key.serialize_key())).is_ok()
+    }
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for FilesystemStore<K, V> {

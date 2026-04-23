@@ -54,6 +54,14 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
             .set_item(&self.count_key(), &(count + 1).to_string())
             .expect("Failed to set count");
     }
+
+    fn dec_count(&self) {
+        let count: usize = self.get_count();
+
+        self.storage
+            .set_item(&self.count_key(), &(count - 1).to_string())
+            .expect("Failed to set count");
+    }
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for BrowserStore<K, V> {
@@ -88,6 +96,25 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K
         self.storage
             .set_item(&key, &val)
             .expect("Failed to insert value into local store");
+    }
+
+    fn delete(&self, key: &K) -> bool {
+        let key = self.get_key_string(key);
+        let had_item = self
+            .storage
+            .get_item(&key)
+            .expect("Failed to retreive value from local store")
+            .is_some();
+
+        if had_item {
+            self.dec_count();
+        }
+
+        self.storage
+            .remove_item(&key)
+            .expect("Failed to remove value from local store");
+
+        had_item
     }
 }
 
