@@ -93,3 +93,38 @@ pub trait AppendableStore<K: Ord, V>: OrderedStoreRead<K, V> {
     /// - the index of the new value. This is the key under which the value can later be retreived
     fn append(&self, value: V) -> K;
 }
+
+/// Extension to a [`OrderedStoreRead`], that allows looking through the store to look for specific
+/// entries,
+pub trait SearchableStore<K: Ord, V>: OrderedStoreRead<K, V> {
+    /// Search for all entries in the store, that fulfill a certain predicate
+    ///
+    /// Note that the elements are being searched through in the order specified by [`Ord`] of key
+    ///
+    /// # Arguments
+    /// - `pred`: A predicate that has access to the key and value
+    ///
+    /// # Returns
+    /// - An array of key-value pairs, for which `pred` holds true
+    fn filter<F: FnOnce(&K, &V) -> bool>(&self, pred: F) -> Vec<(K, V)>;
+
+    fn find<F: FnOnce(&K, &V) -> bool>(&self, pred: F) -> Option<(K, V)> {
+        let mut found = false;
+
+        let vals = self.filter(|key, value| {
+            if !found && pred(key, value) {
+                found = true;
+                true
+            } else {
+                false
+            }
+        });
+
+        if found {
+            assert_eq!(vals.len(), 1);
+            Some(vals.into_iter().next().unwrap())
+        } else {
+            None
+        }
+    }
+}
