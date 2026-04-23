@@ -53,7 +53,9 @@ impl Scanner {
         let log_list: LogList = serde_json::from_str(&log_list).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
-        let config = ScannerConfig::new();
+        let config = ScannerConfig::builder()
+            .build()
+            .map_err(|err| format!("{:?}", err))?;
 
         let client = match config.otlsp_url() {
             Some(url) => OtlspClient::builder()
@@ -158,3 +160,5 @@ impl Scanner {
         Ok(is_recusion)
     }
 }
+
+// TODO: Full scenario test

@@ -1,12 +1,18 @@
+use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
 use url::Url;
 use web_time::Duration;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Builder)]
+#[builder(setter(into))]
 pub struct ScannerConfig {
+    #[builder(default)]
     pub(crate) validate_cert_chain: bool,
 
+    #[builder(default)]
     pub(crate) otlsp_url: Option<Url>,
+
+    #[builder(default = "Duration::from_secs(30)")]
     pub(crate) otlsp_connection_timeout: Duration,
 }
 
@@ -21,17 +27,12 @@ impl Default for ScannerConfig {
 }
 
 impl ScannerConfig {
-    pub fn new() -> Self {
-        Self::default()
+    pub fn builder() -> ScannerConfigBuilder {
+        ScannerConfigBuilder::default()
     }
 
     pub fn validate_cert_chain(&self) -> bool {
         self.validate_cert_chain
-    }
-
-    pub fn set_validate_cert_chain(mut self) -> Self {
-        self.validate_cert_chain = true;
-        self
     }
 
     pub fn otlsp_url(&self) -> &Option<Url> {

@@ -13,7 +13,7 @@ use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
 use web_time::{SystemTime, UNIX_EPOCH};
 pub use {
-    config::ScannerConfig,
+    config::{ScannerConfig, ScannerConfigBuilder},
     log::builder::LogBuilder,
     report::{Report, SctReport, SthReport},
     utils::Validated,

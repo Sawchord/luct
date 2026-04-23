@@ -25,6 +25,7 @@ chrono = { workspace = true }
 tracing = { workspace = true }
 lru = { workspace = true }
 
+derive_builder = { workspace = true }
 web-time = { workspace = true }
 url = { workspace = true }
 

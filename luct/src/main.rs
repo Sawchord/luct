@@ -60,7 +60,7 @@ async fn main() -> eyre::Result<()> {
         Box::new(FilesystemStore::new(workdir.join("sct_report"))) as _
     };
 
-    let config = ScannerConfig::new().set_validate_cert_chain();
+    let config = ScannerConfig::builder().validate_cert_chain(true).build()?;
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
     let mut scanner = Scanner::new_with_client(config, sct_report_cache, client);
     tracing::info!("Initialized scanner");
