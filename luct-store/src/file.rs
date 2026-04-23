@@ -1,4 +1,4 @@
-use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
+use luct_core::store::{OrderedStoreRead, SearchableStore, StoreRead, StoreWrite};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -25,6 +25,24 @@ impl<K, V> FilesystemStore<K, V> {
             path,
             access: Arc::new(Mutex::new(())),
         }
+    }
+}
+
+impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
+    fn get_sorted_keys(&self) -> Option<Vec<K>> {
+        let paths = std::fs::read_dir(&self.path).ok()?;
+        let mut keys = paths
+            .filter_map(|path| match path {
+                Ok(dir_entry) => Some(K::deserialize_key(
+                    &dir_entry.file_name().into_string().unwrap(),
+                ))
+                .flatten(),
+                Err(_) => None,
+            })
+            .collect::<Vec<_>>();
+        keys.sort();
+
+        Some(keys)
     }
 }
 
@@ -67,22 +85,7 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStor
 impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for FilesystemStore<K, V> {
     fn last(&self) -> Option<(K, V)> {
         let _lock = self.access.lock().unwrap();
-
-        let paths = std::fs::read_dir(&self.path).ok()?;
-
-        // Read the directory to file keys
-        let mut keys = paths
-            .filter_map(|path| match path {
-                Ok(dir_entry) => Some(K::deserialize_key(
-                    &dir_entry.file_name().into_string().unwrap(),
-                ))
-                .flatten(),
-                Err(_) => None,
-            })
-            .collect::<Vec<_>>();
-
-        // Sort
-        keys.sort();
+        let keys = self.get_sorted_keys()?;
 
         // If the last one exists, try to read the value
         let key = keys.last().cloned()?;
@@ -93,10 +96,29 @@ impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for Filesyst
     }
 }
 
+impl<K: StringStoreKey, V: StringStoreValue> SearchableStore<K, V> for FilesystemStore<K, V> {
+    fn filter<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Vec<(K, V)> {
+        let _lock = self.access.lock().unwrap();
+        let Some(keys) = self.get_sorted_keys() else {
+            return vec![];
+        };
+
+        keys.into_iter()
+            .filter_map(|key| {
+                std::fs::read_to_string(self.path.join(key.serialize_key()))
+                    .ok()
+                    .map(|data| (key, data))
+            })
+            .filter_map(|(key, data)| V::deserialize_value(&data).map(|val| (key, val)))
+            .filter(|(key, val)| pred(key, val))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_test::store::{ordered_store_test, store_test};
+    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
     use tempdir::TempDir;
 
     #[test]
@@ -113,5 +135,13 @@ mod tests {
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         ordered_store_test(store);
+    }
+
+    #[test]
+    fn filesystem_searchable_store() {
+        let dir = TempDir::new("filesystem_store").unwrap();
+
+        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        searchable_store_test(store);
     }
 }
