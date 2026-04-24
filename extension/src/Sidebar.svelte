@@ -23,7 +23,14 @@
     });
 
     async function update_content() {
-        const report = await browser.runtime.sendMessage({ tabId });
+        var report;
+        try {
+            report = await browser.runtime.sendMessage({ tabId });
+        } catch (err) {
+            console.log(
+                "Updating content failed because background script has not started yet",
+            );
+        }
 
         if (report) {
             let certs = new Map();
