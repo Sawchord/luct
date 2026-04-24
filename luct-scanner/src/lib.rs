@@ -31,8 +31,6 @@ pub struct Scanner<C> {
     logs: BTreeMap<LogId, ScannerLog<C>>,
     sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
     client: C,
-    // TODO: CertificateChainStore
-    // TODO: Roots denylist
 }
 
 #[allow(clippy::type_complexity)]
@@ -64,6 +62,7 @@ impl<C: Client + Clone> Scanner<C> {
 }
 
 impl<C: Client> Scanner<C> {
+    /// Updates all log's STHs
     pub async fn update_sths(&self) -> Result<(), ScannerError> {
         let updates = self
             .logs
@@ -76,6 +75,7 @@ impl<C: Client> Scanner<C> {
         Ok(())
     }
 
+    /// Fetches a fresh STH from the log
     pub async fn update_sth(&self, log_name: &str) -> Result<(), ScannerError> {
         match self
             .logs
