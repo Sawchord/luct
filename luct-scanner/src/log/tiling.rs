@@ -165,7 +165,7 @@ impl<C: Client> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<C> {
             return None;
         }
 
-        tracing::debug!("Fetching key {:?} against tree size {}", key, tree_size);
+        tracing::trace!("Fetching key {:?} against tree size {}", key, tree_size);
         let nodes = self.fetch_unbalanced_keys(&key, tree_size).await?;
 
         // Pick the result from the recomputed nodes
@@ -207,14 +207,14 @@ impl<C: Client> TileFetchStore<C> {
         let nodes = if key.is_balanced() {
             // If the key is balanced, we know it is contained within exactly one tile.
             // We call `fetch_balanced_tile` to fetch the tile and then recompute the nodes
-            tracing::debug!("Fetching balanced key: {:?}", key);
+            tracing::trace!("Fetching balanced key: {:?}", key);
             self.fetch_balanced_keys(key, tree_size).await?
         } else {
             // If the key is unbalanced, we might need to fetch multiple tiles.
             // We split the key into a balanced left part and an unbalanced right part which we fetch recursively
             let (left, right) = key.split();
-            tracing::debug!("Fetching balanced key: {:?}", left);
-            tracing::debug!("Fetching unbalanced key: {:?}", right);
+            tracing::trace!("Fetching balanced key: {:?}", left);
+            tracing::trace!("Fetching unbalanced key: {:?}", right);
             let (left_nodes, right_nodes) = futures::join!(
                 self.fetch_balanced_keys(&left, tree_size),
                 Box::pin(self.fetch_unbalanced_keys(&right, tree_size)),
