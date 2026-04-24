@@ -1,10 +1,13 @@
 use crate::{ScannerError, log::tiling::TileFetcher, utils::Validated};
 use luct_client::{Client, CtClient};
 use luct_core::{
-    store::OrderedStore,
+    store::SearchableStore,
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
-use std::{fmt, sync::Arc};
+use std::{
+    fmt::{self, Debug},
+    sync::Arc,
+};
 
 pub(crate) mod builder;
 pub(crate) mod tiling;
@@ -12,18 +15,18 @@ pub(crate) mod tiling;
 /// Internal structure holding references to per log
 /// clients and stores
 #[derive(Debug)]
-pub(crate) struct ScannerLog<C> {
-    log: Arc<ScannerLogInner<C>>,
-    tiles: Option<TileFetcher<C>>,
+pub(crate) struct ScannerLog<C, S> {
+    log: Arc<ScannerLogInner<C, S>>,
+    tiles: Option<TileFetcher<C, S>>,
 }
 
-pub(crate) struct ScannerLogInner<C> {
+pub(crate) struct ScannerLogInner<C, S> {
     name: String,
     client: CtClient<C>,
-    sth_store: Box<dyn OrderedStore<u64, Validated<SignedTreeHead>>>,
+    sth_store: S,
 }
 
-impl<C> fmt::Debug for ScannerLogInner<C> {
+impl<C, S> fmt::Debug for ScannerLogInner<C, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("ScannerLogInner")
             .field("name", &self.name)
@@ -31,7 +34,11 @@ impl<C> fmt::Debug for ScannerLogInner<C> {
     }
 }
 
-impl<C: Client> ScannerLog<C> {
+impl<C, S> ScannerLog<C, S>
+where
+    C: Client,
+    S: SearchableStore<u64, Validated<SignedTreeHead>> + Debug,
+{
     pub(crate) fn client(&self) -> &CtClient<C> {
         &self.log.client
     }

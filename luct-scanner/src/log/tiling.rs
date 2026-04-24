@@ -1,14 +1,14 @@
-use crate::{HashOutput, log::ScannerLogInner};
+use crate::{HashOutput, Validated, log::ScannerLogInner};
 use lru::LruCache;
 use luct_client::Client;
 use luct_core::{
-    store::{AsyncStoreRead, Hashable, MemoryStore},
+    store::{AsyncStoreRead, Hashable, MemoryStore, SearchableStore},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{
-    fmt,
+    fmt::{self, Debug},
     num::NonZero,
     sync::{
         Arc, Mutex,
@@ -17,16 +17,16 @@ use std::{
 };
 
 #[derive(Debug)]
-pub(crate) struct TileFetcher<C>(
+pub(crate) struct TileFetcher<C, S>(
     Tree<
-        TileFetchStore<C>,
+        TileFetchStore<C, S>,
         MemoryStore<u64, SignedCertificateTimestamp>,
         SignedCertificateTimestamp,
     >,
 );
 
-impl<C> TileFetcher<C> {
-    pub(crate) fn new(log: &Arc<ScannerLogInner<C>>) -> Self {
+impl<C, S> TileFetcher<C, S> {
+    pub(crate) fn new(log: &Arc<ScannerLogInner<C, S>>) -> Self {
         Self(Tree::new(
             TileFetchStore::new(log.clone()),
             MemoryStore::default(),
@@ -34,7 +34,11 @@ impl<C> TileFetcher<C> {
     }
 }
 
-impl<C: Client> TileFetcher<C> {
+impl<C, S> TileFetcher<C, S>
+where
+    C: Client,
+    S: SearchableStore<u64, Validated<SignedTreeHead>> + Debug,
+{
     #[tracing::instrument(level = "trace")]
     pub(crate) async fn check_sct_inclusion(
         &self,
@@ -121,20 +125,20 @@ impl<C: Client> TileFetcher<C> {
     }
 }
 
-pub(crate) struct TileFetchStore<C> {
+pub(crate) struct TileFetchStore<C, S> {
     node_cache: Mutex<LruCache<NodeKey, HashOutput>>,
-    log: Arc<ScannerLogInner<C>>,
+    log: Arc<ScannerLogInner<C, S>>,
     tree_size: AtomicU64,
 }
 
-impl<C> fmt::Debug for TileFetchStore<C> {
+impl<C, S> fmt::Debug for TileFetchStore<C, S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TileFetchStore").finish()
     }
 }
 
-impl<C> TileFetchStore<C> {
-    fn new(log: Arc<ScannerLogInner<C>>) -> Self {
+impl<C, S> TileFetchStore<C, S> {
+    fn new(log: Arc<ScannerLogInner<C, S>>) -> Self {
         Self {
             node_cache: Mutex::new(LruCache::new(NonZero::new(1000).unwrap())),
             log,
@@ -147,7 +151,11 @@ impl<C> TileFetchStore<C> {
     }
 }
 
-impl<C: Client> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<C> {
+impl<C, S> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<C, S>
+where
+    C: Client,
+    S: SearchableStore<u64, Validated<SignedTreeHead>>,
+{
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // First, try to get the node from the cache
@@ -193,7 +201,7 @@ impl<C: Client> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<C> {
     }
 }
 
-impl<C: Client> TileFetchStore<C> {
+impl<C: Client, S> TileFetchStore<C, S> {
     #[tracing::instrument(level = "trace")]
     async fn fetch_unbalanced_keys(
         &self,

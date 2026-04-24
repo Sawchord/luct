@@ -4,9 +4,9 @@ use crate::store::BrowserStore;
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
-use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList};
+use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
 use luct_otlsp::OtlspClient;
-use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, ScannerConfig};
+use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, ScannerConfig, Validated};
 use std::sync::Arc;
 use tracing::Level;
 use tracing_wasm::WASMLayerConfigBuilder;
@@ -43,7 +43,10 @@ pub fn start() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Scanner {
-    scanner: CtScanner<RequestDeduplicationClient<OtlspClient>>,
+    scanner: CtScanner<
+        RequestDeduplicationClient<OtlspClient>,
+        BrowserStore<u64, Validated<SignedTreeHead>>,
+    >,
 }
 
 #[wasm_bindgen]

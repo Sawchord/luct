@@ -4,12 +4,12 @@ use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
-    store::Store,
+    store::{SearchableStore, Store},
     tiling::TilingError,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
 use thiserror::Error;
 use web_time::{Duration, SystemTime, UNIX_EPOCH};
 pub use {
@@ -26,15 +26,19 @@ mod log;
 mod report;
 mod utils;
 
-pub struct Scanner<C> {
+pub struct Scanner<C, S> {
     config: ScannerConfig,
-    logs: BTreeMap<LogId, ScannerLog<C>>,
+    logs: BTreeMap<LogId, ScannerLog<C, S>>,
     report_cache: Box<dyn Store<Fingerprint, Report>>,
     client: C,
 }
 
 #[allow(clippy::type_complexity)]
-impl<C: Client + Clone> Scanner<C> {
+impl<C, S> Scanner<C, S>
+where
+    C: Client + Clone,
+    S: SearchableStore<u64, Validated<SignedTreeHead>> + Debug,
+{
     pub fn logs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CtLog> + 'a> {
         Box::new(self.logs.values().map(|val| val.client().log()))
     }
@@ -52,16 +56,14 @@ impl<C: Client + Clone> Scanner<C> {
         }
     }
 
-    pub fn add_log(&mut self, log: LogBuilder) -> &mut Self {
+    pub fn add_log(&mut self, log: LogBuilder<S>) -> &mut Self {
         let scanner_log = log.build(&self.client);
         let log_id = scanner_log.client().log().log_id().clone();
 
         self.logs.insert(log_id, scanner_log);
         self
     }
-}
 
-impl<C: Client> Scanner<C> {
     /// Updates all log's STHs
     pub async fn refresh_all_logs(&self) -> Result<(), ScannerError> {
         let updates = self
@@ -180,7 +182,7 @@ impl<C: Client> Scanner<C> {
 
     // TODO: Remove
     async fn add_latest_sth(
-        log: &ScannerLog<C>,
+        log: &ScannerLog<C, S>,
         report: &SctReport,
     ) -> Result<Validated<SignedTreeHead>, SctReport> {
         let latest_sth = match log.latest_sth().await {
@@ -199,7 +201,7 @@ impl<C: Client> Scanner<C> {
     /// If it is too old, it will fetch a fresh one
     async fn get_fresh_sth(
         &self,
-        log: &ScannerLog<C>,
+        log: &ScannerLog<C, S>,
     ) -> Result<Validated<SignedTreeHead>, ScannerError> {
         let log_name = log.client().log().description();
 
