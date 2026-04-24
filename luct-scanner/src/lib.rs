@@ -63,11 +63,11 @@ impl<C: Client + Clone> Scanner<C> {
 
 impl<C: Client> Scanner<C> {
     /// Updates all log's STHs
-    pub async fn update_all_logs(&self) -> Result<(), ScannerError> {
+    pub async fn refresh_all_logs(&self) -> Result<(), ScannerError> {
         let updates = self
             .logs
             .values()
-            .map(|log| log.update_sth())
+            .map(|log| self.get_fresh_sth(log))
             .collect::<Vec<_>>();
 
         future::try_join_all(updates).await?;
