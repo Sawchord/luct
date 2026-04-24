@@ -235,11 +235,11 @@ impl<C: Client> TileFetchStore<C> {
             left_nodes.append(&mut right_nodes);
             left_nodes.push((key.clone(), hash));
 
-            tracing::debug!("Fetched unbalanced key: {:?}", key);
+            tracing::trace!("Fetched unbalanced key: {:?}", key);
             left_nodes
         };
 
-        tracing::debug!("Fetched {} nodes", nodes.len());
+        tracing::trace!("Fetched {} nodes", nodes.len());
         Some(nodes)
     }
 
@@ -263,7 +263,7 @@ impl<C: Client> TileFetchStore<C> {
         let tile = tile.ok()?;
         let nodes = tile.recompute_node_keys();
 
-        tracing::debug!("Fetched balanced key: {:?}", key);
+        tracing::trace!("Fetched balanced key: {:?}", key);
         Some(nodes)
     }
 }
