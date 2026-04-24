@@ -4,7 +4,7 @@ use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
-    store::{Hashable, Store},
+    store::Store,
     tiling::TilingError,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
@@ -29,7 +29,6 @@ mod utils;
 pub struct Scanner<C> {
     config: ScannerConfig,
     logs: BTreeMap<LogId, ScannerLog<C>>,
-    sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
     report_cache: Box<dyn Store<Fingerprint, Report>>,
     client: C,
 }
@@ -42,14 +41,12 @@ impl<C: Client + Clone> Scanner<C> {
 
     pub fn new_with_client(
         config: ScannerConfig,
-        sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
         report_cache: Box<dyn Store<Fingerprint, Report>>,
         client: C,
     ) -> Self {
         Self {
             config,
             logs: BTreeMap::new(),
-            sct_report_cache,
             report_cache,
             client,
         }
@@ -151,22 +148,7 @@ impl<C: Client> Scanner<C> {
         let Some(log) = self.logs.get(&sct.log_id()) else {
             return report.error_description(format!("No log with id {} known", sct.log_id()));
         };
-
         let report = report.log_name(log.client().log().description().to_string());
-
-        // Look up data in report cache
-        if let Some(report) = self.sct_report_cache.get(&sct.hash()) {
-            let latest_sth = match Self::add_latest_sth(log, &report).await {
-                Ok(sth) => sth,
-                Err(report) => return report,
-            };
-
-            tracing::debug!(
-                "Using cached sct report for log {}",
-                log.client().log().description()
-            );
-            return report.latest_sth(SthReport::from(&latest_sth)).cached();
-        };
 
         // Validate the signature
         if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
@@ -201,10 +183,6 @@ impl<C: Client> Scanner<C> {
             return report.error_description(err.to_string());
         };
         let report = report.inclusion_proof(SthReport::from(&latest_sth));
-
-        //  Cache report
-        self.sct_report_cache.insert(sct.hash(), report.clone());
-
         // Set last_sth and return
         report.latest_sth(SthReport::from(&latest_sth))
     }

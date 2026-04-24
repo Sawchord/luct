@@ -76,8 +76,6 @@ impl StringStoreValue for Report {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SctReport {
-    // TODO: Remove after switching to full report cache
-    cached: bool,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     signature_validation_time: Option<DateTime<Local>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -90,32 +88,15 @@ pub struct SctReport {
     error_description: Option<String>,
 }
 
-// TODO: Remove after switching to full report cache
-impl StringStoreValue for SctReport {
-    fn serialize_value(&self) -> String {
-        serde_json::to_string(self).unwrap()
-    }
-
-    fn deserialize_value(value: &str) -> Option<Self> {
-        serde_json::from_str(value).ok()
-    }
-}
-
 impl SctReport {
     pub(crate) fn new() -> Self {
         Self {
-            cached: false,
             signature_validation_time: None,
             log_name: None,
             latest_sth: None,
             inclusion_proof: None,
             error_description: None,
         }
-    }
-
-    pub(crate) fn cached(mut self) -> Self {
-        self.cached = true;
-        self
     }
 
     pub(crate) fn signature_validation_time(mut self, time: DateTime<Local>) -> Self {

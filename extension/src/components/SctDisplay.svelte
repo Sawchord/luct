@@ -27,10 +27,6 @@
             <li>
                 <SthDisplay name="Latest STH" , sth={sct.latest_sth} />
             </li>
-            <li>
-                <b>Cached:</b>
-                {sct.cached}
-            </li>
         </ul>
     </Expandable>
 </li>
