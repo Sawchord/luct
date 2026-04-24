@@ -11,7 +11,7 @@ use crate::{StringStoreKey, StringStoreValue};
 
 // TODO: Log errors
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
     path: PathBuf,
@@ -97,7 +97,7 @@ impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for Filesyst
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> SearchableStoreRead<K, V> for FilesystemStore<K, V> {
-    fn filter<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Vec<(K, V)> {
+    fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         let _lock = self.access.lock().unwrap();
         let Some(keys) = self.get_sorted_keys() else {
             return vec![];

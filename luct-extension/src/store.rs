@@ -4,6 +4,7 @@ use luct_store::{StringStoreKey, StringStoreValue};
 use std::marker::PhantomData;
 use web_sys::{Storage, window};
 
+#[derive(Debug)]
 pub struct BrowserStore<K, V> {
     _kv: PhantomData<(K, V)>,
     prefix: String,
@@ -140,7 +141,7 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for Br
 impl<K: StringStoreKey + Ord, V: StringStoreValue> SearchableStoreRead<K, V>
     for BrowserStore<K, V>
 {
-    fn filter<F: FnMut(&K, &V) -> bool>(&self, mut pred: F) -> Vec<(K, V)> {
+    fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         Object::keys(&self.storage)
             .iter()
             .filter_map(|key| key.as_string())
