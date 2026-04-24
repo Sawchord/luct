@@ -3,7 +3,7 @@ use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
-    CertificateChain, CertificateError, CtLog, CtLogConfig, LogId,
+    CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
     store::{Hashable, Store},
     tiling::TilingError,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
@@ -30,6 +30,7 @@ pub struct Scanner<C> {
     config: ScannerConfig,
     logs: BTreeMap<LogId, ScannerLog<C>>,
     sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
+    report_cache: Box<dyn Store<Fingerprint, Report>>,
     client: C,
 }
 
@@ -42,12 +43,14 @@ impl<C: Client + Clone> Scanner<C> {
     pub fn new_with_client(
         config: ScannerConfig,
         sct_report_cache: Box<dyn Store<HashOutput, SctReport>>,
+        report_cache: Box<dyn Store<Fingerprint, Report>>,
         client: C,
     ) -> Self {
         Self {
             config,
             logs: BTreeMap::new(),
             sct_report_cache,
+            report_cache,
             client,
         }
     }
@@ -105,8 +108,14 @@ impl<C: Client> Scanner<C> {
         chain: Arc<CertificateChain>,
     ) -> Result<Report, ScannerError> {
         let cert = chain.cert();
-        let (not_before, not_after) = cert.get_validity();
+        let cert_fp = cert.fingerprint_sha256();
 
+        if let Some(report) = self.report_cache.get(&cert_fp) {
+            tracing::debug!("Found report for {} in cache", cert_fp.to_string());
+            return Ok(report);
+        }
+
+        let (not_before, not_after) = cert.get_validity();
         let embedded_scts = cert.extract_scts_v1()?;
 
         let scts = join_all(
@@ -116,7 +125,7 @@ impl<C: Client> Scanner<C> {
         )
         .await;
 
-        Ok(Report {
+        let report = Report {
             ca_issuer: chain.root().get_issuer_name(),
             ca_subject: chain.root().get_subject_name(),
             cert_issuer: chain.cert().get_issuer_name(),
@@ -125,7 +134,10 @@ impl<C: Client> Scanner<C> {
             not_before: not_before.into(),
             not_after: not_after.into(),
             scts,
-        })
+        };
+
+        self.report_cache.insert(cert_fp, report.clone());
+        Ok(report)
     }
 
     pub(crate) async fn collect_embedded_sct_report(

@@ -4,7 +4,7 @@ use crate::store::BrowserStore;
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
-use luct_core::{CertificateChain, log_list::v3::LogList};
+use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList};
 use luct_otlsp::OtlspClient;
 use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, ScannerConfig, SctReport};
 use std::sync::Arc;
@@ -69,11 +69,17 @@ impl Scanner {
         let client = RequestDeduplicationClient::new(client);
 
         let sct_report_cache = Box::new(
-            BrowserStore::<[u8; 32], SctReport>::new_local_store("report".to_string())
+            BrowserStore::<[u8; 32], SctReport>::new_local_store("sct_report".to_string())
                 .expect("Failed to initialize SCT report cache"),
         ) as _;
 
-        let mut scanner = CtScanner::new_with_client(config, sct_report_cache, client);
+        let report_cache = Box::new(
+            BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())
+                .expect("Failed to initialize report cache"),
+        ) as _;
+
+        let mut scanner =
+            CtScanner::new_with_client(config, sct_report_cache, report_cache, client);
 
         for log in logs {
             let name = log.description();
