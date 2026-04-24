@@ -11,7 +11,7 @@ use luct_core::{
 use serde::{Deserialize, Serialize};
 use std::{collections::BTreeMap, sync::Arc};
 use thiserror::Error;
-use web_time::{SystemTime, UNIX_EPOCH};
+use web_time::{Duration, SystemTime, UNIX_EPOCH};
 pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
     log::builder::LogBuilder,
@@ -63,7 +63,7 @@ impl<C: Client + Clone> Scanner<C> {
 
 impl<C: Client> Scanner<C> {
     /// Updates all log's STHs
-    pub async fn update_sths(&self) -> Result<(), ScannerError> {
+    pub async fn update_all_logs(&self) -> Result<(), ScannerError> {
         let updates = self
             .logs
             .values()
@@ -73,21 +73,6 @@ impl<C: Client> Scanner<C> {
         future::try_join_all(updates).await?;
 
         Ok(())
-    }
-
-    /// Fetches a fresh STH from the log
-    pub async fn update_sth(&self, log_name: &str) -> Result<(), ScannerError> {
-        match self
-            .logs
-            .values()
-            .find(|log| log.client().log().description() == log_name)
-        {
-            Some(log) => Ok(log.update_sth().await?),
-            None => {
-                tracing::warn!("Failed to find log {} to update", log_name);
-                Ok(())
-            }
-        }
     }
 
     pub async fn collect_report_pem(&self, data: &str) -> Result<Report, ScannerError> {
@@ -148,7 +133,8 @@ impl<C: Client> Scanner<C> {
         let Some(log) = self.logs.get(&sct.log_id()) else {
             return report.error_description(format!("No log with id {} known", sct.log_id()));
         };
-        let report = report.log_name(log.client().log().description().to_string());
+        let log_name = log.client().log().description().to_string();
+        let report = report.log_name(log_name);
 
         // Validate the signature
         if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
@@ -165,11 +151,12 @@ impl<C: Client> Scanner<C> {
             .into(),
         );
 
-        // TODO: Use oldest valid sth for the inclusion proof, not last. Then only add last_sth after caching
-        let latest_sth = match Self::add_latest_sth(log, &report).await {
+        // Get a fresh sth
+        let fresh_sth = match self.get_fresh_sth(log).await {
             Ok(sth) => sth,
-            Err(report) => return report,
+            Err(err) => return report.error_description(err.to_string()),
         };
+        let report = report.latest_sth(SthReport::from(&fresh_sth));
 
         let leaf = match chain.as_leaf_v1(&sct, true) {
             Err(err) => {
@@ -178,15 +165,20 @@ impl<C: Client> Scanner<C> {
             Ok(leaf) => leaf,
         };
 
+        // TODO: Use oldest valid sth for the inclusion proof, not last. Then only add last_sth after caching
+        let latest_sth = match Self::add_latest_sth(log, &report).await {
+            Ok(sth) => sth,
+            Err(report) => return report,
+        };
+
         // Check inclusion
         if let Err(err) = log.check_sct_inclusion(&sct, &latest_sth, &leaf).await {
             return report.error_description(err.to_string());
         };
-        let report = report.inclusion_proof(SthReport::from(&latest_sth));
-        // Set last_sth and return
-        report.latest_sth(SthReport::from(&latest_sth))
+        report.inclusion_proof(SthReport::from(&latest_sth))
     }
 
+    // TODO: Remove
     async fn add_latest_sth(
         log: &ScannerLog<C>,
         report: &SctReport,
@@ -199,6 +191,32 @@ impl<C: Client> Scanner<C> {
         };
 
         Ok(latest_sth)
+    }
+
+    /// Get a fresh STH
+    ///
+    /// Checks whether the latest STH is still new enough.
+    /// If it is too old, it will fetch a fresh one
+    async fn get_fresh_sth(
+        &self,
+        log: &ScannerLog<C>,
+    ) -> Result<Validated<SignedTreeHead>, ScannerError> {
+        let log_name = log.client().log().description();
+
+        // If we have no STH whatsoever, simply fetch it
+        let Some(last_sth) = log.get_latest_sth() else {
+            tracing::debug!("No prior known STHs for {}, fetching fresh STH", log_name);
+            return log.update_sth().await;
+        };
+
+        let now = SystemTime::now();
+        let timestamp = UNIX_EPOCH + Duration::from_millis(last_sth.timestamp());
+        if timestamp + self.config.sth_update_threshold < now {
+            tracing::debug!("Updating old STH for log {}", log_name);
+            log.update_sth().await
+        } else {
+            Ok(last_sth)
+        }
     }
 }
 

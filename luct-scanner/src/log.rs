@@ -66,14 +66,20 @@ impl<C: Client> ScannerLog<C> {
         }
     }
 
+    pub(crate) fn get_latest_sth(&self) -> Option<Validated<SignedTreeHead>> {
+        self.log.sth_store.last().map(|sth| sth.1)
+    }
+
     /// Updates the log to the newest STH
     ///
     /// Checks consistency to the last STH, of one exists
     #[tracing::instrument(level = "trace")]
-    pub(crate) async fn update_sth(&self) -> Result<(), ScannerError> {
+    pub(crate) async fn update_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         let new_sth = self.get_sth().await?;
 
-        if let Some((_, old_sth)) = self.log.sth_store.last() {
+        if let Some((_, old_sth)) = self.log.sth_store.last()
+            && old_sth.tree_size() < new_sth.tree_size()
+        {
             tracing::debug!(
                 "Updating STH: Checking STH {} against old STH {}",
                 new_sth.tree_size(),
@@ -91,9 +97,11 @@ impl<C: Client> ScannerLog<C> {
             };
         };
 
-        self.log.sth_store.insert(new_sth.tree_size(), new_sth);
+        self.log
+            .sth_store
+            .insert(new_sth.tree_size(), new_sth.clone());
 
-        Ok(())
+        Ok(new_sth)
     }
 
     #[tracing::instrument(level = "trace")]
