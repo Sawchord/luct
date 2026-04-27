@@ -1,9 +1,12 @@
 mod file;
+mod switch;
+
 pub use file::FilesystemStore;
 use luct_core::{
     Fingerprint,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
+pub use switch::StoreSwitch;
 
 pub trait StringStoreKey: Clone + Ord + Send + 'static {
     fn serialize_key(&self) -> String;
