@@ -1,7 +1,7 @@
 use crate::{ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
 use luct_client::CtClient;
 use luct_core::{
-    store::{OrderedStoreRead, StoreWrite},
+    store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{
@@ -70,7 +70,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
         match self.log.sth_store.last() {
             Some((_, sth)) => Ok(sth),
             None => {
-                let sth = self.get_sth().await?;
+                let sth = self.fetch_sth().await?;
                 self.log.sth_store.insert(sth.tree_size(), sth.clone());
                 Ok(sth)
             }
@@ -86,7 +86,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
     /// Checks consistency to the last STH, of one exists
     #[tracing::instrument(level = "trace")]
     pub(crate) async fn update_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
-        let new_sth = self.get_sth().await?;
+        let new_sth = self.fetch_sth().await?;
 
         if let Some((_, old_sth)) = self.log.sth_store.last()
             && old_sth.tree_size() < new_sth.tree_size()
@@ -116,7 +116,22 @@ impl<S: ScannerImpl> ScannerLog<S> {
     }
 
     #[tracing::instrument(level = "trace")]
-    async fn get_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
+    pub(crate) fn oldest_viable_sth(
+        &self,
+        sct: &SignedCertificateTimestamp,
+    ) -> Option<Validated<SignedTreeHead>> {
+        let timestamp = sct.timestamp();
+        //dbg!("Looking for timestamp: {}", timestamp);
+
+        let tree_head = self.log.sth_store.find(|_, sth| {
+            //dbg!("Checking {}", sth);
+            sth.timestamp() > timestamp
+        })?;
+        Some(tree_head.1)
+    }
+
+    #[tracing::instrument(level = "trace")]
+    async fn fetch_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.tiles {
             Some(_) => Ok(Validated::new(self.log.client.get_checkpoint().await?)),

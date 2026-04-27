@@ -172,17 +172,12 @@ impl<S: ScannerImpl> Scanner<S> {
             Ok(leaf) => leaf,
         };
 
-        // TODO: Use oldest valid sth for the inclusion proof, not last. Then only add last_sth after caching
-        let latest_sth = match Self::add_latest_sth(log, &report).await {
-            Ok(sth) => sth,
-            Err(report) => return report,
-        };
-
         // Check inclusion
-        if let Err(err) = log.check_sct_inclusion(&sct, &latest_sth, &leaf).await {
+        let oldest_sth = log.oldest_viable_sth(&sct).unwrap_or(fresh_sth);
+        if let Err(err) = log.check_sct_inclusion(&sct, &oldest_sth, &leaf).await {
             return report.error_description(err.to_string());
         };
-        report.inclusion_proof(SthReport::from(&latest_sth))
+        report.inclusion_proof(SthReport::from(&oldest_sth))
     }
 
     // TODO: Remove
