@@ -20,6 +20,16 @@ pub struct FilesystemStore<K, V> {
 
 impl<K, V> FilesystemStore<K, V> {
     pub fn new(path: PathBuf) -> FilesystemStore<K, V> {
+        std::fs::create_dir_all(&path)
+            .inspect_err(|err| {
+                tracing::error!(
+                    "Failed to create necessary directory {:?} for filesystem store, err: {:?}",
+                    path,
+                    err,
+                )
+            })
+            .expect("Failed to set up filesystem store");
+
         Self {
             _kv: PhantomData,
             path,
@@ -37,7 +47,13 @@ impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
                     &dir_entry.file_name().into_string().unwrap(),
                 ))
                 .flatten(),
-                Err(_) => None,
+                Err(err) => {
+                    tracing::error!(
+                        "Failed to deserialize a key (get_sorted_keys) err: {:?}",
+                        err
+                    );
+                    None
+                }
             })
             .collect::<Vec<_>>();
         keys.sort();
@@ -66,14 +82,20 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for FilesystemStore
 impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStore<K, V> {
     fn insert(&self, key: K, value: V) {
         let _lock = self.access.lock().unwrap();
-        if let Ok(mut file) = OpenOptions::new()
+        let store_path = self.path.join(key.serialize_key());
+
+        match OpenOptions::new()
             .create(true)
             .truncate(true)
             .write(true)
-            .open(self.path.join(key.serialize_key()))
+            .open(&store_path)
         {
-            file.write_all(value.serialize_value().as_bytes()).unwrap()
-        }
+            Ok(mut file) => {
+                file.write_all(value.serialize_value().as_bytes()).unwrap();
+                tracing::debug!("Wrote key to {:?}", store_path);
+            }
+            Err(err) => tracing::error!("Failed to write to path {:?}, err {:?}", store_path, err),
+        };
     }
 
     fn delete(&self, key: &K) -> bool {
