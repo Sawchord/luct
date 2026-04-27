@@ -26,6 +26,7 @@ struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
+    type ReportStore = BrowserStore<Fingerprint, Report>;
     type SthStore = BrowserStore<u64, Validated<SignedTreeHead>>;
 }
 
@@ -75,10 +76,9 @@ impl Scanner {
         };
         let client = RequestDeduplicationClient::new(client);
 
-        let report_cache = Box::new(
+        let report_cache =
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())
-                .expect("Failed to initialize report cache"),
-        ) as _;
+                .expect("Failed to initialize report cache");
 
         let mut scanner = CtScanner::new_with_client(config, report_cache, client);
 

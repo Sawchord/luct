@@ -6,9 +6,9 @@ use chrono::DateTime;
 use clap::Parser;
 use eyre::Context;
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
-use luct_core::{log_list::v3::LogList, store::MemoryStore, v1::SignedTreeHead};
-use luct_scanner::{Scanner, ScannerConfig, ScannerImpl, Validated};
-use luct_store::FilesystemStore;
+use luct_core::{Fingerprint, log_list::v3::LogList, store::MemoryStore, v1::SignedTreeHead};
+use luct_scanner::{Report, Scanner, ScannerConfig, ScannerImpl, Validated};
+use luct_store::{FilesystemStore, StoreSwitch};
 use std::{sync::Arc, time::SystemTime};
 use tracing_subscriber::EnvFilter;
 
@@ -26,6 +26,8 @@ struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
     type Client = RequestDeduplicationClient<ReqwestClient>;
+    type ReportStore =
+        StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>;
     type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
 }
 
@@ -62,9 +64,9 @@ async fn main() -> eyre::Result<()> {
     tracing::info!("Imported {} logs", logs.len());
 
     let report_cache = if args.no_cache {
-        Box::new(MemoryStore::default()) as _
+        StoreSwitch::A(MemoryStore::default())
     } else {
-        Box::new(FilesystemStore::new(workdir.join("report"))) as _
+        StoreSwitch::B(FilesystemStore::new(workdir.join("report")))
     };
 
     let config = ScannerConfig::builder().validate_cert_chain(true).build()?;

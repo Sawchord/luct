@@ -4,7 +4,7 @@ use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
     CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
-    store::{SearchableStore, Store},
+    store::{SearchableStore, StoreRead, StoreWrite},
     tiling::TilingError,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
@@ -27,13 +27,14 @@ mod utils;
 
 pub trait ScannerImpl {
     type Client: Client + Clone;
-    type SthStore: SearchableStore<u64, Validated<SignedTreeHead>> + Debug;
+    type ReportStore: SearchableStore<Fingerprint, Report>;
+    type SthStore: SearchableStore<u64, Validated<SignedTreeHead>>;
 }
 
 pub struct Scanner<S: ScannerImpl> {
     config: ScannerConfig,
     logs: BTreeMap<LogId, ScannerLog<S>>,
-    report_cache: Box<dyn Store<Fingerprint, Report>>,
+    report_store: S::ReportStore,
     client: S::Client,
 }
 
@@ -45,13 +46,13 @@ impl<S: ScannerImpl> Scanner<S> {
 
     pub fn new_with_client(
         config: ScannerConfig,
-        report_cache: Box<dyn Store<Fingerprint, Report>>,
+        report_store: S::ReportStore,
         client: S::Client,
     ) -> Self {
         Self {
             config,
             logs: BTreeMap::new(),
-            report_cache,
+            report_store,
             client,
         }
     }
@@ -98,7 +99,7 @@ impl<S: ScannerImpl> Scanner<S> {
         let cert = chain.cert();
         let cert_fp = cert.fingerprint_sha256();
 
-        if let Some(report) = self.report_cache.get(&cert_fp) {
+        if let Some(report) = self.report_store.get(&cert_fp) {
             tracing::debug!("Found report for {} in cache", cert_fp.to_string());
             return Ok(report);
         }
@@ -124,7 +125,7 @@ impl<S: ScannerImpl> Scanner<S> {
             scts,
         };
 
-        self.report_cache.insert(cert_fp, report.clone());
+        self.report_store.insert(cert_fp, report.clone());
         Ok(report)
     }
 
