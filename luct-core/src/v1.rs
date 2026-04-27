@@ -31,8 +31,14 @@ pub use tree::MerkleTreeLeaf;
 
 // TODO: LogEntryChain type
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct LogId(pub(crate) [u8; 32]);
+
+impl fmt::Debug for LogId {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.debug_tuple("LogId").field(&hex::encode(self.0)).finish()
+    }
+}
 
 impl Display for LogId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {

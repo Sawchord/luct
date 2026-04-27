@@ -20,12 +20,23 @@ impl CtLog {
 /// Response returned by call to `/ct/v1/get-sth`
 ///
 /// See RFC 6962 4.3
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct SignedTreeHead {
     pub(crate) tree_size: u64,
     pub(crate) timestamp: u64,
     pub(crate) sha256_root_hash: HashOutput,
     pub(crate) tree_head_signature: Signature<TreeHeadSignature>,
+}
+
+impl std::fmt::Debug for SignedTreeHead {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("SignedTreeHead")
+            .field("tree_size", &self.tree_size)
+            .field("timestamp", &self.timestamp)
+            .field("sha256_root_hash", &hex::encode(self.sha256_root_hash))
+            .field("tree_head_signature", &self.tree_head_signature)
+            .finish()
+    }
 }
 
 impl SignedTreeHead {

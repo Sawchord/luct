@@ -6,7 +6,12 @@ use chrono::DateTime;
 use clap::Parser;
 use eyre::Context;
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
-use luct_core::{Fingerprint, log_list::v3::LogList, store::MemoryStore, v1::SignedTreeHead};
+use luct_core::{
+    Fingerprint,
+    log_list::v3::LogList,
+    store::{MemoryStore, StoreRead},
+    v1::SignedTreeHead,
+};
 use luct_scanner::{Report, Scanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::{FilesystemStore, StoreSwitch};
 use std::{sync::Arc, time::SystemTime};
@@ -66,7 +71,9 @@ async fn main() -> eyre::Result<()> {
     let report_cache = if args.no_cache {
         StoreSwitch::A(MemoryStore::default())
     } else {
-        StoreSwitch::B(FilesystemStore::new(workdir.join("report")))
+        let store = StoreSwitch::B(FilesystemStore::new(workdir.join("report")));
+        tracing::debug!("Loaded report store with {} cached reports", store.len());
+        store
     };
 
     let config = ScannerConfig::builder().validate_cert_chain(true).build()?;

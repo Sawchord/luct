@@ -15,11 +15,20 @@ use std::{
 use thiserror::Error;
 
 /// See RFC 5246 4.7
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub(crate) struct Signature<T> {
     algorithm: SignatureAndHashAlgorithm,
     signature: CodecVec<u16>,
     inner: PhantomData<T>,
+}
+
+impl<T: std::fmt::Debug> std::fmt::Debug for Signature<T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Signature")
+            .field("algorithm", &self.algorithm)
+            .field("signature", &hex::encode(&self.signature))
+            .finish()
+    }
 }
 
 impl<T> Encode for Signature<T> {
