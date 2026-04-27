@@ -74,7 +74,7 @@ impl<S: ScannerImpl> Scanner<S> {
         let updates = self
             .logs
             .values()
-            .map(|log| self.get_fresh_sth(log))
+            .map(|log| log.update_sth())
             .collect::<Vec<_>>();
 
         future::try_join_all(updates).await?;

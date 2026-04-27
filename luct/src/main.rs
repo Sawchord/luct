@@ -49,6 +49,7 @@ async fn main() -> eyre::Result<()> {
 
     let workdir = get_workdir(&args);
     let log_list_path = log_list_path(&args);
+    tracing::debug!("Workdir: {:?}, log list path: {:?}", workdir, log_list_path);
 
     let log_list = log_list_path
         .and_then(|confpath| {
@@ -83,7 +84,6 @@ async fn main() -> eyre::Result<()> {
 
     for log in logs {
         let name = log.description();
-
         scanner.add_log(&log, FilesystemStore::new(workdir.join("sth").join(name)));
     }
 
