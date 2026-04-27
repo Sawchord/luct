@@ -1,4 +1,4 @@
-use crate::log::ScannerLog;
+use crate::log::{ScannerLog, builder::LogImpls};
 use chrono::DateTime;
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
@@ -14,7 +14,6 @@ use thiserror::Error;
 use web_time::{Duration, SystemTime, UNIX_EPOCH};
 pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
-    log::builder::LogBuilder,
     report::{Report, SctReport, SthReport},
     utils::Validated,
 };
@@ -26,19 +25,20 @@ mod log;
 mod report;
 mod utils;
 
-pub struct Scanner<C, S> {
+pub trait ScannerImpl {
+    type Client: Client + Clone;
+    type SthStore: SearchableStore<u64, Validated<SignedTreeHead>> + Debug;
+}
+
+pub struct Scanner<S: ScannerImpl> {
     config: ScannerConfig,
-    logs: BTreeMap<LogId, ScannerLog<C, S>>,
+    logs: BTreeMap<LogId, ScannerLog<S>>,
     report_cache: Box<dyn Store<Fingerprint, Report>>,
-    client: C,
+    client: S::Client,
 }
 
 #[allow(clippy::type_complexity)]
-impl<C, S> Scanner<C, S>
-where
-    C: Client + Clone,
-    S: SearchableStore<u64, Validated<SignedTreeHead>> + Debug,
-{
+impl<S: ScannerImpl> Scanner<S> {
     pub fn logs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CtLog> + 'a> {
         Box::new(self.logs.values().map(|val| val.client().log()))
     }
@@ -46,7 +46,7 @@ where
     pub fn new_with_client(
         config: ScannerConfig,
         report_cache: Box<dyn Store<Fingerprint, Report>>,
-        client: C,
+        client: S::Client,
     ) -> Self {
         Self {
             config,
@@ -56,8 +56,12 @@ where
         }
     }
 
-    pub fn add_log(&mut self, log: LogBuilder<S>) -> &mut Self {
-        let scanner_log = log.build(&self.client);
+    pub fn add_log(&mut self, log: &CtLog, sth_store: S::SthStore) -> &mut Self {
+        let impls = LogImpls {
+            client: self.client.clone(),
+            sth_store,
+        };
+        let scanner_log = ScannerLog::new(log, impls);
         let log_id = scanner_log.client().log().log_id().clone();
 
         self.logs.insert(log_id, scanner_log);
@@ -182,7 +186,7 @@ where
 
     // TODO: Remove
     async fn add_latest_sth(
-        log: &ScannerLog<C, S>,
+        log: &ScannerLog<S>,
         report: &SctReport,
     ) -> Result<Validated<SignedTreeHead>, SctReport> {
         let latest_sth = match log.latest_sth().await {
@@ -201,7 +205,7 @@ where
     /// If it is too old, it will fetch a fresh one
     async fn get_fresh_sth(
         &self,
-        log: &ScannerLog<C, S>,
+        log: &ScannerLog<S>,
     ) -> Result<Validated<SignedTreeHead>, ScannerError> {
         let log_name = log.client().log().description();
 

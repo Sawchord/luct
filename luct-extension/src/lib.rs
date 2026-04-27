@@ -6,7 +6,7 @@ use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
 use luct_otlsp::OtlspClient;
-use luct_scanner::{LogBuilder, Report, Scanner as CtScanner, ScannerConfig, Validated};
+use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
 use std::sync::Arc;
 use tracing::Level;
 use tracing_wasm::WASMLayerConfigBuilder;
@@ -21,6 +21,13 @@ const USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     " (https://github.com/Sawchord/luct/)"
 );
+
+struct ExtensionScannerImpl;
+
+impl ScannerImpl for ExtensionScannerImpl {
+    type Client = RequestDeduplicationClient<OtlspClient>;
+    type SthStore = BrowserStore<u64, Validated<SignedTreeHead>>;
+}
 
 #[wasm_bindgen]
 extern "C" {
@@ -43,10 +50,7 @@ pub fn start() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 pub struct Scanner {
-    scanner: CtScanner<
-        RequestDeduplicationClient<OtlspClient>,
-        BrowserStore<u64, Validated<SignedTreeHead>>,
-    >,
+    scanner: CtScanner<ExtensionScannerImpl>,
 }
 
 #[wasm_bindgen]
@@ -81,10 +85,9 @@ impl Scanner {
         for log in logs {
             let name = log.description();
             scanner.add_log(
-                LogBuilder::new(&log).with_sth_store(
-                    BrowserStore::new_local_store(format!("sth/{name}"))
-                        .expect("Failed to initialize STH store"),
-                ),
+                &log,
+                BrowserStore::new_local_store(format!("sth/{name}"))
+                    .expect("Failed to initialize STH store"),
             );
         }
 

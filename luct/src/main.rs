@@ -6,8 +6,8 @@ use chrono::DateTime;
 use clap::Parser;
 use eyre::Context;
 use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
-use luct_core::{log_list::v3::LogList, store::MemoryStore};
-use luct_scanner::{LogBuilder, Scanner, ScannerConfig};
+use luct_core::{log_list::v3::LogList, store::MemoryStore, v1::SignedTreeHead};
+use luct_scanner::{Scanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::FilesystemStore;
 use std::{sync::Arc, time::SystemTime};
 use tracing_subscriber::EnvFilter;
@@ -21,6 +21,13 @@ const USER_AGENT: &str = concat!(
     " (https://github.com/Sawchord/luct/)"
 );
 const LOG_LIST: &str = include_str!("../../extension/luct/logs/log_list.json");
+
+struct CliScannerImpl;
+
+impl ScannerImpl for CliScannerImpl {
+    type Client = RequestDeduplicationClient<ReqwestClient>;
+    type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
+}
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
@@ -62,16 +69,13 @@ async fn main() -> eyre::Result<()> {
 
     let config = ScannerConfig::builder().validate_cert_chain(true).build()?;
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
-    let mut scanner = Scanner::new_with_client(config, report_cache, client);
+    let mut scanner = Scanner::<CliScannerImpl>::new_with_client(config, report_cache, client);
     tracing::info!("Initialized scanner");
 
     for log in logs {
         let name = log.description();
 
-        scanner.add_log(
-            LogBuilder::new(&log)
-                .with_sth_store(FilesystemStore::new(workdir.join("sth").join(name))),
-        );
+        scanner.add_log(&log, FilesystemStore::new(workdir.join("sth").join(name)));
     }
 
     if args.update_sths {

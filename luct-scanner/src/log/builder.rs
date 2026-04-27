@@ -1,43 +1,25 @@
 use crate::{
+    ScannerImpl,
     log::{ScannerLog, ScannerLogInner, tiling::TileFetcher},
-    utils::Validated,
 };
-use luct_client::{Client, CtClient};
-use luct_core::{CtLog, CtLogConfig, store::MemoryStore, v1::SignedTreeHead};
+use luct_client::CtClient;
+use luct_core::CtLog;
 use std::sync::Arc;
 
-pub struct LogBuilder<S> {
-    name: String,
-    config: CtLogConfig,
-    sth_store: S,
+#[derive(Debug, Clone)]
+pub(crate) struct LogImpls<S: ScannerImpl> {
+    pub client: S::Client,
+    pub sth_store: S::SthStore,
 }
 
-impl LogBuilder<MemoryStore<u64, Validated<SignedTreeHead>>> {
-    pub fn new(log: &CtLog) -> Self {
-        LogBuilder {
-            name: log.description().to_string(),
-            config: log.config().clone(),
-            sth_store: MemoryStore::default(),
-        }
-    }
-}
+impl<S: ScannerImpl> ScannerLog<S> {
+    pub fn new(log: &CtLog, impls: LogImpls<S>) -> Self {
+        let client = CtClient::new(log.config().clone(), impls.client);
 
-impl<S> LogBuilder<S> {
-    pub fn with_sth_store<S2>(self, store: S2) -> LogBuilder<S2> {
-        LogBuilder::<S2> {
-            name: self.name,
-            config: self.config,
-            sth_store: store,
-        }
-    }
-
-    pub(crate) fn build<C: Client + Clone>(self, client: &C) -> ScannerLog<C, S> {
-        let client = CtClient::new(self.config, client.clone());
-
-        let log = Arc::new(ScannerLogInner {
-            name: self.name,
+        let log = Arc::new(ScannerLogInner::<S> {
+            name: log.description().to_owned(),
             client,
-            sth_store: self.sth_store,
+            sth_store: impls.sth_store,
         });
 
         let tiles = log
