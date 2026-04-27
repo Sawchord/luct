@@ -180,21 +180,6 @@ impl<S: ScannerImpl> Scanner<S> {
         report.inclusion_proof(SthReport::from(&oldest_sth))
     }
 
-    // TODO: Remove
-    async fn add_latest_sth(
-        log: &ScannerLog<S>,
-        report: &SctReport,
-    ) -> Result<Validated<SignedTreeHead>, SctReport> {
-        let latest_sth = match log.latest_sth().await {
-            Err(err) => {
-                return Err(report.clone().error_description(err.to_string()));
-            }
-            Ok(sth) => sth,
-        };
-
-        Ok(latest_sth)
-    }
-
     /// Get a fresh STH
     ///
     /// Checks whether the latest STH is still new enough.

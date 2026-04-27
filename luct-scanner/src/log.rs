@@ -64,19 +64,6 @@ impl<S: ScannerImpl> ScannerLog<S> {
         }
     }
 
-    /// Returns the latests STH, if it exists, fetches it otherwise
-    #[tracing::instrument(level = "trace")]
-    pub(crate) async fn latest_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
-        match self.log.sth_store.last() {
-            Some((_, sth)) => Ok(sth),
-            None => {
-                let sth = self.fetch_sth().await?;
-                self.log.sth_store.insert(sth.tree_size(), sth.clone());
-                Ok(sth)
-            }
-        }
-    }
-
     pub(crate) fn get_latest_sth(&self) -> Option<Validated<SignedTreeHead>> {
         self.log.sth_store.last().map(|sth| sth.1)
     }
