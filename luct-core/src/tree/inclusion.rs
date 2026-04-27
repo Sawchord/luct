@@ -102,6 +102,10 @@ pub struct AuditProof {
 }
 
 impl AuditProof {
+    pub fn index(&self) -> u64 {
+        self.index
+    }
+
     pub fn validate(
         &self,
         head: &TreeHead,

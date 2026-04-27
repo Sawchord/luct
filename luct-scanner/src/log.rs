@@ -53,7 +53,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
         sct: &SignedCertificateTimestamp,
         sth: &Validated<SignedTreeHead>,
         leaf: &MerkleTreeLeaf,
-    ) -> Result<(), ScannerError> {
+    ) -> Result<u64, ScannerError> {
         match &self.tiles {
             Some(tiles) => Ok(tiles.check_sct_inclusion(sct, sth, leaf).await?),
             None => Ok(self

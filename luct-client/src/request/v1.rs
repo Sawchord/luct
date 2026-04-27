@@ -115,7 +115,7 @@ impl<C: Client> CtClient<C> {
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,
         leaf: &MerkleTreeLeaf,
-    ) -> Result<(), ClientError> {
+    ) -> Result<u64, ClientError> {
         self.assert_v1()?;
 
         let leaf_hash = leaf.hash();
@@ -146,7 +146,7 @@ impl<C: Client> CtClient<C> {
             sth.tree_size()
         );
 
-        Ok(())
+        Ok(proof.index())
     }
 
     #[tracing::instrument(level = "trace")]

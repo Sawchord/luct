@@ -175,9 +175,11 @@ impl<S: ScannerImpl> Scanner<S> {
 
         // Check inclusion
         let oldest_sth = log.oldest_viable_sth(&sct).unwrap_or(fresh_sth);
-        if let Err(err) = log.check_sct_inclusion(&sct, &oldest_sth, &leaf).await {
-            return report.error_description(err.to_string());
+        let report = match log.check_sct_inclusion(&sct, &oldest_sth, &leaf).await {
+            Ok(index) => report.index(index),
+            Err(err) => return report.error_description(err.to_string()),
         };
+
         report.inclusion_proof(SthReport::from(&oldest_sth))
     }
 

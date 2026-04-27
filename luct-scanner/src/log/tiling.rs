@@ -45,7 +45,7 @@ impl<S: ScannerImpl> TileFetcher<S> {
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,
         leaf: &MerkleTreeLeaf,
-    ) -> Result<(), TilingError> {
+    ) -> Result<u64, TilingError> {
         let Some(leaf_index) = sct.leaf_index() else {
             return Err(TilingError::LeafIndexMissing);
         };
@@ -71,7 +71,7 @@ impl<S: ScannerImpl> TileFetcher<S> {
             .validate(&tree_head, leaf)
             .map_err(TilingError::AuditProofError)?;
 
-        Ok(())
+        Ok(audit_proof.index())
     }
 
     pub(crate) async fn check_sth_consistency(

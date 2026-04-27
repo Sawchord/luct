@@ -14,6 +14,7 @@ pub struct Report {
     pub(crate) fingerprint: String,
     pub(crate) not_before: DateTime<Local>,
     pub(crate) not_after: DateTime<Local>,
+    // TODO: Precert fingerprint
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub(crate) scts: Vec<SctReport>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -123,6 +124,8 @@ pub struct SctReport {
     #[serde(skip_serializing_if = "Option::is_none", default)]
     latest_sth: Option<SthReport>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
+    index: Option<u64>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
     inclusion_proof: Option<SthReport>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     error_description: Option<String>,
@@ -135,6 +138,7 @@ impl SctReport {
             signature_validation_time: None,
             log_name: None,
             latest_sth: None,
+            index: None,
             inclusion_proof: None,
             error_description: None,
         }
@@ -152,6 +156,11 @@ impl SctReport {
 
     pub(crate) fn latest_sth(mut self, sth: SthReport) -> Self {
         self.latest_sth = Some(sth);
+        self
+    }
+
+    pub(crate) fn index(mut self, index: u64) -> Self {
+        self.index = Some(index);
         self
     }
 
