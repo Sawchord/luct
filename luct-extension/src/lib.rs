@@ -130,7 +130,7 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub fn evaluate_report(report: JsValue) -> Result<(), String> {
+    pub fn evaluate_report(&self, report: JsValue) -> Result<(), String> {
         let report: Report =
             serde_wasm_bindgen::from_value(report).map_err(|err| format!("{err}"))?;
 
@@ -142,7 +142,7 @@ impl Scanner {
         )
         .unwrap()
         .into();
-        report.evaluate_policy(now)?;
+        self.scanner.evaluate_policy(report, now)?;
 
         Ok(())
     }

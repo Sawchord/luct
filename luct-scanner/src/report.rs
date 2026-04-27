@@ -1,9 +1,9 @@
-use crate::Validated;
+use crate::{Scanner, ScannerImpl, Validated};
 use chrono::{DateTime, Local, TimeDelta};
-use luct_core::v1::SignedTreeHead;
+use luct_core::{LogId, v1::SignedTreeHead};
 use luct_store::StringStoreValue;
 use serde::{Deserialize, Serialize};
-use web_time::UNIX_EPOCH;
+use web_time::{Duration, UNIX_EPOCH};
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
@@ -14,46 +14,80 @@ pub struct Report {
     pub(crate) fingerprint: String,
     pub(crate) not_before: DateTime<Local>,
     pub(crate) not_after: DateTime<Local>,
+    #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub(crate) scts: Vec<SctReport>,
+    #[serde(skip_serializing_if = "Option::is_none", default)]
+    pub(crate) error_description: Option<String>,
 }
 
-impl Report {
-    pub fn evaluate_policy(&self, time: DateTime<Local>) -> Result<(), String> {
-        let num_expected_scts = match self.not_after - self.not_before {
+impl<S: ScannerImpl> Scanner<S> {
+    // TODO: Evaluate the policy right when creating the report and put the errors into the
+    // error fields of the report
+    pub fn evaluate_policy(
+        &self,
+        report: Report,
+        current_time: DateTime<Local>,
+    ) -> Result<(), String> {
+        // TODO: Check that expiration date matches logs submission bracket?
+
+        // Calculate the number of scts we expect
+        let num_expected_scts = match report.not_after - report.not_before {
             time if time <= TimeDelta::days(180) => 2,
             _ => 3,
         };
 
-        let num_scts = self
+        // Calculate the number of scts that the report contains from known logs
+        // TODO: Make sure that the logs are from different operators
+        let num_scts_from_known_logs = report
             .scts
             .iter()
+            // NOTE: Having a signature that passed validation means the log is known
             .filter(|sct| sct.signature_validation_time.is_some())
             .count();
 
-        if num_scts < num_expected_scts {
+        // Check that we have enough SCTs from known logs
+        if num_scts_from_known_logs < num_expected_scts {
             return Err(format!(
                 "Insufficient number of SCTs from known logs. Expected {} but got {}",
-                num_expected_scts, num_scts
+                num_expected_scts, num_scts_from_known_logs
             ));
         }
 
-        // TODO: Check that expiration date matches logs bracket?
+        let mut fresh_inclusion_proofs = 0;
+        let mut old_inclusion_proofs = 0;
+        for sct in report.scts.iter() {
+            // Scts with error cannot be valid
+            if sct.error_description.is_some() {
+                continue;
+            }
 
-        let (old_inclusion_proofs, fresh_inclusion_proofs) = self
-            .scts
-            .iter()
-            // Filter out sct reports that correspond to logs that don't have a recent sth
-            .filter(|sct_report| {
-                sct_report.latest_sth.as_ref().is_some_and(|sth_report| {
-                    sth_report.verification_time > time - TimeDelta::hours(24)
-                })
-            })
-            .filter_map(|sct_report| sct_report.inclusion_proof.as_ref())
-            .partition::<Vec<_>, _>(|sth_report| {
-                sth_report.verification_time < time - TimeDelta::hours(24)
-            });
+            // Check that the SCT has a a fresh STH
+            let Some(latest_sth) = &sct.latest_sth else {
+                // Could not find a fresh STH for this SCT
+                continue;
+            };
+            if latest_sth.verification_time
+                < current_time - time_delta_from_duration(self.config.sth_freshness_threshold)
+            {
+                // The logs latest STH is too old and the log is considered state
+                continue;
+            }
 
-        if old_inclusion_proofs.is_empty() && fresh_inclusion_proofs.len() < 2 {
+            // Check whether the proofs are old or fresh
+            let Some(inclusion_proof) = &sct.inclusion_proof else {
+                // Could not find an inclusion proof for this SCT
+                continue;
+            };
+            if inclusion_proof.verification_time
+                < current_time - time_delta_from_duration(self.config.sth_freshness_threshold)
+            {
+                old_inclusion_proofs += 1;
+            } else {
+                fresh_inclusion_proofs += 1;
+            }
+        }
+
+        if old_inclusion_proofs == 0 && fresh_inclusion_proofs < num_expected_scts {
             return Err(
                 "Insufficient number of inclusion proofs with fresh sths could be verified!"
                     .to_string(),
@@ -62,6 +96,11 @@ impl Report {
 
         Ok(())
     }
+}
+
+fn time_delta_from_duration(duration: Duration) -> TimeDelta {
+    TimeDelta::new(duration.as_secs() as i64, duration.subsec_nanos())
+        .expect("Failed to translate duration into timedelta")
 }
 
 impl StringStoreValue for Report {
@@ -76,6 +115,7 @@ impl StringStoreValue for Report {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SctReport {
+    log_id: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     signature_validation_time: Option<DateTime<Local>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -89,8 +129,9 @@ pub struct SctReport {
 }
 
 impl SctReport {
-    pub(crate) fn new() -> Self {
+    pub(crate) fn new(log_id: LogId) -> Self {
         Self {
+            log_id: log_id.to_string(),
             signature_validation_time: None,
             log_name: None,
             latest_sth: None,
@@ -151,3 +192,5 @@ impl From<&Validated<SignedTreeHead>> for SthReport {
         }
     }
 }
+
+// TODO: Tests for policy evaluation

@@ -123,6 +123,7 @@ impl<S: ScannerImpl> Scanner<S> {
             not_before: not_before.into(),
             not_after: not_after.into(),
             scts,
+            error_description: None,
         };
 
         self.report_store.insert(cert_fp, report.clone());
@@ -134,7 +135,7 @@ impl<S: ScannerImpl> Scanner<S> {
         sct: SignedCertificateTimestamp,
         chain: &Arc<CertificateChain>,
     ) -> SctReport {
-        let report = SctReport::new();
+        let report = SctReport::new(sct.log_id());
 
         // Find the log this sct belongs to
         let Some(log) = self.logs.get(&sct.log_id()) else {

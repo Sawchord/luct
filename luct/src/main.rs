@@ -101,8 +101,8 @@ async fn main() -> eyre::Result<()> {
     let report_str = serde_json::to_string_pretty(&report).unwrap();
     println!("Finished report: {}", report_str);
 
-    report
-        .evaluate_policy(DateTime::from(SystemTime::now()))
+    scanner
+        .evaluate_policy(report, DateTime::from(SystemTime::now()))
         .map_err(|err| eyre::eyre!(err))?;
 
     Ok(())
