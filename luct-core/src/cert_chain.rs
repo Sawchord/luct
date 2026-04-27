@@ -4,6 +4,7 @@ use crate::{
     utils::codec::CodecError,
     v1,
 };
+use itertools::Itertools;
 use sha2::{Digest, Sha256};
 use x509_cert::{
     Certificate as Cert,
@@ -37,6 +38,10 @@ impl CertificateChain {
 
         let chain = Self(chain.into_iter().map(Certificate).collect());
         Ok(chain)
+    }
+
+    pub fn as_pem_chain(&self) -> String {
+        self.0.iter().map(|cert| cert.as_pem()).join("")
     }
 
     pub fn from_der_chain(input: &[Vec<u8>]) -> Result<Self, CertificateError> {

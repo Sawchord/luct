@@ -16,7 +16,7 @@ use std::{
 use thiserror::Error;
 use x509_cert::{
     Certificate as Cert,
-    der::{Decode as CertDecode, DecodePem, Encode as CertEncode, asn1::OctetString},
+    der::{Decode as CertDecode, DecodePem, Encode as CertEncode, EncodePem, asn1::OctetString},
     ext::pkix::{AuthorityKeyIdentifier, SubjectKeyIdentifier},
 };
 
@@ -38,6 +38,10 @@ impl Certificate {
         Ok(Self(
             Cert::from_pem(input.as_bytes()).map_err(CodecError::DerError)?,
         ))
+    }
+
+    pub fn as_pem(&self) -> String {
+        self.0.to_pem(p256::pkcs8::LineEnding::LF).unwrap()
     }
 
     /// Parse a DER decoded string into a [`Certificate`]

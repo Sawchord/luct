@@ -27,6 +27,7 @@ const USER_AGENT: &str = concat!(
 );
 const LOG_LIST: &str = include_str!("../../extension/luct/logs/log_list.json");
 
+// TODO: Ability to overwrite probe user agent
 struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
@@ -93,6 +94,11 @@ async fn main() -> eyre::Result<()> {
 
     let chain = fetch_cert_chain(&args.source)?;
     println!("Fingerprint: {}", chain.cert().fingerprint_sha256());
+
+    if let Some(destination) = args.output_certificate {
+        let chain_str = chain.as_pem_chain();
+        std::fs::write(destination, chain_str).expect("failed to output pem chain")
+    }
 
     let report = scanner
         .collect_report(Arc::new(chain))

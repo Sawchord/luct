@@ -31,6 +31,10 @@ pub(crate) struct Args {
     /// Do not use the SCT cache when validating
     #[arg(long)]
     pub(crate) no_cache: bool,
+
+    /// Output the certificate chain to a file
+    #[arg(long, value_name = "DESTINATION")]
+    pub(crate) output_certificate: Option<PathBuf>,
 }
 
 pub(crate) fn get_workdir(args: &Args) -> PathBuf {
