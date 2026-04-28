@@ -33,7 +33,7 @@ impl Report {
 }
 
 impl<S: ScannerImpl> Scanner<S> {
-    pub fn evaluate_policy(&self, report: Report, current_time: DateTime<Local>) -> Report {
+    pub(crate) fn evaluate_policy(&self, report: Report, current_time: DateTime<Local>) -> Report {
         // TODO: Check that expiration date matches logs submission bracket?
 
         // Calculate the number of scts we expect

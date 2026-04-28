@@ -80,7 +80,9 @@ async fn main() -> eyre::Result<()> {
 
     let config = ScannerConfig::builder().validate_cert_chain(true).build()?;
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
-    let mut scanner = Scanner::<CliScannerImpl>::new_with_client(config, report_cache, client);
+    let time_source = || DateTime::from(SystemTime::now());
+
+    let mut scanner = Scanner::<CliScannerImpl>::new(config, report_cache, client, time_source);
     tracing::info!("Initialized scanner");
 
     for log in logs {
@@ -104,7 +106,6 @@ async fn main() -> eyre::Result<()> {
         .collect_report(Arc::new(chain))
         .await
         .with_context(|| format!("failed to collext leads for {}", args.source))?;
-    let report = scanner.evaluate_policy(report, DateTime::from(SystemTime::now()));
 
     let report = serde_json::to_string_pretty(&report).unwrap();
     println!("Finished report: {}", report);

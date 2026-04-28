@@ -1,5 +1,5 @@
 use crate::log::{ScannerLog, builder::LogImpls};
-use chrono::DateTime;
+use chrono::{DateTime, Local};
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
@@ -36,6 +36,7 @@ pub struct Scanner<S: ScannerImpl> {
     logs: BTreeMap<LogId, ScannerLog<S>>,
     report_store: S::ReportStore,
     client: S::Client,
+    time_source: Box<dyn Fn() -> DateTime<Local>>,
 }
 
 #[allow(clippy::type_complexity)]
@@ -44,16 +45,18 @@ impl<S: ScannerImpl> Scanner<S> {
         Box::new(self.logs.values().map(|val| val.client().log()))
     }
 
-    pub fn new_with_client(
+    pub fn new<F: Fn() -> DateTime<Local> + 'static>(
         config: ScannerConfig,
         report_store: S::ReportStore,
         client: S::Client,
+        time_source: F,
     ) -> Self {
         Self {
             config,
             logs: BTreeMap::new(),
             report_store,
             client,
+            time_source: Box::new(time_source) as _,
         }
     }
 
@@ -126,7 +129,11 @@ impl<S: ScannerImpl> Scanner<S> {
             error_description: None,
         };
 
-        self.report_store.insert(cert_fp, report.clone());
+        let report = self.evaluate_policy(report, (self.time_source)());
+        if report.get_error().is_none() {
+            self.report_store.insert(cert_fp, report.clone());
+        }
+
         Ok(report)
     }
 

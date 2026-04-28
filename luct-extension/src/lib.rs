@@ -80,7 +80,18 @@ impl Scanner {
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())
                 .expect("Failed to initialize report cache");
 
-        let mut scanner = CtScanner::new_with_client(config, report_cache, client);
+        let time_source = || {
+            DateTime::from_timestamp_millis(
+                SystemTime::now()
+                    .duration_since(UNIX_EPOCH)
+                    .unwrap()
+                    .as_millis() as i64,
+            )
+            .unwrap()
+            .into()
+        };
+
+        let mut scanner = CtScanner::new(config, report_cache, client, time_source);
 
         for log in logs {
             let name = log.description();
@@ -124,16 +135,6 @@ impl Scanner {
             .await
             .map_err(|err| err.to_string())?;
 
-        // Evaluate the report
-        let now = DateTime::from_timestamp_millis(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as i64,
-        )
-        .unwrap()
-        .into();
-        let report = self.scanner.evaluate_policy(report, now);
         let report = serde_wasm_bindgen::to_value(&report).map_err(|err| format!("{err}"))?;
 
         Ok(Some(report))
