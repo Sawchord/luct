@@ -2,7 +2,6 @@
 
 use crate::store::BrowserStore;
 use chrono::DateTime;
-use core::panic;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
