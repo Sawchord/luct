@@ -21,14 +21,19 @@ pub struct Report {
     pub(crate) error_description: Option<String>,
 }
 
+impl Report {
+    pub fn get_error(&self) -> Option<String> {
+        self.error_description.clone()
+    }
+
+    fn error_description(mut self, err: String) -> Self {
+        self.error_description = Some(err);
+        self
+    }
+}
+
 impl<S: ScannerImpl> Scanner<S> {
-    // TODO: Evaluate the policy right when creating the report and put the errors into the
-    // error fields of the report
-    pub fn evaluate_policy(
-        &self,
-        report: Report,
-        current_time: DateTime<Local>,
-    ) -> Result<(), String> {
+    pub fn evaluate_policy(&self, report: Report, current_time: DateTime<Local>) -> Report {
         // TODO: Check that expiration date matches logs submission bracket?
 
         // Calculate the number of scts we expect
@@ -48,7 +53,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         // Check that we have enough SCTs from known logs
         if num_scts_from_known_logs < num_expected_scts {
-            return Err(format!(
+            return report.error_description(format!(
                 "Insufficient number of SCTs from known logs. Expected {} but got {}",
                 num_expected_scts, num_scts_from_known_logs
             ));
@@ -89,13 +94,13 @@ impl<S: ScannerImpl> Scanner<S> {
         }
 
         if old_inclusion_proofs == 0 && fresh_inclusion_proofs < num_expected_scts {
-            return Err(
+            return report.error_description(
                 "Insufficient number of inclusion proofs with fresh sths could be verified!"
                     .to_string(),
             );
         }
 
-        Ok(())
+        report
     }
 }
 

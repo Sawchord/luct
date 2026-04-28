@@ -139,7 +139,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         // Find the log this sct belongs to
         let Some(log) = self.logs.get(&sct.log_id()) else {
-            return report.error_description(format!("No log with id {} known", sct.log_id()));
+            return report.error_description("Unknown log id".to_string());
         };
         let log_name = log.client().log().description().to_string();
         let report = report.log_name(log_name);

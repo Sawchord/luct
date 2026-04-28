@@ -104,12 +104,9 @@ async fn main() -> eyre::Result<()> {
         .collect_report(Arc::new(chain))
         .await
         .with_context(|| format!("failed to collext leads for {}", args.source))?;
-    let report_str = serde_json::to_string_pretty(&report).unwrap();
-    println!("Finished report: {}", report_str);
+    let report = scanner.evaluate_policy(report, DateTime::from(SystemTime::now()));
 
-    scanner
-        .evaluate_policy(report, DateTime::from(SystemTime::now()))
-        .map_err(|err| eyre::eyre!(err))?;
-
+    let report = serde_json::to_string_pretty(&report).unwrap();
+    println!("Finished report: {}", report);
     Ok(())
 }
