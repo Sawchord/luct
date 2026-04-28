@@ -1,8 +1,8 @@
 {
     "manifest_version": 2,
     "name": "luCT certificate scanner",
-    "version": "0.0",
-    "description": "Audit certificate transparency logs from the browser ",
+    "version": "0.0.0",
+    "description": "Audit certificate transparency logs in the browser",
     "browser_specific_settings": {
         "gecko": {
             "id": "{30a71f7a-a1c7-41a9-9fce-8d025ec631b7}"
@@ -14,6 +14,10 @@
         ],
         "type": "module"
     },
+    "icons": {
+        "32": "icons/luct_safe.svg",
+        "64": "icons/luct_safe.svg"
+    },
     "page_action": {
         "default_icon": "icons/luct_unsafe.svg",
         "browser_style": true
@@ -24,12 +28,18 @@
         "default_panel": "sidebar/sidebar.html",
         "open_at_install": false
     },
+    "options_ui": {
+        "page": "settings.html",
+        "browser_style": false,
+        "open_in_tab": true
+    },
     "permissions": [
-        "webRequest",
-        "webRequestBlocking",
+        "<all_urls>",
         "activeTab",
         "tabs",
-        "<all_urls>"
+        "unlimitedStorage",
+        "webRequest",
+        "webRequestBlocking"
     ],
     "commands": {
         "_execute_sidebar_action": {
