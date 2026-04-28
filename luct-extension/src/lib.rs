@@ -2,6 +2,7 @@
 
 use crate::store::BrowserStore;
 use chrono::DateTime;
+use core::panic;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
@@ -141,7 +142,7 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub fn evaluate_report(&self, report: JsValue) -> Result<(), String> {
+    pub fn evaluate_report(report: JsValue) -> Result<(), String> {
         let report: Report =
             serde_wasm_bindgen::from_value(report).map_err(|err| format!("{err}"))?;
 
