@@ -1684,6 +1684,7 @@ dependencies = [
  "luct-scanner",
  "luct-store",
  "luct-test",
+ "serde",
  "serde-wasm-bindgen",
  "serde_json",
  "tracing",
