@@ -12,6 +12,7 @@ pub struct Report {
     pub(crate) cert_issuer: String,
     pub(crate) cert_subject: String,
     pub(crate) fingerprint: String,
+    pub(crate) ca_fingerprint: String,
     pub(crate) not_before: DateTime<Local>,
     pub(crate) not_after: DateTime<Local>,
     // TODO: Precert fingerprint

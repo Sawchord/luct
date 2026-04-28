@@ -123,6 +123,7 @@ impl<S: ScannerImpl> Scanner<S> {
             cert_issuer: chain.cert().get_issuer_name(),
             cert_subject: chain.cert().get_subject_name(),
             fingerprint: chain.cert().fingerprint_sha256().to_string(),
+            ca_fingerprint: chain.root().fingerprint_sha256().to_string(),
             not_before: not_before.into(),
             not_after: not_after.into(),
             scts,

@@ -108,12 +108,11 @@ impl<S: ScannerImpl> ScannerLog<S> {
         sct: &SignedCertificateTimestamp,
     ) -> Option<Validated<SignedTreeHead>> {
         let timestamp = sct.timestamp();
-        //dbg!("Looking for timestamp: {}", timestamp);
 
-        let tree_head = self.log.sth_store.find(|_, sth| {
-            //dbg!("Checking {}", sth);
-            sth.timestamp() > timestamp
-        })?;
+        let tree_head = self
+            .log
+            .sth_store
+            .find(|_, sth| sth.timestamp() > timestamp)?;
         Some(tree_head.1)
     }
 

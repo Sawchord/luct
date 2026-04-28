@@ -9,7 +9,7 @@ use std::{
 };
 use url::Url;
 
-// NOTE: This code is largely copied from https://github.com/robjtede/inspect-cert-chain/blob/main/src/fetch.rs
+// NOTE: This code is copied and adapted from https://github.com/robjtede/inspect-cert-chain/blob/main/src/fetch.rs
 
 pub(crate) fn fetch_cert_chain(url: &str) -> eyre::Result<CertificateChain> {
     let url = Url::parse(url).with_context(|| format!("failed to parse url: \"{url}\""))?;
@@ -58,6 +58,9 @@ Accept-Encoding: identity
 
     // peer_certificates method will return certificates by now
     // because app data has already been written
+    // FIXME: Root certificate is missing
+    // Unlike the browser extension, this call does not include the root certificate
+    // We need to compile webpki-root-certs into the tool and find and match the root certificate here
     let chain = tls
         .conn
         .peer_certificates()
