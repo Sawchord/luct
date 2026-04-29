@@ -139,6 +139,11 @@ function add_listener() {
     }, ALL_SITES, extraInfoSpec);
 
     browser.runtime.onMessage.addListener((message, _sender, respond) => {
+        if (message === "reload") {
+            load_scanner()
+            return;
+        }
+
         let tabData = tabState.tabs.get(message.tabId);
         activeTab = message.tabId;
         respond(tabData);
@@ -164,4 +169,3 @@ function setup_tab_actions() {
         browser.sidebarAction.toggle();
     })
 }
-

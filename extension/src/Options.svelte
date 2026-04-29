@@ -1,16 +1,17 @@
 <script>
     let settings = JSON.parse(window.localStorage.getItem("settings"));
-    let old_settings = settings;
-    console.log(settings);
 
-    function store_and_reload() {
-        console.log(settings);
+    async function store_and_reload() {
+        const json_settings = JSON.stringify(settings);
+        window.localStorage.setItem("settings", json_settings);
+
+        const _report = await browser.runtime.sendMessage("reload");
     }
 </script>
 
 <div class="card">
     <header class="card-header">
-        <p class="card-header-title">Settings</p>
+        <p class="card-header-title">luCT Settings</p>
         <button class="card-header-icon" aria-label="more options">
             <span class="icon is-large">
                 <i class="fa fa-lg fa-cog" aria-hidden="true"></i>
@@ -98,3 +99,14 @@
         </footer>
     </div>
 </div>
+
+<footer class="fixed-footer">
+    <div class="content has-text-centered">
+        <p>
+            <b class="card-footer-item"
+                >Note: The settings are currently not being validated. If you
+                set them wrong, luCT may stop working.
+            </b>
+        </p>
+    </div>
+</footer>

@@ -72,6 +72,10 @@
     //     console.log(json);
     //     return json;
     // }
+
+    function openOptions() {
+        browser.runtime.openOptionsPage();
+    }
 </script>
 
 {#await update_content()}
@@ -81,3 +85,27 @@
         <Report {report}></Report>
     {/each}
 {/await}
+
+<footer class="fixed-footer">
+    <div class="content">
+        <p>
+            <b class="card-footer-item"
+                ><div class="control">
+                    <button
+                        on:click={openOptions}
+                        class="button card-footer-item">Open settings</button
+                    >
+                </div>
+            </b>
+
+            <b class="card-footer-item">
+                <span
+                    >Built with 🤎 by <a
+                        href="https://github.com/Sawchord"
+                        class="link">Sawchord</a
+                    ></span
+                >
+            </b>
+        </p>
+    </div>
+</footer>
