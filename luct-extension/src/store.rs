@@ -12,9 +12,9 @@ pub struct BrowserStore<K, V> {
 }
 
 impl<K, V> BrowserStore<K, V> {
-    pub fn new_local_store(prefix: String) -> Option<Self> {
-        let storage = window().map(|window| window.local_storage())?.ok()??;
-        Some(Self {
+    pub fn new_local_store(prefix: String) -> Result<Self, String> {
+        let storage = browser_local_store()?;
+        Ok(Self {
             _kv: PhantomData,
             prefix,
             storage,
@@ -156,6 +156,17 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> SearchableStoreRead<K, V>
             .filter(|(key, val)| pred(key, val))
             .collect()
     }
+}
+
+pub fn browser_local_store() -> Result<Storage, String> {
+    let store = window()
+        .map(|window| window.local_storage())
+        .transpose()
+        .map_err(|err| err.as_string().unwrap())?
+        .flatten()
+        .ok_or("Failed to retreive local store")?;
+
+    Ok(store)
 }
 
 #[cfg(test)]

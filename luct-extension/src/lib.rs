@@ -1,6 +1,6 @@
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-use crate::store::BrowserStore;
+use crate::{config::load_config, store::BrowserStore};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
@@ -62,24 +62,28 @@ impl Scanner {
         let log_list: LogList = serde_json::from_str(&log_list).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
-        let config = ScannerConfig::builder()
-            .build()
-            .map_err(|err| format!("{:?}", err))?;
+        let extension_config = load_config()?;
+        let scanner_config = ScannerConfig::try_from(&extension_config)?;
 
-        let client = match config.otlsp_url() {
-            Some(url) => OtlspClient::builder()
-                .proxy_url(url.clone())
-                .connection_timeout(*config.otlsp_connection_timeout())
-                .agent(USER_AGENT.to_string())
-                .build(),
+        let client = match scanner_config.otlsp_url() {
+            Some(url) => {
+                tracing::info!("Using oblivious TLS proxy at {}", url);
+                OtlspClient::builder()
+                    .proxy_url(url.clone())
+                    .connection_timeout(*scanner_config.otlsp_connection_timeout())
+                    .agent(USER_AGENT.to_string())
+                    .build()
+            }
 
-            None => OtlspClient::builder().agent(USER_AGENT.to_string()).build(),
+            None => {
+                tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
+                OtlspClient::builder().agent(USER_AGENT.to_string()).build()
+            }
         };
         let client = RequestDeduplicationClient::new(client);
 
         let report_cache =
-            BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())
-                .expect("Failed to initialize report cache");
+            BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
 
         let time_source = || {
             DateTime::from_timestamp_millis(
@@ -92,15 +96,11 @@ impl Scanner {
             .into()
         };
 
-        let mut scanner = CtScanner::new(config, report_cache, client, time_source);
+        let mut scanner = CtScanner::new(scanner_config, report_cache, client, time_source);
 
         for log in logs {
             let name = log.description();
-            scanner.add_log(
-                &log,
-                BrowserStore::new_local_store(format!("sth/{name}"))
-                    .expect("Failed to initialize STH store"),
-            );
+            scanner.add_log(&log, BrowserStore::new_local_store(format!("sth/{name}"))?);
         }
 
         log("Initialized scanner");
