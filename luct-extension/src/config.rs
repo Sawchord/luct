@@ -30,38 +30,40 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionConfig {
-    #[serde(default = "default_true")]
+    #[serde(default = "default_false")]
     validate_cert_chain: bool,
 
-    #[serde(default = "otlsp_url")]
-    otlsp_url: Option<String>,
+    #[serde(default = "default_false")]
+    use_otlsp: bool,
 
-    #[serde(default = "sth_freshness_threshold")]
+    #[serde(default = "default_otlsp_url")]
+    otlsp_url: String,
+
+    #[serde(default = "default_sth_freshness_threshold")]
     sth_freshness_threshold: u64,
 
-    #[serde(default = "sth_update_threshold")]
+    #[serde(default = "default_sth_update_threshold")]
     sth_update_threshold: u64,
 
     #[serde(default = "default_false")]
     debug_output: bool,
 }
 
-fn otlsp_url() -> Option<String> {
-    // Some("https://node.luct.dev/otlsp".to_string())
-    None
+fn default_otlsp_url() -> String {
+    "https://node.luct.dev/otlsp".to_string()
 }
 
-fn sth_freshness_threshold() -> u64 {
+fn default_sth_freshness_threshold() -> u64 {
     24 * 60 * 60
 }
 
-fn sth_update_threshold() -> u64 {
+fn default_sth_update_threshold() -> u64 {
     8 * 60 * 60
 }
 
-fn default_true() -> bool {
-    true
-}
+// fn default_true() -> bool {
+//     true
+// }
 
 fn default_false() -> bool {
     false
@@ -71,12 +73,10 @@ impl TryFrom<&ExtensionConfig> for ScannerConfig {
     type Error = String;
 
     fn try_from(config: &ExtensionConfig) -> Result<Self, Self::Error> {
-        let otlsp_url = config
-            .otlsp_url
-            .as_ref()
-            .map(|url| Url::parse(url))
-            .transpose()
-            .map_err(|err| err.to_string())?;
+        let otlsp_url = match config.use_otlsp {
+            true => Some(Url::parse(&config.otlsp_url).map_err(|err| err.to_string())?),
+            false => None,
+        };
 
         let config = ScannerConfig::builder()
             .validate_cert_chain(config.validate_cert_chain)
