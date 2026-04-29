@@ -14,7 +14,7 @@ WORKDIR /usr/src
 
 # Set up depdendencies
 COPY ./extension/package.json .
-# COPY ./extension/package-lock.json .
+COPY ./extension/package-lock.json .
 RUN npm install
 
 # Copy source and build

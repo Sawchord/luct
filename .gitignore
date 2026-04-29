@@ -8,6 +8,3 @@ luct.xpi
 bundle.js
 bundle.css
 bundle.js.map
-
-# For now, until we figure out repro builds for svelte
-package-lock.json
