@@ -1,6 +1,7 @@
 # Compile the wasm
 FROM rust:1.95.0-alpine3.22 AS wasm-builder
 
+RUN uname -m
 RUN rustup target add wasm32-unknown-unknown
 WORKDIR /usr/src
 
