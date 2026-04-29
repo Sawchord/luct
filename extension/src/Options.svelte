@@ -88,19 +88,17 @@
             Debug output
         </label>
 
-        <footer class="card-footer">
+        <div class="field">
             <div class="control">
-                <button
-                    on:click={store_and_reload}
-                    class="button is-primary card-footer-item"
+                <button on:click={store_and_reload} class="button is-primary"
                     >Save settings and reload</button
                 >
             </div>
-        </footer>
+        </div>
     </div>
 </div>
 
-<footer class="fixed-footer">
+<footer class="footer fixed-footer">
     <div class="content has-text-centered">
         <p>
             <b class="card-footer-item"

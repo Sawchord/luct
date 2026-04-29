@@ -86,14 +86,13 @@
     {/each}
 {/await}
 
-<footer class="fixed-footer">
+<footer class="footer fixed-footer">
     <div class="content">
         <p>
             <b class="card-footer-item"
                 ><div class="control">
-                    <button
-                        on:click={openOptions}
-                        class="button card-footer-item">Open settings</button
+                    <button on:click={openOptions} class="button"
+                        >Open settings</button
                     >
                 </div>
             </b>
