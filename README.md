@@ -2,6 +2,8 @@
 
 luCT (pronounced "lucid") is a digital self defense tool that adds an extra layer of security to HTTPs by auditing certificate's log inclusion proofs locally in real time, as you browse.
 
+![](docs/gifs/example-usage.gif)
+
 
 ## Quick Start
 
