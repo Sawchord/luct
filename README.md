@@ -1,6 +1,7 @@
 # luCT
 
-luCT (pronounced "lucid") is a digital self defense tool to audit certificate transparency logs in the browser.
+luCT (pronounced "lucid") is a digital self defense tool that adds an extra layer of security to HTTPs by auditing certificate's log inclusion proofs locally in real time, as you browse.
+
 
 ## Quick Start
 
@@ -11,21 +12,21 @@ luCT (pronounced "lucid") is a digital self defense tool to audit certificate tr
 
 ## Status
 
-This project is **experimental and not yet audited**.
+This project is **🚧 experimental and not yet audited 🚧**.
 
-- Bugs are likely
-- False positives/negatives may occur
-- Do not rely on this for critical security decisions
+- ⚠ Bugs are likely
+- ⚠ False positives/negatives may occur
+- ⚠ Do not rely on this for critical security decisions
 
 At this point in time, use it for **testing, research, and exploration only**.
 
 
 ## Building
 
-To build luCT yourself, see [build instructions](./BUILD.md)
+To build and test luCT yourself, see the [build instructions.](./BUILD.md)
 
 
-## How this works
+## How it works
 
 [Certificate transparency](https://en.wikipedia.org/wiki/Certificate_Transparency) helps to improve the security of the Web by requiring certificate authorities to log their certificates in an append only log.
 Logs return a signed certificate timestamp (SCT) to the certificate authority.
@@ -37,6 +38,7 @@ Browsers do not actually follow the logs and check inclusion proofs of SCTs that
 luCT closes that gap by checking log inclusions while you browse.
 If everything checks out, it gives an additional checkmark indicator.
 It is planned to extend luCT over time, such that it includes more and more guarantees over time. 
+
 
 ## Privacy
 
@@ -59,9 +61,19 @@ luCT does **not collect any telemetry**.
 TODO
 
 
+## Contributing
+
+PRs are welcome!
+
+The project is in an early stage, so there are still many things unsettled and moving around.
+
+Before starting major changes, it would be best to get into contact with me first,
+for example via [matrix](https://matrix.to/#/#luct:matrix.org).
+
+
 ## Repository overview
 
-Here is a short overview of what is where in the repository
+Here is a short overview of what is where in the repository:
 
 - `extension/src`: Firefox extension svelte UI
 - `extension/luct`: Firefox extension data, manifest, etc.
