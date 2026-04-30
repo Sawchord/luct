@@ -18,7 +18,8 @@ It is planned to extend luCT over time, such that it includes more and more guar
 ## Security Warning
 
 The project is a work-in-progress.
-It is neither feature complete, nor has it been independently audited. Both false positive and false negative results due to bugs are still possible and likely at this point in time.
+It is neither feature complete, nor has it been independently audited.
+Both false positive and false negative results due to bugs are still possible and likely at this point in time.
 
 **Use at your own risk! Do not critically rely on output from this tool yet!**
 
@@ -30,22 +31,49 @@ This is likely the main reason why browsers do not check the audit proofs by def
 There are multiple avenues to remedy this situation, but none are implemented yet.
 For now, the only privacy preserving mode of operating this tool is to use it behind a VPN or through TOR.
 
-## Crates
+## Repository
 
-Here is a short list of crates contained in this repository,
-including a short decription of their purpose:
+Here is a short overview of what is where in the repository
 
-- `luct-core`: Core RFC6962 implementation. Contains the code for
-parsing and verifying CT artifacts.
-- `luct-client`: Async client implemtation. Uses `luct-core` and
-implements a stateless client over it.
-The underlying HTTP client is pluggable.
-- `luct-scanner`: Implementation of the scanner
-- `luct-server`: Implementation of the server / monitor
-- `luct-store`: Multiple `Store` implementations, which are used
-by `luct-scanner` and `luct-server`.
-- `luct`: CLI tool to run `luct-scanner` in the console
-- `luct-extension`: Firefox web-extension to run `luct-scanner` in firefox
+- `extension`:
+
+    Directory for the firefox extension JavaScript.
+    Contains two subdirectories `src`, which is the UI svelte code and `luct`, which contains extension files
+    
+- `luct`: Luct CLI tool
+- `luct-client`:
+
+    Implementation of clients to connect to logs and fetch data.
+
+- `luct-core`: 
+
+    Core RFC6962 implementation. 
+    Contains the code for parsing and verifying CT artifacts.
+
+- `luct-extension`:
+    
+    Rust side of the firefox extension.
+    Implements a wrapper around `luct-scanner` and some necessary infrastructure for running it in a browser.
+
+- `luct-node`:
+
+    Executable that supports server functionality used in `luct-scanner`, such as the oblivious TLS proxy.
+    This is NOT a log implementation.
+
+- `luct-otlsp`: Integration of `otlsp-client` as a `luct-client`
+- `luct-scanner`: Implements the core auditing logic.
+
+- `luct-server`: Placeholder crate for a potential future log implementation
+- `luct-store`: 
+
+    Different implementations to store CT artifacts.
+    Mainly used by `luct-scanner`
+
+- `luct-test`: Collection of test code used in development
+- `otlsp-core`: Shared code for oblivious TLS proxy implementation
+- `otlsp-client`: Client side of oblivious TLS proxy implementation
+- `otlsp-server`: Server side of oblivious TLS proxy implementation
+
 
 ## License
 
