@@ -14,9 +14,9 @@ luCT (pronounced "lucid") is a digital self defense tool that adds an extra laye
 
 This project is **🚧 experimental and not yet audited 🚧**.
 
-- ⚠ Bugs are likely
-- ⚠ False positives/negatives may occur
-- ⚠ Do not rely on this for critical security decisions
+- ❗ Bugs are likely
+- ❗ False positives/negatives may occur
+- ❗ Do not rely on this for critical security decisions
 
 At this point in time, use it for **testing, research, and exploration only**.
 
@@ -58,7 +58,26 @@ luCT does **not collect any telemetry**.
 
 ## Permissions
 
-TODO
+The extension requires the following permissions:
+
+
+- `<all_urls>`, `webRequest`, `webRequestBlocking`
+
+    Are needed such that luCT can intercept the browsers HTTPs requests to extract the certificate chains used during TLS handshake.
+    The signed certificate timestamps are then extracted from these certificates.
+
+- `activeTab` and `tabs`
+
+    Are needed to keep track of which tab is currently active, when tabs are being closed or their document url changes.
+    luCT needs to keep track of that, to display the correct safety status and sidebar information.
+
+
+- `unlimitedStorage`
+
+    Is needed to store more than 10MB of data.
+    Usually, luCT should keep well below that.
+
+
 
 
 ## Contributing
