@@ -2,14 +2,14 @@
 
 luCT (pronounced "lucid") is a digital self defense tool that adds an extra layer of security to HTTPs by auditing certificate's log inclusion proofs locally in real time, as you browse.
 
-![](docs/gifs/example-usage.gif)
-
 
 ## Quick Start
 
 1. Install the Firefox extension
 2. Browse normally
-3. Look for the indicator when CT inclusion is verified
+3. Look for the <img src="./extension/luct/icons/luct_safe.svg" atl="luCT icon" width="12em"> indicator when CT inclusion is verified
+
+![](docs/gifs/example-usage.gif)
 
 
 ## Status
