@@ -41,9 +41,15 @@ extern "C" {
 pub fn start() -> Result<(), JsValue> {
     console_error_panic_hook::set_once();
 
+    #[cfg(debug_assertions)]
+    let log_level = Level::DEBUG;
+
+    #[cfg(not(debug_assertions))]
+    let log_level = Level::INFO;
+
     tracing_wasm::set_as_global_default_with_config(
         WASMLayerConfigBuilder::default()
-            .set_max_level(Level::DEBUG)
+            .set_max_level(log_level)
             .build(),
     );
 
