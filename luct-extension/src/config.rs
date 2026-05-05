@@ -33,7 +33,7 @@ pub struct ExtensionConfig {
     #[serde(default = "default_false")]
     validate_cert_chain: bool,
 
-    #[serde(default = "default_false")]
+    #[serde(default = "default_true")]
     use_otlsp: bool,
 
     #[serde(default = "default_otlsp_url")]
@@ -61,9 +61,9 @@ fn default_sth_update_threshold() -> u64 {
     8 * 60 * 60
 }
 
-// fn default_true() -> bool {
-//     true
-// }
+fn default_true() -> bool {
+    true
+}
 
 fn default_false() -> bool {
     false
