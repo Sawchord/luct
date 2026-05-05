@@ -1580,7 +1580,7 @@ dependencies = [
 
 [[package]]
 name = "luct"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
@@ -1601,7 +1601,7 @@ dependencies = [
 
 [[package]]
 name = "luct-client"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "base64",
  "futures",
@@ -1618,7 +1618,7 @@ dependencies = [
 
 [[package]]
 name = "luct-core"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "base64",
  "chrono",
@@ -1641,7 +1641,7 @@ dependencies = [
 
 [[package]]
 name = "luct-extension"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "console_error_panic_hook",
@@ -1669,7 +1669,7 @@ dependencies = [
 
 [[package]]
 name = "luct-node"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "axum",
  "axum-macros",
@@ -1691,7 +1691,7 @@ dependencies = [
 
 [[package]]
 name = "luct-otlsp"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "futures",
  "http-body-util",
@@ -1710,7 +1710,7 @@ dependencies = [
 
 [[package]]
 name = "luct-scanner"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "chrono",
  "derive_builder",
@@ -1729,11 +1729,11 @@ dependencies = [
 
 [[package]]
 name = "luct-server"
-version = "0.0.0"
+version = "0.1.0"
 
 [[package]]
 name = "luct-store"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "hex",
  "luct-core",
@@ -1746,7 +1746,7 @@ dependencies = [
 
 [[package]]
 name = "luct-test"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "luct-core",
 ]
@@ -1902,7 +1902,7 @@ checksum = "7c87def4c32ab89d880effc9e097653c8da5d6ef28e6b539d313baaacfbafcbe"
 
 [[package]]
 name = "otlsp-client"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "futures",
  "getrandom 0.2.17",
@@ -1929,11 +1929,11 @@ dependencies = [
 
 [[package]]
 name = "otlsp-core"
-version = "0.0.0"
+version = "0.1.0"
 
 [[package]]
 name = "otlsp-server"
-version = "0.0.0"
+version = "0.1.0"
 dependencies = [
  "axum",
  "otlsp-core",
