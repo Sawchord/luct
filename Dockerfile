@@ -31,7 +31,7 @@ RUN apk add tree
 WORKDIR /usr/src
 
 RUN uname -m
-RUN wget -c https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.117/wasm-bindgen-0.2.117-$(uname -m)-unknown-linux-musl.tar.gz -O - | tar -xz
+RUN wget -c https://github.com/wasm-bindgen/wasm-bindgen/releases/download/0.2.120/wasm-bindgen-0.2.120-$(uname -m)-unknown-linux-musl.tar.gz -O - | tar -xz
 
 # Copy together the files from the different sources
 COPY ./extension/zip.py .
@@ -40,7 +40,7 @@ COPY --from=wasm-builder /usr/src/target/wasm32-unknown-unknown/release/luct_ext
 RUN sha256sum luct_extension.wasm
 
 # Generate the bindings for the wasm
-RUN ./wasm-bindgen-0.2.117-$(uname -m)-unknown-linux-musl/wasm-bindgen luct_extension.wasm --no-typescript --target web --out-dir luct/wasm
+RUN ./wasm-bindgen-0.2.120-$(uname -m)-unknown-linux-musl/wasm-bindgen luct_extension.wasm --no-typescript --target web --out-dir luct/wasm
 RUN tree luct
 
 # Create the zip archive

@@ -84,7 +84,7 @@ thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10", features = ["chacha"] }
 itertools = { version = "0.14" }
-lru = { version = "0.17" }
+lru = { version = "0.18.0" }
 
 # Observability
 tracing = { version = "0.1", features = ["log"] }
@@ -97,7 +97,7 @@ futures = { version = "0.3" }
 
 # WASM
 # NOTE: When updating wasm-bindgen, we also need to update the tool in CI
-wasm-bindgen = { version = "= 0.2.117" }
+wasm-bindgen = { version = "= 0.2.120" }
 wasm-bindgen-futures = { version = "0.4" }
 wasm-bindgen-test = { version = "0.3" }
 web-time = { version = "1.1" }
