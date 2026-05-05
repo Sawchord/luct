@@ -2,7 +2,7 @@
     import Expandable from "./Expandable.svelte";
     import SctsDisplay from "./SctsDisplay.svelte";
     import TimeDisplay from "./TimeDisplay.svelte";
-    import UrlDisplay from "./UrlDisplay.svelte";
+    // import UrlDisplay from "./UrlDisplay.svelte";
 
     export let report;
 
@@ -50,9 +50,13 @@
                     <li>
                         <SctsDisplay scts={report.report.scts} />
                     </li>
-                    <li>
+                    <!-- 
+                        NOTE: Displaying URLs can be overwhelming and processing them takes a lot of resources
+                        TODO: Remove URL reporting to sidebar altogether
+                    -->
+                    <!-- <li>
                         <UrlDisplay urls={report.urls} />
-                    </li>
+                    </li> -->
                     {#if report.report.error_description}
                         <li>
                             <b>Error: </b>
