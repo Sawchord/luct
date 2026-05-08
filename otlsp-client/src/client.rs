@@ -6,12 +6,14 @@ use std::sync::Arc;
 use url::Url;
 use x509_cert::{Certificate, der::Encode};
 
+/// Create an oblivious TLS proxy client connection
 pub struct OtlspClientBuilder {
     proxy: Url,
     roots: Vec<TrustAnchor<'static>>,
 }
 
 impl OtlspClientBuilder {
+    /// Create a new [`OtlspClientBuilder`]
     pub fn new(proxy: Url) -> Self {
         Self {
             proxy,
@@ -19,11 +21,13 @@ impl OtlspClientBuilder {
         }
     }
 
+    /// Add the Mozilla webpki to the trust store roots program using [`webpki_roots`]
     pub fn with_webpki_roots(mut self) -> Self {
         self.roots.extend_from_slice(webpki_roots::TLS_SERVER_ROOTS);
         self
     }
 
+    /// Manually add an extra root [`Certificate`] to the trust store
     pub fn with_root_cert(mut self, cert: Certificate) -> Self {
         self.roots.push(TrustAnchor {
             subject: cert
@@ -43,6 +47,18 @@ impl OtlspClientBuilder {
         self
     }
 
+    /// Spawn the oblivious TLS proxy connection by doing a TLS handshare
+    ///
+    /// This function will establish the websocket connection to the proxy.
+    /// If successful, it will then do a TLS handshake with the destination server,
+    /// returning the hyper [`SendRequest`] ready to make a HTTP request
+    ///
+    /// # Arguments
+    /// - `dst`: The [`Url`] of the destination server
+    ///
+    /// # Returns
+    /// - **On success**: The [`SendRequest`] ready to make a HTTP request
+    /// - **On failure**: [`OtlspError`] indicating what went wwrong
     pub async fn handshake<B>(self, dst: Url) -> Result<SendRequest<B>, OtlspError>
     where
         B: Body + 'static,
