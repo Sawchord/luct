@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use luct_core::{
     CtLog, CtLogConfig, SignatureValidationError,
     tiling::{ParseCheckpointError, TilingError},

@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use std::io::ErrorKind;
 
 #[derive(Debug, Clone, PartialEq, PartialOrd)]

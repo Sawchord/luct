@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 pub use crate::config::OtlspClientBuilder;
 use crate::{config::OtlspClientConfig, connection::OtlspConnection};
 use futures::lock::Mutex;

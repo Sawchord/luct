@@ -1,8 +1,9 @@
-use std::fmt::{self, Display};
+#![forbid(unsafe_code)]
 
 use crate::utils::base64::Base64;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use std::fmt::{self, Display};
 use url::Url;
 
 mod cert;

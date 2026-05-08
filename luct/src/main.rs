@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use crate::{
     args::{Args, get_workdir, log_list_path},
     fetch::fetch_cert_chain,

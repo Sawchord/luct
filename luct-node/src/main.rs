@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use crate::{args::Args, conf::Config, otlsp::handle_otlsp_connection, state::NodeState};
 use axum::{Router, routing::get};
 use clap::Parser;

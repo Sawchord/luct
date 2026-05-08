@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
 use crate::{config::load_config, store::BrowserStore};

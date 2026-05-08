@@ -1,3 +1,5 @@
+#![forbid(unsafe_code)]
+
 use crate::log::{ScannerLog, builder::LogImpls};
 use chrono::{DateTime, Local};
 use futures::future::{self, join_all};
