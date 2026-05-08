@@ -3,6 +3,8 @@ name = "otlsp-server"
 description = "Oblivious TLS proxy server"
 edition = { workspace = true }
 authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 version = { workspace = true }
 readme = { workspace = true }
 publish = { workspace = true }

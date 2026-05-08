@@ -3,6 +3,8 @@ name = "otlsp-core"
 description = "Core library of shared structures for OTLSP"
 edition = { workspace = true }
 authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 version = { workspace = true }
 readme = { workspace = true }
 publish = { workspace = true }

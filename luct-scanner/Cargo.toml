@@ -3,6 +3,8 @@ name = "luct-scanner"
 description = "Tool to provide additional checks on TLS certificates"
 edition = { workspace = true }
 authors = { workspace = true }
+homepage = { workspace = true }
+repository = { workspace = true }
 version = { workspace = true }
 readme = { workspace = true }
 publish = { workspace = true }
