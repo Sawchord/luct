@@ -1,7 +1,15 @@
 #![forbid(unsafe_code)]
 
+//! Oblivious TLS proxy core crate
+//!
+//! Contains the shared code of the oblivious TLS proxy protocol
+
 use std::io::ErrorKind;
 
+/// Error codes returned by the oblivious TLS proxy protocol
+///
+/// This is an arbitrary mappings from OS level error codes to
+/// WebSocket close codes in the 4xxx range.
 #[derive(Debug, Clone, PartialEq, PartialOrd)]
 pub struct OtlspErrorCode(u16);
 

@@ -1,3 +1,5 @@
+//! Server side implementation of the oblivious TLS proxy protocol using axum.
+
 #![forbid(unsafe_code)]
 
 use axum::{
@@ -20,17 +22,28 @@ use url::{Host, Url};
 
 const FRAME_SIZE: usize = 1500;
 
+/// Url query parameters used by the oblivious TLS proxy endpoint
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Destination {
     to: String,
 }
 
 impl Destination {
+    /// Returns the `?to=` part of the query, indicating the desired destination server
     pub fn dst(&self) -> &str {
         &self.to
     }
 }
 
+/// Function to handle an oblivious TLS proxy endpoint in axum
+///
+/// # Arguments
+/// - `destination`: [`Destination`] structure indicating which destination to proxy to
+/// - `ws`: An axum [`WebSocketUpgrade`], which will be used to establish the websocked connection
+/// - `access`: A callback function provided to check, whether the client should have access to the [`Url`]
+///
+/// # Returns
+/// The protocol upgrade response to initiate the Websocket connection
 pub async fn handle_connection<F>(
     destination: Destination,
     ws: WebSocketUpgrade,
