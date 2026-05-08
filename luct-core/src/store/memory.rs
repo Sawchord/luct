@@ -7,7 +7,7 @@ use std::{
     sync::{Arc, RwLock},
 };
 
-/// A non-persistent implementation of [`Store`]
+/// A non-persistent implementation of [`Store`](crate::store::Store)
 ///
 /// This can be useful for testing, or in settings, in which the data should not be stored,
 /// for example when running as a command line tool in CI

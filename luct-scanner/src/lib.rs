@@ -1,3 +1,5 @@
+//! Certificate transparency auditing logic used by luCT firefox extension and CLI tool
+
 #![forbid(unsafe_code)]
 
 use crate::log::{ScannerLog, builder::LogImpls};
@@ -27,12 +29,22 @@ mod log;
 mod report;
 mod utils;
 
+/// Bundle trait for [`Scanner`]
+///
+/// Defines the [`Store`](luct_core::store::Store) and [`Client`] backends to be used by the scanner
 pub trait ScannerImpl {
+    /// [`Client`] implementation to make connections to logs to
     type Client: Client + Clone;
+    /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) of audit results
     type ReportStore: SearchableStore<Fingerprint, Report>;
+    /// The [`Store`](luct_core::store::Store) use to store [`SignedTreeHeads`](SignedTreeHead)
     type SthStore: SearchableStore<u64, Validated<SignedTreeHead>>;
 }
 
+/// The scanner holds the state that is necessary to perform audits as well as the auditing logic
+///
+/// It is generic over [`ScannerImpl`], which is a bundle trait containing implementations of [`Stores`](luct_core::store::Store)
+/// and [`Clients`](Client).
 pub struct Scanner<S: ScannerImpl> {
     config: ScannerConfig,
     logs: BTreeMap<LogId, ScannerLog<S>>,

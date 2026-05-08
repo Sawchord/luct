@@ -1,13 +1,11 @@
+use crate::utils::codec::{CodecError, Decode, Encode};
+use serde::{Deserialize, Serialize};
 use std::{
     fmt::Display,
     io::{Read, Write},
 };
 
-use serde::{Deserialize, Serialize};
-
-use crate::utils::codec::{CodecError, Decode, Encode};
-
-/// The version of the protocol, that the [`CtLog`] supports
+/// The version of the protocol, that the log supports
 ///
 /// - `V1` corresponds to RFC 6962
 /// - `V2` corresponds to RFC 9162

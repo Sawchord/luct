@@ -166,7 +166,7 @@ impl Display for Fingerprint {
     }
 }
 
-/// Error returned when parsing a [`Certificate`] or [`CertificateChain`]
+/// Error returned when parsing a [`Certificate`] or [`CertificateChain`](crate::cert_chain::CertificateChain)
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum CertificateError {
     #[error("A precert can't have SCTs or more than one poison value")]
