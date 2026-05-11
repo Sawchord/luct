@@ -1,0 +1,27 @@
+name: CI
+on: [push, pull_request]
+
+jobs:
+  tests:
+    uses: ./tests.yml
+  build-extension:
+    name: Firefox extension build
+    needs:
+      - tests
+    runs-on: ubuntu-24.04-arm
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Setup docker buildx
+        id: buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build extension
+        run: docker buildx build --progress=plain . -o .
+
+      - name: Upload CLI tool
+        uses: actions/upload-artifact@v7
+        with:
+          name: luct-extension
+          path: luct.xpi

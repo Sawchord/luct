@@ -10,8 +10,6 @@ jobs:
           - name: Linux X86-64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            binary_ext: ""
-            use_cross: false
 
     runs-on: ubuntu-latest
     steps:
@@ -43,6 +41,5 @@ jobs:
           key: ${{ runner.os }}-cargo-test-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build CLI tool (native)
-        if: ${{ !matrix.platform.use_cross }}
         run: cargo test --locked --target ${{ matrix.platform.target }}
 
