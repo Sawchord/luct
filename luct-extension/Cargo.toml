@@ -16,11 +16,11 @@ license = { workspace = true }
 crate-type = ["cdylib"]
 
 [dependencies]
-luct-core = { path = "../luct-core" }
-luct-client = { path = "../luct-client" }
-luct-otlsp = { path = "../luct-otlsp" }
-luct-scanner = { path = "../luct-scanner" }
-luct-store = { path = "../luct-store" }
+luct-core = { version = "0.1.0", path = "../luct-core" }
+luct-client = { version = "0.1.0", path = "../luct-client" }
+luct-otlsp = { version = "0.1.0", path = "../luct-otlsp" }
+luct-scanner = { version = "0.1.0", path = "../luct-scanner" }
+luct-store = { version = "0.1.0", path = "../luct-store" }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -52,7 +52,7 @@ tracing = { workspace = true }
 tracing-wasm = { workspace = true }
 
 [dev-dependencies]
-luct-test = { path = "../luct-test" }
+luct-test = { version = "0.1.0", path = "../luct-test" }
 
 tracing-subscriber = { workspace = true }
 wasm-bindgen-test = { workspace = true }

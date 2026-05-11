@@ -27,7 +27,7 @@ const USER_AGENT: &str = concat!(
     env!("CARGO_PKG_VERSION"),
     " (https://github.com/Sawchord/luct/)"
 );
-const LOG_LIST: &str = include_str!("../../extension/luct/logs/log_list.json");
+const LOG_LIST: &str = include_str!("../log_list.json");
 
 // TODO: Ability to overwrite probe user agent
 struct CliScannerImpl;
