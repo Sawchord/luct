@@ -3,6 +3,9 @@ use serde::{Deserialize, Serialize};
 use url::Url;
 use web_time::Duration;
 
+/// Configuration values of the [`ScannerConfig`].
+///
+/// These values determine, how the [`Scanner`](crate::Scanner) behaves.
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Builder)]
 #[builder(setter(into))]
 pub struct ScannerConfig {
@@ -17,7 +20,6 @@ pub struct ScannerConfig {
     /// The url of the otlsp proxy
     ///
     /// If unset, no proxy is used
-    //#[builder(default = "Some(Url::parse(\"https://node.luct.dev/otlsp\").unwrap())")]
     #[builder(default = "None")]
     pub(crate) otlsp_url: Option<Url>,
 
@@ -41,18 +43,23 @@ pub struct ScannerConfig {
 }
 
 impl ScannerConfig {
+    /// Return a [`ScannerConfigBuilder`]
     pub fn builder() -> ScannerConfigBuilder {
         ScannerConfigBuilder::default()
     }
 
+    /// Returns `true`, if certificate chain validation is activated
     pub fn validate_cert_chain(&self) -> bool {
         self.validate_cert_chain
     }
 
+    /// Returns the [`Url`] of the oblivious TLS proxy, if it exists
     pub fn otlsp_url(&self) -> &Option<Url> {
         &self.otlsp_url
     }
 
+    /// Return the timeout value, after which a connection to an oblivious
+    /// TLS proxy is considered stale
     pub fn otlsp_connection_timeout(&self) -> &Duration {
         &self.otlsp_connection_timeout
     }
