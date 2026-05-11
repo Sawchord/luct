@@ -1,0 +1,61 @@
+name: Build CLI executable
+on: workflow_call
+
+jobs:
+  build-cli:
+    name: CLI build
+    strategy:
+      matrix:
+        platform:
+          - name: Linux X86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            binary_ext: ""
+
+          - name: Linux ARM64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            binary_ext: ""
+
+          - name: Windows x86_64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            binary_ext: ".exe"
+
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+          targets: ${{ matrix.platform.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build CLI tool
+        run: cargo build --bin luct --release --locked --target ${{ matrix.platform.target }}
+
+      - name: Upload CLI tool
+        uses: actions/upload-artifact@v7
+        with:
+          name: luct-cli(${{ matrix.platform.target }})
+          path: target/${{ matrix.platform.target }}/release/luct${{ matrix.platform.binary_ext }}
