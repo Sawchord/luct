@@ -22,6 +22,11 @@ jobs:
             target: x86_64-pc-windows-msvc
             binary_ext: ".exe"
 
+          - name: macOS ARM64
+            os: macos-latest
+            target: aarch64-apple-darwin
+            binary_ext: ""
+
     runs-on: ${{ matrix.platform.os }}
     steps:
       - name: Checkout source code
