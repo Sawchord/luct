@@ -1,0 +1,57 @@
+name: Build node executable
+on: workflow_call
+
+
+jobs:
+  build-cli:
+    name: Node executable build
+    strategy:
+      matrix:
+        platform:
+          - name: Linux X86_64
+            os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            binary_ext: ""
+
+          - name: Linux ARM64
+            os: ubuntu-24.04-arm
+            target: aarch64-unknown-linux-musl
+            binary_ext: ""
+
+    runs-on: ${{ matrix.platform.os }}
+    steps:
+      - name: Checkout source code
+        uses: actions/checkout@v5
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: 1.92.0
+          targets: ${{ matrix.platform.target }}
+
+      - name: Cache cargo registry
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/registry
+          key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo index
+        uses: actions/cache@v5
+        with:
+          path: ~/.cargo/git
+          key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Cache cargo build
+        uses: actions/cache@v5
+        with:
+          path: target
+          key: ${{ runner.os }}-cargo-build-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build CLI tool
+        run: cargo build --bin luct-node --release --locked --target ${{ matrix.platform.target }}
+
+      - name: Upload node executable
+        uses: actions/upload-artifact@v7
+        with:
+          name: luct-node(${{ matrix.platform.target }})
+          path: target/${{ matrix.platform.target }}/release/luct-node${{ matrix.platform.binary_ext }}
