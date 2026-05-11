@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-cli:
-    name: CLI build
+    name: Native build
     needs:
       - unit-tests
     strategy:
@@ -20,19 +20,16 @@ jobs:
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             binary_ext: ""
-            use_cross: false
 
           - name: Linux ARM64
-            os: ubuntu-latest
+            os: ubuntu-24.04-arm
             target: aarch64-unknown-linux-musl
             binary_ext: ""
-            use_cross: true
 
           - name: Windows x86_64
             os: windows-latest
             target: x86_64-pc-windows-msvc
             binary_ext: ".exe"
-            use_cross: false
 
     runs-on: ${{ matrix.platform.os }}
     steps:
@@ -44,10 +41,6 @@ jobs:
         with:
           toolchain: 1.92.0
           targets: ${{ matrix.platform.target }}
-
-      - name: Install cross-compilation tool
-        if: matrix.platform.use_cross
-        run: cargo install cross --git https://github.com/cross-rs/cross
 
       - name: Cache cargo registry
         uses: actions/cache@v5
@@ -67,13 +60,8 @@ jobs:
           path: target
           key: ${{ runner.os }}-cargo-build-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Build CLI tool (native)
-        if: ${{ !matrix.platform.use_cross }}
+      - name: Build CLI tool
         run: cargo build --bin luct --bin luct-node --release --locked --target ${{ matrix.platform.target }}
-
-      - name: Build CLI tool (cross)
-        if: matrix.platform.use_cross
-        run: cross build --bin luct --bin luct-node --release --locked --target ${{ matrix.platform.target }}
 
       - name: Upload CLI tool
         uses: actions/upload-artifact@v7
@@ -107,6 +95,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: luct-extension
+          archive: false
           path: luct.xpi
 
   unit-tests:
@@ -118,8 +107,6 @@ jobs:
           - name: Linux X86-64
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            binary_ext: ""
-            use_cross: false
 
     runs-on: ubuntu-latest
     steps:
@@ -151,6 +138,5 @@ jobs:
           key: ${{ runner.os }}-cargo-test-target-${{ matrix.platform.target }}-${{ hashFiles('**/Cargo.lock') }}
 
       - name: Build CLI tool (native)
-        if: ${{ !matrix.platform.use_cross }}
         run: cargo test --locked --target ${{ matrix.platform.target }}
 
