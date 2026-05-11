@@ -1,3 +1,5 @@
+//! Collection of implementations of different [`Stores`](luct_core::store::Store)
+
 #![forbid(unsafe_code)]
 
 mod file;
@@ -10,11 +12,28 @@ use luct_core::{
 };
 pub use switch::StoreSwitch;
 
+/// Indicates, that a key can be serialized as a [`String`].
+///
+/// Some [`Store`](luct_core::store::Store) implementations need to internally store keys
+/// as a [`String`].
+///
+/// These implementations need to restrict their key type to [`StringStoreKey`].
+///
+/// # Caution
+/// In the case of [`StringStoreKey`], it is important that the [`String`] representation of the key
+/// has the same ordering as the actual keys.
+/// This is relevant for [`OrderedStores`](luct_core::store::OrderedStore).
 pub trait StringStoreKey: Clone + Ord + Send + 'static {
     fn serialize_key(&self) -> String;
     fn deserialize_key(key: &str) -> Option<Self>;
 }
 
+/// Indicates, that a value can be serialized as a [`String`].
+///
+/// Some [`Store`](luct_core::store::Store) implementations need to internally store values
+/// as a [`String`].
+///
+/// These implementations need to restrict their value type to [`StringStoreValue`].
 pub trait StringStoreValue: Clone + Send + Eq + 'static {
     fn serialize_value(&self) -> String;
     fn deserialize_value(value: &str) -> Option<Self>;

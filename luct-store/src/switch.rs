@@ -2,6 +2,11 @@ use luct_core::store::{
     AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite,
 };
 
+/// [`Store`](luct_core::store::Store) implementation that switches between two different
+/// inner [`Stores`](luct_core::store::Store).
+///
+/// This can be used, if you want to switch at runtime between the [`Stores`](luct_core::store::Store)
+/// [`A`](Self::A) and [`B`](Self::B),
 pub enum StoreSwitch<A, B> {
     A(A),
     B(B),

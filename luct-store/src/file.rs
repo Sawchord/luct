@@ -11,6 +11,27 @@ use crate::{StringStoreKey, StringStoreValue};
 
 // TODO: Log errors
 
+/// Implementation of [`Store`](luct_core::store::Store) that is backed by a directory.
+///
+/// # Description
+/// [`FilesystemStore`] used a directory named after the store and stores the keys as files.
+/// It requires both [`StringStoreKey`] for keys and [`StringStoreValue`] for values, since
+/// it stores the values as [`Strings`](String) as well.
+///
+/// This implementation is not efficient in any way.
+/// It is fast enough for CLI usage, since the amount of data processed there is relatively small.
+/// Also, storing data as [`Stings`](String) in files makes debugging and understanding what data has
+/// been stored very easy.
+///
+/// Searching through the store is done by scanning through the directory, which is very slow.
+///
+/// # Caution
+/// There is no locking or checking that each path is instanciated only once.
+/// You must be careful not to instanciate two stores at the same location.
+///
+/// Also starting a program that uses the store twice may load to problems.
+/// This is used mainly for simple applications.
+/// You may need a database for more complex applications.
 #[derive(Clone, Debug)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
@@ -19,6 +40,7 @@ pub struct FilesystemStore<K, V> {
 }
 
 impl<K, V> FilesystemStore<K, V> {
+    /// Create a new [`FilesystemStore`], at the `path`
     pub fn new(path: PathBuf) -> FilesystemStore<K, V> {
         std::fs::create_dir_all(&path)
             .inspect_err(|err| {
