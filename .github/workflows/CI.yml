@@ -10,7 +10,7 @@ on:
 
 jobs:
   build-cli:
-    name: CLI build
+    name: Native build
     needs:
       - unit-tests
     strategy:
@@ -68,14 +68,12 @@ jobs:
         with:
           name: luct-cli(${{ matrix.platform.target }})
           path: target/${{ matrix.platform.target }}/release/luct${{ matrix.platform.binary_ext }}
-          archive: false
 
       - name: Upload node
         uses: actions/upload-artifact@v7
         with:
           name: luct-node(${{ matrix.platform.target }})
           path: target/${{ matrix.platform.target }}/release/luct-node${{ matrix.platform.binary_ext }}
-          archive: false
 
   build-extension:
     name: Firefox extension build
