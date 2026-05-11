@@ -1,3 +1,5 @@
+//! [`Client`] wrapper to deduplicate requests to the same [`Url`](url::Url)
+
 use crate::{Client, ClientError};
 use futures::channel::oneshot::{Sender, channel};
 use std::{
