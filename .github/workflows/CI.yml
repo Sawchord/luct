@@ -11,6 +11,9 @@ on:
 jobs:
   tests:
     uses: ./.github/workflows/tests.yml
+
+  browser-tests:
+    uses: ./.github/workflows/browser-tests.yml
   
   build-cli:
     needs:
