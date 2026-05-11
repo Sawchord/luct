@@ -1,9 +1,9 @@
-name: CI
+name: Build CLI
 on: [push, pull_request]
 
 jobs:
   tests:
-    uses: ./tests.yml
+    uses: ./.github/workflows/tests.yml
   build-cli:
     name: CLI build
     needs:

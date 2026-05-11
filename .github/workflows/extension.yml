@@ -1,9 +1,9 @@
-name: CI
+name: Build extension
 on: [push, pull_request]
 
 jobs:
   tests:
-    uses: ./tests.yml
+    uses: ./.github/workflows/tests.yml
   build-extension:
     name: Firefox extension build
     needs:
