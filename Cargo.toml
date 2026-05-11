@@ -29,8 +29,8 @@ categories = ["cryptography", "security", "visualization", "wasm"]
 keywords = [
     "browser-extension",
     "certificates",
-    "certificate-authority",
-    "certificate-transparency-logs",
+    "CA",
+    "transparency-logs",
     "web-security",
 ]
 edition = "2024"
