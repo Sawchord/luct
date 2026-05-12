@@ -1,4 +1,4 @@
-use crate::{browser::async_stream::WsAsyncStream, error::OtlspError};
+use crate::{AsyncStream, browser::async_stream::WsAsyncStream, error::OtlspError};
 use hyper::{body::Body, client::conn::http1::SendRequest};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, client::WebPkiServerVerifier};
 use rustls_pki_types::{ServerName, TrustAnchor};
@@ -28,6 +28,7 @@ impl OtlspClientBuilder {
     }
 
     /// Manually add an extra root [`Certificate`] to the trust store
+    // TODO: Errors instead of panics
     pub fn with_root_cert(mut self, cert: Certificate) -> Self {
         self.roots.push(TrustAnchor {
             subject: cert
