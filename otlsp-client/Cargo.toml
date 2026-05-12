@@ -49,6 +49,11 @@ wasm-bindgen-futures = { workspace = true }
 # otherwise the crate would not compile to wasm
 getrandom = { version = "0.2", features = ["js"] }
 
+[target.'cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))'.dependencies]
+tokio = { workspace = true }
+tungstenite = { workspace = true }
+tokio-tungstenite = { workspace = true }
+
 [dev-dependencies]
 luct-test = { version = "0.1.0", path = "../luct-test" }
 

@@ -1,12 +1,17 @@
 use crate::{AsyncStream, OtlspError};
 use hyper::{body::Body, client::conn::http1::Connection, rt};
+use rustls::{ClientConnection, StreamOwned};
 use std::{
     pin::Pin,
+    sync::Arc,
     task::{Context, Poll},
 };
+use tokio::net::TcpStream;
+use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
+use url::Url;
 
 #[derive(Debug)]
-pub struct NativeAsyncStream {}
+pub struct NativeAsyncStream(StreamOwned<ClientConnection, WsStream>);
 
 impl AsyncStream for NativeAsyncStream {
     async fn create(
@@ -14,10 +19,15 @@ impl AsyncStream for NativeAsyncStream {
         proxy: url::Url,
         dst: url::Url,
     ) -> Result<Self, OtlspError> {
-        todo!()
+        // Setup the underlying websocket stream
+        let ws_stream = WsStream::new(proxy, dst).await?;
+
+        // Initiate the connection
+        let stream = StreamOwned::new(conn, ws_stream);
+        Ok(Self(stream))
     }
 
-    fn spawn<B>(connection: Connection<Self, B>)
+    fn spawn<B>(_connection: Connection<Self, B>)
     where
         B: Body,
         B::Data: Send,
@@ -54,6 +64,36 @@ impl rt::Write for NativeAsyncStream {
         self: Pin<&mut Self>,
         cx: &mut Context<'_>,
     ) -> Poll<Result<(), std::io::Error>> {
+        todo!()
+    }
+}
+
+#[derive(Debug)]
+pub struct WsStream(WebSocketStream<MaybeTlsStream<TcpStream>>);
+
+impl WsStream {
+    async fn new(proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
+        let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
+
+        let (stream, _response) = connect_async(&request_string)
+            .await
+            .map_err(|err| OtlspError::UnreachableStd(Arc::new(err)))?;
+        Ok(Self(stream))
+    }
+}
+
+impl std::io::Read for WsStream {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        todo!()
+    }
+}
+
+impl std::io::Write for WsStream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        todo!()
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
         todo!()
     }
 }
