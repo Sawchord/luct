@@ -13,6 +13,7 @@ use std::{
 };
 use url::Url;
 
+#[allow(dead_code)]
 #[derive(Debug)]
 pub struct WsAsyncStream(StreamOwned<ClientConnection, WsStream>);
 
