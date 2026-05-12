@@ -2,22 +2,24 @@ use crate::{AsyncStream, browser::async_stream::WsAsyncStream, error::OtlspError
 use hyper::{body::Body, client::conn::http1::SendRequest};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, client::WebPkiServerVerifier};
 use rustls_pki_types::{ServerName, TrustAnchor};
-use std::sync::Arc;
+use std::{marker::PhantomData, sync::Arc};
 use url::Url;
 use x509_cert::{Certificate, der::Encode};
 
 /// Create an oblivious TLS proxy client connection
-pub struct OtlspClientBuilder {
+pub struct OtlspConnectionBuilder<AS> {
     proxy: Url,
     roots: Vec<TrustAnchor<'static>>,
+    stream: PhantomData<AS>,
 }
 
-impl OtlspClientBuilder {
+impl<AS: AsyncStream> OtlspConnectionBuilder<AS> {
     /// Create a new [`OtlspClientBuilder`]
     pub fn new(proxy: Url) -> Self {
         Self {
             proxy,
             roots: vec![],
+            stream: PhantomData,
         }
     }
 
@@ -107,6 +109,7 @@ mod tests {
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
+    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn smoke_test() {
         tracing();
@@ -121,6 +124,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
+    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn permission_denied_test() {
         tracing();
@@ -143,12 +147,13 @@ mod tests {
         let url = Url::parse(url).unwrap();
         let host = url.host_str().unwrap().to_string();
 
-        let mut sender =
-            OtlspClientBuilder::new(Url::parse("https://node.luct.dev/otlsp").unwrap())
-                .with_webpki_roots()
-                //.with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
-                .handshake(url)
-                .await?;
+        let mut sender = OtlspConnectionBuilder::<WsAsyncStream>::new(
+            Url::parse("https://node.luct.dev/otlsp").unwrap(),
+        )
+        .with_webpki_roots()
+        //.with_root_cert(Certificate::from_pem(include_str!("../e2e-test/ca.crt")).unwrap())
+        .handshake(url)
+        .await?;
 
         let req = Request::builder()
             .uri(path)

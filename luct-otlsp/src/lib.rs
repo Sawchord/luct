@@ -125,6 +125,7 @@ mod test {
         }";
 
     #[wasm_bindgen_test]
+    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn get_checkpoint() {
         tracing();
@@ -134,6 +135,7 @@ mod test {
     }
 
     #[wasm_bindgen_test]
+    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn get_tile() {
         tracing();
