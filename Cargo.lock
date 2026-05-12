@@ -1698,6 +1698,7 @@ dependencies = [
  "hyper",
  "luct-client",
  "luct-core",
+ "luct-test",
  "otlsp-client",
  "serde_json",
  "tokio",
