@@ -1,4 +1,4 @@
-use crate::{AsyncStream, error::OtlspError};
+use crate::{WebsocketStream, async_stream::WsAsyncStream, error::OtlspError};
 use hyper::{body::Body, client::conn::http1::SendRequest};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, client::WebPkiServerVerifier};
 use rustls_pki_types::{ServerName, TrustAnchor};
@@ -13,7 +13,7 @@ pub struct OtlspConnectionBuilder<AS> {
     stream: PhantomData<AS>,
 }
 
-impl<AS: AsyncStream> OtlspConnectionBuilder<AS> {
+impl<WS: WebsocketStream> OtlspConnectionBuilder<WS> {
     /// Create a new [`OtlspClientBuilder`]
     pub fn new(proxy: Url) -> Self {
         Self {
@@ -86,11 +86,11 @@ impl<AS: AsyncStream> OtlspConnectionBuilder<AS> {
                 .to_owned();
         let conn = ClientConnection::new(Arc::new(config), server_name)?;
 
-        let stream = AS::create(conn, self.proxy, dst).await?;
+        let stream = WsAsyncStream::<WS>::create(conn, self.proxy, dst).await?;
         let (sender, connection) = hyper::client::conn::http1::handshake::<_, B>(stream).await?;
 
         // Send connection to the web-sys executor
-        AS::spawn(connection);
+        WS::spawn(connection);
 
         Ok(sender)
     }
@@ -98,8 +98,9 @@ impl<AS: AsyncStream> OtlspConnectionBuilder<AS> {
 
 #[cfg(test)]
 mod tests {
+    use crate::DefaultWebsocketStream;
+
     use super::*;
-    use crate::DefaultAsyncStream;
     use http_body_util::BodyExt;
     use hyper::{Request, body::Buf, header::HOST};
     use luct_test::utils::test_tracing;
@@ -165,7 +166,7 @@ mod tests {
         let url = Url::parse(url).unwrap();
         let host = url.host_str().unwrap().to_string();
 
-        let mut sender = OtlspConnectionBuilder::<DefaultAsyncStream>::new(
+        let mut sender = OtlspConnectionBuilder::<DefaultWebsocketStream>::new(
             Url::parse("https://node.luct.dev/otlsp").unwrap(),
         )
         .with_webpki_roots()
