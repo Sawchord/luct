@@ -1,6 +1,6 @@
 use crate::{OtlspError, browser::ws_stream::WsStream};
 use futures::io;
-use hyper::rt::ReadBufCursor;
+use hyper::{body::Body, client::conn::http1::Connection, rt::ReadBufCursor};
 use rustls::{ClientConnection, StreamOwned};
 use std::{
     io::{ErrorKind, Read, Write},
@@ -10,10 +10,10 @@ use std::{
 use url::Url;
 
 #[derive(Debug)]
-pub(crate) struct AsyncStream(StreamOwned<ClientConnection, WsStream>);
+pub(crate) struct WsAsyncStream(StreamOwned<ClientConnection, WsStream>);
 
-impl AsyncStream {
-    pub(crate) async fn new(
+impl WsAsyncStream {
+    pub(crate) async fn create(
         conn: ClientConnection,
         proxy: Url,
         dst: Url,
@@ -25,9 +25,22 @@ impl AsyncStream {
         let stream = StreamOwned::new(conn, ws_stream);
         Ok(Self(stream))
     }
+
+    pub(crate) fn spawn<B>(connection: Connection<Self, B>)
+    where
+        B: Body,
+        B::Data: Send,
+        B::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
+    {
+        wasm_bindgen_futures::spawn_local(async move {
+            if let Err(err) = connection.await {
+                tracing::error!("Connection failed: {:?}", err)
+            }
+        });
+    }
 }
 
-impl hyper::rt::Read for AsyncStream {
+impl hyper::rt::Read for WsAsyncStream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -60,7 +73,7 @@ impl hyper::rt::Read for AsyncStream {
     }
 }
 
-impl hyper::rt::Write for AsyncStream {
+impl hyper::rt::Write for WsAsyncStream {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,

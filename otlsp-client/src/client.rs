@@ -1,4 +1,4 @@
-use crate::{browser::async_stream::AsyncStream, error::OtlspError};
+use crate::{browser::async_stream::WsAsyncStream, error::OtlspError};
 use hyper::{body::Body, client::conn::http1::SendRequest};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, client::WebPkiServerVerifier};
 use rustls_pki_types::{ServerName, TrustAnchor};
@@ -83,15 +83,11 @@ impl OtlspClientBuilder {
                 .to_owned();
         let conn = ClientConnection::new(Arc::new(config), server_name)?;
 
-        let stream = AsyncStream::new(conn, self.proxy, dst).await?;
+        let stream = WsAsyncStream::create(conn, self.proxy, dst).await?;
         let (sender, connection) = hyper::client::conn::http1::handshake::<_, B>(stream).await?;
 
         // Send connection to the web-sys executor
-        wasm_bindgen_futures::spawn_local(async move {
-            if let Err(err) = connection.await {
-                tracing::error!("Connection failed: {:?}", err)
-            }
-        });
+        WsAsyncStream::spawn(connection);
 
         Ok(sender)
     }
