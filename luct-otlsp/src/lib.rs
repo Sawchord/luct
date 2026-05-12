@@ -101,9 +101,7 @@ mod test {
     use crate::OtlspClient;
     use luct_client::CtClient;
     use luct_core::{CtLogConfig, tiling::TileId, tree::NodeKey};
-    use tracing::Level;
-    use tracing_subscriber::{Registry, layer::SubscriberExt};
-    use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
+    use luct_test::utils::test_tracing;
     use url::Url;
     use wasm_bindgen_test::wasm_bindgen_test;
 
@@ -128,7 +126,7 @@ mod test {
     //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn get_checkpoint() {
-        tracing();
+        test_tracing();
 
         let client = get_client(SYC2027H2);
         let _ = client.get_checkpoint().await.unwrap();
@@ -138,7 +136,7 @@ mod test {
     //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn get_tile() {
-        tracing();
+        test_tracing();
 
         let client = get_client(SYC2027H2);
 
@@ -150,17 +148,6 @@ mod test {
     }
 
     // TODO: Test with parameters
-
-    fn tracing() {
-        let _ = tracing::subscriber::set_global_default(
-            Registry::default().with(WASMLayer::new(
-                WASMLayerConfigBuilder::default()
-                    .set_max_level(Level::TRACE)
-                    .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
-                    .build(),
-            )),
-        );
-    }
 
     fn get_client(log: &str) -> CtClient<OtlspClient> {
         let config: CtLogConfig = serde_json::from_str(log).unwrap();
