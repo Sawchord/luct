@@ -1,4 +1,4 @@
-use crate::{AsyncStream, OtlspError, browser::ws_stream::WsStream};
+use crate::{AsyncStream, OtlspError, WebsocketStream};
 use futures::io;
 use hyper::{
     body::Body,
@@ -15,12 +15,12 @@ use url::Url;
 
 #[allow(dead_code)]
 #[derive(Debug)]
-pub struct WsAsyncStream(StreamOwned<ClientConnection, WsStream>);
+pub struct WsAsyncStream<WS: WebsocketStream>(StreamOwned<ClientConnection, WS>);
 
-impl AsyncStream for WsAsyncStream {
+impl<WS: WebsocketStream> AsyncStream for WsAsyncStream<WS> {
     async fn create(conn: ClientConnection, proxy: Url, dst: Url) -> Result<Self, OtlspError> {
         // Setup the underlying websocket stream
-        let ws_stream = WsStream::new(proxy, dst).await?;
+        let ws_stream = WS::new(proxy, dst).await?;
 
         // Initiate the connection
         let stream = StreamOwned::new(conn, ws_stream);
@@ -41,7 +41,7 @@ impl AsyncStream for WsAsyncStream {
     }
 }
 
-impl rt::Read for WsAsyncStream {
+impl<WS: WebsocketStream> rt::Read for WsAsyncStream<WS> {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
@@ -74,7 +74,7 @@ impl rt::Read for WsAsyncStream {
     }
 }
 
-impl rt::Write for WsAsyncStream {
+impl<WS: WebsocketStream> rt::Write for WsAsyncStream<WS> {
     fn poll_write(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,

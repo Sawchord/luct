@@ -14,7 +14,7 @@ pub use client::OtlspConnectionBuilder;
 pub use error::OtlspError;
 use hyper::{body::Body, client::conn::http1::Connection, rt};
 use rustls::ClientConnection;
-use std::future::Future;
+use std::{future::Future, io, task::Context};
 use url::Url;
 
 #[cfg(any(target_arch = "wasm32", target_arch = "wasm64"))]
@@ -39,6 +39,12 @@ pub trait AsyncStream: rt::Write + rt::Read + Sized + Unpin {
         B: Body,
         B::Data: Send,
         B::Error: Into<Box<dyn std::error::Error + Send + Sync>>;
+}
+
+pub trait WebsocketStream: io::Read + io::Write + Sized + Unpin + 'static {
+    fn new(proxy: Url, dst: Url) -> impl Future<Output = Result<Self, OtlspError>>;
+    fn close(&self) -> io::Result<()>;
+    fn enqueue_waker(&self, cx: &Context<'_>);
 }
 
 // TODO: Native implementation using a native websocket client

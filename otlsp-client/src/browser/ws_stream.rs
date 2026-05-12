@@ -1,4 +1,4 @@
-use crate::error::OtlspError;
+use crate::{WebsocketStream, error::OtlspError};
 use js_sys::{ArrayBuffer, JsString, Promise, Uint8Array};
 use otlsp_core::OtlspErrorCode;
 use std::{
@@ -14,7 +14,7 @@ use wasm_bindgen_futures::JsFuture;
 use web_sys::{BinaryType, Blob, CloseEvent, MessageEvent, WebSocket};
 
 #[derive(Debug, Clone)]
-pub(crate) struct WsStream {
+pub(crate) struct BrowserWebsocketStream {
     websocket: WebSocket,
 
     // TODO: Use a vectored buffer to avoid extensive copying
@@ -44,8 +44,8 @@ pub(crate) struct WsStream {
     _onclose: Rc<Closure<dyn FnMut(MessageEvent)>>,
 }
 
-impl WsStream {
-    pub async fn new(proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
+impl WebsocketStream for BrowserWebsocketStream {
+    async fn new(proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
         let waker = Rc::new(RefCell::new(vec![]));
         let input_buffer = Rc::new(RefCell::new(VecDeque::<u8>::new()));
 
@@ -110,10 +110,29 @@ impl WsStream {
         })
     }
 
-    pub fn enqueue_waker(&self, cx: &Context<'_>) {
-        self.waker.borrow_mut().push(cx.waker().clone());
+    fn close(&self) -> io::Result<()> {
+        self.websocket
+            .close_with_code(1000)
+            .expect("Failed to close websocket");
+
+        match self.connection_status.borrow_mut().take() {
+            Some(status) => status,
+            None => {
+                tracing::trace!("ws stream close: would block");
+                Err(io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    "Waiting on shutdown".to_string(),
+                ))
+            }
+        }
     }
 
+    fn enqueue_waker(&self, cx: &Context<'_>) {
+        self.waker.borrow_mut().push(cx.waker().clone());
+    }
+}
+
+impl BrowserWebsocketStream {
     /// Set up the connection or error out
     async fn await_opened(websocket: &WebSocket) -> Result<(), OtlspError> {
         // These are here to hold the closures until the promise is resolved
@@ -184,23 +203,6 @@ impl WsStream {
         Ok(())
     }
 
-    pub(crate) fn close(&self) -> io::Result<()> {
-        self.websocket
-            .close_with_code(1000)
-            .expect("Failed to close websocket");
-
-        match self.connection_status.borrow_mut().take() {
-            Some(status) => status,
-            None => {
-                tracing::trace!("ws stream close: would block");
-                Err(io::Error::new(
-                    io::ErrorKind::WouldBlock,
-                    "Waiting on shutdown".to_string(),
-                ))
-            }
-        }
-    }
-
     /// Wake all wakers in the list
     fn wake_all(waker: &Rc<RefCell<Vec<Waker>>>) {
         let mut waker = waker.borrow_mut();
@@ -211,7 +213,7 @@ impl WsStream {
     }
 }
 
-impl io::Read for WsStream {
+impl io::Read for BrowserWebsocketStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if buf.is_empty() {
             return Ok(0);
@@ -251,7 +253,7 @@ impl io::Read for WsStream {
     }
 }
 
-impl io::Write for WsStream {
+impl io::Write for BrowserWebsocketStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         self.websocket
             .send_with_js_u8_array(&Uint8Array::from(buf))
@@ -277,7 +279,7 @@ impl io::Write for WsStream {
     }
 }
 
-impl Drop for WsStream {
+impl Drop for BrowserWebsocketStream {
     fn drop(&mut self) {
         tracing::debug!("Dropping ws stream");
     }

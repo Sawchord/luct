@@ -1,4 +1,4 @@
-use crate::{AsyncStream, OtlspError};
+use crate::{AsyncStream, OtlspError, WebsocketStream};
 use hyper::{body::Body, client::conn::http1::Connection, rt};
 use rustls::{ClientConnection, StreamOwned};
 use std::{
@@ -11,7 +11,7 @@ use tokio_tungstenite::{MaybeTlsStream, WebSocketStream, connect_async};
 use url::Url;
 
 #[derive(Debug)]
-pub struct NativeAsyncStream(StreamOwned<ClientConnection, WsStream>);
+pub struct NativeAsyncStream(StreamOwned<ClientConnection, NativeWebsocketStream>);
 
 impl AsyncStream for NativeAsyncStream {
     async fn create(
@@ -20,7 +20,7 @@ impl AsyncStream for NativeAsyncStream {
         dst: url::Url,
     ) -> Result<Self, OtlspError> {
         // Setup the underlying websocket stream
-        let ws_stream = WsStream::new(proxy, dst).await?;
+        let ws_stream = NativeWebsocketStream::new(proxy, dst).await?;
 
         // Initiate the connection
         let stream = StreamOwned::new(conn, ws_stream);
@@ -69,9 +69,9 @@ impl rt::Write for NativeAsyncStream {
 }
 
 #[derive(Debug)]
-pub struct WsStream(WebSocketStream<MaybeTlsStream<TcpStream>>);
+pub struct NativeWebsocketStream(WebSocketStream<MaybeTlsStream<TcpStream>>);
 
-impl WsStream {
+impl WebsocketStream for NativeWebsocketStream {
     async fn new(proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
         let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
 
@@ -80,15 +80,23 @@ impl WsStream {
             .map_err(|err| OtlspError::UnreachableStd(Arc::new(err)))?;
         Ok(Self(stream))
     }
+
+    fn close(&self) -> std::io::Result<()> {
+        todo!()
+    }
+
+    fn enqueue_waker(&self, cx: &Context<'_>) {
+        todo!()
+    }
 }
 
-impl std::io::Read for WsStream {
+impl std::io::Read for NativeWebsocketStream {
     fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
         todo!()
     }
 }
 
-impl std::io::Write for WsStream {
+impl std::io::Write for NativeWebsocketStream {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         todo!()
     }
