@@ -101,18 +101,17 @@ mod tests {
     use super::*;
     use http_body_util::BodyExt;
     use hyper::{Request, body::Buf, header::HOST};
+    use luct_test::utils::test_tracing;
     use std::io::ErrorKind;
-    use tracing::Level;
-    use tracing_subscriber::{Registry, layer::SubscriberExt};
-    use tracing_wasm::{ConsoleConfig, WASMLayer, WASMLayerConfigBuilder};
     use wasm_bindgen_test::wasm_bindgen_test;
+
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
     //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn smoke_test() {
-        tracing();
+        test_tracing();
 
         let (status, response) =
             get_request("https://tuscolo2026h2.skylight.geomys.org", "/checkpoint")
@@ -127,7 +126,7 @@ mod tests {
     //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn permission_denied_test() {
-        tracing();
+        test_tracing();
 
         // This url is not a log and therefore will not be enabled in on a proxy
         let result = get_request("https://google.com", "/").await;
@@ -168,17 +167,6 @@ mod tests {
         let response = response.copy_to_bytes(response.remaining()).to_vec();
 
         Ok((status, response))
-    }
-
-    fn tracing() {
-        let _ = tracing::subscriber::set_global_default(
-            Registry::default().with(WASMLayer::new(
-                WASMLayerConfigBuilder::default()
-                    .set_max_level(Level::TRACE)
-                    .set_console_config(ConsoleConfig::ReportWithoutConsoleColor)
-                    .build(),
-            )),
-        );
     }
 
     fn assert_error(result: Result<(u16, Vec<u8>), OtlspError>, error: ErrorKind) {
