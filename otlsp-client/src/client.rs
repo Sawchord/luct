@@ -1,4 +1,4 @@
-use crate::{AsyncStream, browser::async_stream::WsAsyncStream, error::OtlspError};
+use crate::{AsyncStream, error::OtlspError};
 use hyper::{body::Body, client::conn::http1::SendRequest};
 use rustls::{ClientConfig, ClientConnection, RootCertStore, client::WebPkiServerVerifier};
 use rustls_pki_types::{ServerName, TrustAnchor};
@@ -86,11 +86,11 @@ impl<AS: AsyncStream> OtlspConnectionBuilder<AS> {
                 .to_owned();
         let conn = ClientConnection::new(Arc::new(config), server_name)?;
 
-        let stream = WsAsyncStream::create(conn, self.proxy, dst).await?;
+        let stream = AS::create(conn, self.proxy, dst).await?;
         let (sender, connection) = hyper::client::conn::http1::handshake::<_, B>(stream).await?;
 
         // Send connection to the web-sys executor
-        WsAsyncStream::spawn(connection);
+        AS::spawn(connection);
 
         Ok(sender)
     }
@@ -99,6 +99,7 @@ impl<AS: AsyncStream> OtlspConnectionBuilder<AS> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::DefaultAsyncStream;
     use http_body_util::BodyExt;
     use hyper::{Request, body::Buf, header::HOST};
     use luct_test::utils::test_tracing;
@@ -108,8 +109,17 @@ mod tests {
     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
 
     #[wasm_bindgen_test]
-    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn smoke_test_wasm() {
+        smoke_test().await
+    }
+
+    #[tokio::test]
+    #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn smoke_test_native() {
+        smoke_test().await
+    }
+
     async fn smoke_test() {
         test_tracing();
 
@@ -123,8 +133,17 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn permission_denied_test_wasm() {
+        permission_denied_test().await
+    }
+
+    #[tokio::test]
+    #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn permission_denied_test_native() {
+        permission_denied_test().await
+    }
+
     async fn permission_denied_test() {
         test_tracing();
 
@@ -146,7 +165,7 @@ mod tests {
         let url = Url::parse(url).unwrap();
         let host = url.host_str().unwrap().to_string();
 
-        let mut sender = OtlspConnectionBuilder::<WsAsyncStream>::new(
+        let mut sender = OtlspConnectionBuilder::<DefaultAsyncStream>::new(
             Url::parse("https://node.luct.dev/otlsp").unwrap(),
         )
         .with_webpki_roots()

@@ -35,6 +35,10 @@ futures = { workspace = true }
 thiserror = { workspace = true }
 tracing = { workspace = true }
 
+rustls-pki-types = { version = "1", default-features = false, features = [
+    "web",
+] }
+
 # Wasm
 web-sys = { workspace = true }
 js-sys = { workspace = true }
@@ -44,10 +48,6 @@ wasm-bindgen-futures = { workspace = true }
 # This needs to be imported here to set the "js" feature,
 # otherwise the crate would not compile to wasm
 getrandom = { version = "0.2", features = ["js"] }
-
-rustls-pki-types = { version = "1", default-features = false, features = [
-    "web",
-] }
 
 [dev-dependencies]
 luct-test = { version = "0.1.0", path = "../luct-test" }
