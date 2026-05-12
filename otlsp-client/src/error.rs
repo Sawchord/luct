@@ -10,6 +10,10 @@ pub enum OtlspError {
     #[error("Network unreachable: {0}")]
     Unreachable(String),
 
+    /// The proxy was unreachable
+    #[error("Network unreachable: {0}")]
+    UnreachableStd(Arc<dyn std::error::Error + Send + Sync>),
+
     /// An error occured within the TCP connection between proxy and destination server
     #[error("TCP stream error: {0}")]
     Tcp(Arc<io::Error>),

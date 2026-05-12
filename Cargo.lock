@@ -1923,9 +1923,11 @@ dependencies = [
  "rustls-rustcrypto",
  "thiserror",
  "tokio",
+ "tokio-tungstenite",
  "tracing",
  "tracing-subscriber",
  "tracing-wasm",
+ "tungstenite",
  "url",
  "wasm-bindgen",
  "wasm-bindgen-futures",
@@ -3038,6 +3040,7 @@ checksum = "8f72a05e828585856dacd553fba484c242c46e391fb0e58917c942ee9202915c"
 dependencies = [
  "futures-util",
  "log",
+ "rustls",
  "tokio",
  "tungstenite",
 ]
