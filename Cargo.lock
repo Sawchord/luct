@@ -1749,7 +1749,11 @@ dependencies = [
 name = "luct-test"
 version = "0.1.0"
 dependencies = [
+ "getrandom 0.2.17",
  "luct-core",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-wasm",
 ]
 
 [[package]]
@@ -1911,6 +1915,7 @@ dependencies = [
  "hyper",
  "hyper-util",
  "js-sys",
+ "luct-test",
  "otlsp-core",
  "rustls",
  "rustls-pki-types",

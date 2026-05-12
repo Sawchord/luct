@@ -14,3 +14,9 @@ license = { workspace = true }
 
 [dependencies]
 luct-core = { version = "0.1.0", path = "../luct-core" }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[target.'cfg(any(target_arch = "wasm32", target_arch = "wasm64"))'.dependencies]
+tracing-wasm = { workspace = true }
+getrandom = { version = "0.2", features = ["js"] }

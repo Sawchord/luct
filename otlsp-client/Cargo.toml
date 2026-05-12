@@ -50,6 +50,8 @@ rustls-pki-types = { version = "1", default-features = false, features = [
 ] }
 
 [dev-dependencies]
+luct-test = { version = "0.1.0", path = "../luct-test" }
+
 wasm-bindgen-test = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
 
