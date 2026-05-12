@@ -1,10 +1,6 @@
-use crate::{AsyncStream, OtlspError, WebsocketStream};
+use crate::{OtlspError, WebsocketStream};
 use futures::io;
-use hyper::{
-    body::Body,
-    client::conn::http1::Connection,
-    rt::{self, ReadBufCursor},
-};
+use hyper::rt::{self, ReadBufCursor};
 use rustls::{ClientConnection, StreamOwned};
 use std::{
     io::{ErrorKind, Read, Write},
@@ -13,31 +9,21 @@ use std::{
 };
 use url::Url;
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub struct WsAsyncStream<WS: WebsocketStream>(StreamOwned<ClientConnection, WS>);
 
-impl<WS: WebsocketStream> AsyncStream for WsAsyncStream<WS> {
-    async fn create(conn: ClientConnection, proxy: Url, dst: Url) -> Result<Self, OtlspError> {
+impl<WS: WebsocketStream> WsAsyncStream<WS> {
+    pub(crate) async fn create(
+        conn: ClientConnection,
+        proxy: Url,
+        dst: Url,
+    ) -> Result<Self, OtlspError> {
         // Setup the underlying websocket stream
         let ws_stream = WS::new(proxy, dst).await?;
 
         // Initiate the connection
         let stream = StreamOwned::new(conn, ws_stream);
         Ok(Self(stream))
-    }
-
-    fn spawn<B>(connection: Connection<Self, B>)
-    where
-        B: Body,
-        B::Data: Send,
-        B::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
-    {
-        wasm_bindgen_futures::spawn_local(async move {
-            if let Err(err) = connection.await {
-                tracing::error!("Connection failed: {:?}", err)
-            }
-        });
     }
 }
 
