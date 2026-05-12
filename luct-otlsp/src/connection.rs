@@ -5,7 +5,7 @@ use hyper::{
     client::conn::http1::SendRequest,
     header::{HOST, HeaderValue, USER_AGENT},
 };
-use otlsp_client::{OtlspConnectionBuilder, OtlspError, WsAsyncStream};
+use otlsp_client::{DefaultAsyncStream, OtlspConnectionBuilder, OtlspError};
 use std::sync::Arc;
 use url::Url;
 use web_time::Instant;
@@ -27,7 +27,7 @@ impl OtlspConnection {
 
         tracing::trace!("Creating otlsp connection to {} via {}", url, proxy_url);
 
-        let sender = OtlspConnectionBuilder::<WsAsyncStream>::new(proxy_url.clone())
+        let sender = OtlspConnectionBuilder::<DefaultAsyncStream>::new(proxy_url.clone())
             .with_webpki_roots()
             .handshake(url.clone())
             .await?;
