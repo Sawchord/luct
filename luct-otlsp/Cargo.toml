@@ -26,6 +26,8 @@ web-time = { workspace = true }
 
 [dev-dependencies]
 luct-core = { version = "0.1.0", path = "../luct-core" }
+
+tokio = { workspace = true, features = ["rt", "macros"] }
 wasm-bindgen-test = { workspace = true }
 
 tracing-subscriber = { workspace = true }

@@ -14,7 +14,7 @@ use std::{
 use url::Url;
 
 #[derive(Debug)]
-pub(crate) struct WsAsyncStream(StreamOwned<ClientConnection, WsStream>);
+pub struct WsAsyncStream(StreamOwned<ClientConnection, WsStream>);
 
 impl AsyncStream for WsAsyncStream {
     async fn create(conn: ClientConnection, proxy: Url, dst: Url) -> Result<Self, OtlspError> {
