@@ -47,6 +47,25 @@ impl WebsocketStream for NativeWebsocketStream {
         let (ws_stream, _response) = connect_async(&request_string)
             .await
             .map_err(|err| OtlspError::UnreachableStd(Arc::new(err)))?;
+        let (mut write, mut read) = ws_stream.split();
+
+        // Await the opening and accept message from the server
+        while let Some(msg) = read.next().await {
+            match msg {
+                Ok(Message::Text(txt)) if txt == "accept" => {
+                    tracing::debug!("Established proxy connection");
+                    break;
+                }
+                Ok(Message::Close(close_frame)) => match close_frame {
+                    None => return Err(OtlspError::Unknown),
+                    Some(close_frame) => return Err(close_frame_to_io_err(close_frame).into()),
+                },
+                smth => tracing::warn!(
+                    "Received unexpected data during proxy connection establishment: {:?}",
+                    smth
+                ),
+            }
+        }
 
         let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
         let stream = Self {
@@ -57,8 +76,6 @@ impl WebsocketStream for NativeWebsocketStream {
                 connection_status: None,
             })),
         };
-
-        let (mut write, mut read) = ws_stream.split();
 
         // Handle the outbound traffic
         tokio::spawn(async move {
@@ -217,11 +234,9 @@ impl io::Write for NativeWebsocketStream {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        // NOTE: The Javascript engine has buffered the data
-        // We do not have any way of checking, whether it has already arrived.
-        // However, the data will still be sent out even if we drop WsStream, as long
-        // the connection to the server persists.
-        // Therefore for our purposes, we can consider the data flushed.
+        // NOTE: The data is already in the outbound queue.
+        // The correct way to handle this would be to enqeue something like a oneshot and
+        // then wait on it
         Ok(())
     }
 }
