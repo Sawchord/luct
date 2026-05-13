@@ -83,9 +83,10 @@ impl<WS: WebsocketStream> rt::Write for WsAsyncStream<WS> {
         }
     }
 
-    fn poll_flush(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<(), io::Error>> {
         // TODO: Implement
         tracing::warn!("Called poll_flush which is not implemented");
+        self.0.sock.enqueue_waker(cx);
         Poll::Ready(Ok(()))
     }
 

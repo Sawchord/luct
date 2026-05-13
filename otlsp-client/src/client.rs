@@ -118,6 +118,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn smoke_test_native() {
+        install_provider();
         smoke_test().await
     }
 
@@ -142,6 +143,7 @@ mod tests {
     #[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
     async fn permission_denied_test_native() {
+        install_provider();
         permission_denied_test().await
     }
 
@@ -197,5 +199,9 @@ mod tests {
             }
             a => panic!("Unexpected result {:?}", a),
         };
+    }
+
+    fn install_provider() {
+        let _ = rustls_rustcrypto::provider().install_default();
     }
 }
