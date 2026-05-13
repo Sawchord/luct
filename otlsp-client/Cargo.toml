@@ -53,6 +53,7 @@ getrandom = { version = "0.2", features = ["js"] }
 tokio = { workspace = true }
 tungstenite = { workspace = true }
 tokio-tungstenite = { workspace = true }
+futures = { workspace = true }
 
 [dev-dependencies]
 luct-test = { version = "0.1.0", path = "../luct-test" }
