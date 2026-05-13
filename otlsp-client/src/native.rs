@@ -1,15 +1,19 @@
 use crate::{OtlspError, WebsocketStream, async_stream::WsAsyncStream};
 use futures::{SinkExt, StreamExt};
 use hyper::{body::Body, client::conn::http1::Connection};
+use otlsp_core::OtlspErrorCode;
 use std::{
     collections::VecDeque,
-    io,
+    io::{self, ErrorKind},
     sync::{Arc, RwLock},
     task::{Context, Waker},
 };
 use tokio::sync::mpsc::UnboundedSender;
 use tokio_tungstenite::connect_async;
-use tungstenite::Message;
+use tungstenite::{
+    Message,
+    protocol::{CloseFrame, frame::coding::CloseCode},
+};
 use url::Url;
 #[derive(Debug, Clone)]
 pub struct NativeWebsocketStream {
@@ -27,9 +31,13 @@ struct NativeWebsocketInner {
 //(WebSocketStream<MaybeTlsStream<TcpStream>>);
 
 impl WebsocketStream for NativeWebsocketStream {
-    async fn new(proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
+    async fn new(mut proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
+        if proxy.scheme() == "https" {
+            let _ = proxy.set_scheme("wss");
+        }
         dst.set_path("");
         let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
+        dbg!(&request_string);
 
         // Connect the web socket to the proxy
         let (ws_stream, _response) = connect_async(&request_string)
@@ -55,8 +63,6 @@ impl WebsocketStream for NativeWebsocketStream {
                     Ok(()) => (),
                     Err(err) => {
                         tracing::error!("Error while sending data via websocket: {:?}", err);
-                        // TODO: Need to set error?
-                        break;
                     }
                 }
             }
@@ -66,7 +72,12 @@ impl WebsocketStream for NativeWebsocketStream {
         let mut stream2 = stream.clone();
         tokio::spawn(async move {
             while let Some(msg) = read.next().await {
-                stream2.handle_inbound(msg).await
+                match msg {
+                    Ok(msg) => stream2.handle_inbound(msg),
+                    Err(err) => {
+                        tracing::error!("Received error while listening to websocket: {:?}", err);
+                    }
+                }
             }
         });
 
@@ -74,7 +85,23 @@ impl WebsocketStream for NativeWebsocketStream {
     }
 
     fn close(&self) -> io::Result<()> {
-        todo!()
+        if let Err(err) = self.sender.send(Message::Close(Some(CloseFrame {
+            code: CloseCode::Normal,
+            reason: "".into(),
+        }))) {
+            tracing::error!("Failed to close the websocket: {:?}", err);
+        }
+
+        match self.inner.write().unwrap().connection_status.take() {
+            Some(status) => status,
+            None => {
+                tracing::trace!("ws stream close: would block");
+                Err(io::Error::new(
+                    io::ErrorKind::WouldBlock,
+                    "Waiting on shutdown".to_string(),
+                ))
+            }
+        }
     }
 
     fn enqueue_waker(&self, cx: &Context<'_>) {
@@ -96,35 +123,41 @@ impl WebsocketStream for NativeWebsocketStream {
 }
 
 impl NativeWebsocketStream {
-    async fn handle_inbound(&mut self, msg: Result<Message, tungstenite::Error>) {
+    fn handle_inbound(&mut self, msg: Message) {
         match msg {
-            Ok(msg) => match msg {
-                Message::Binary(bytes) => {
-                    tracing::trace!("Received {} bytes", bytes.len());
+            Message::Binary(bytes) => {
+                tracing::trace!("Received {} bytes", bytes.len());
 
-                    if !bytes.is_empty() {
-                        let mut inner = self.inner.write().unwrap();
-                        inner.input_buffer.extend(bytes.iter());
-                        inner.wake_all();
-                    }
+                if !bytes.is_empty() {
+                    let mut inner = self.inner.write().unwrap();
+                    inner.input_buffer.extend(bytes.iter());
+                    inner.wake_all();
                 }
-                Message::Close(close_frame) => todo!(),
-                Message::Ping(bytes) => {
-                    tracing::debug!("Received a ping");
-                    if let Err(err) = self.sender.send(Message::Pong(bytes)) {
-                        tracing::error!("Failed to send a pong message: {:?}", err);
-                    }
+            }
+            Message::Ping(bytes) => {
+                tracing::debug!("Received a ping");
+                if let Err(err) = self.sender.send(Message::Pong(bytes)) {
+                    tracing::error!("Failed to send a pong message: {:?}", err);
                 }
-                Message::Pong(_bytes) => {
-                    tracing::debug!("Received a pong message")
-                }
-                Message::Text(txt) => {
-                    tracing::warn!("received unexpected Text: {:?}", txt);
-                }
-                Message::Frame(_frame) => tracing::error!("Received a raw frame. This is a bug"),
-            },
-            Err(err) => todo!(),
-        };
+            }
+            Message::Pong(_bytes) => {
+                tracing::debug!("Received a pong message")
+            }
+            Message::Text(txt) => {
+                tracing::warn!("received unexpected Text: {:?}", txt);
+            }
+            Message::Frame(_frame) => tracing::error!("Received a raw frame. This is a bug"),
+            Message::Close(close_frame) => {
+                tracing::debug!("Received close frame: {:?}", close_frame);
+                let mut inner = self.inner.write().unwrap();
+
+                inner.connection_status = match close_frame {
+                    None => Some(Ok(())),
+                    Some(close_frame) => Some(Err(close_frame_to_io_err(close_frame))),
+                };
+                inner.wake_all();
+            }
+        }
     }
 }
 
@@ -150,5 +183,25 @@ impl NativeWebsocketInner {
             w.wake();
         }
         tracing::trace!("wake_all called");
+    }
+}
+
+impl Drop for NativeWebsocketInner {
+    fn drop(&mut self) {
+        tracing::debug!("Dropping ws stream");
+    }
+}
+
+fn close_frame_to_io_err(close: CloseFrame) -> io::Error {
+    let code = OtlspErrorCode::from(u16::from(close.code));
+
+    let reason = close.reason.as_str().to_string();
+    let kind: ErrorKind = code.clone().into();
+
+    match kind {
+        ErrorKind::Other => {
+            io::Error::other(format!("Websocket error[{}]: {}", u16::from(code), reason))
+        }
+        kind => io::Error::new(kind, reason),
     }
 }
