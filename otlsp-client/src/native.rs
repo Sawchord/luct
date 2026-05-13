@@ -32,12 +32,16 @@ struct NativeWebsocketInner {
 
 impl WebsocketStream for NativeWebsocketStream {
     async fn new(mut proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
+        // Small hack since tungstenite does not seem to allow http and https schemes
         if proxy.scheme() == "https" {
             let _ = proxy.set_scheme("wss");
         }
+        if proxy.scheme() == "http" {
+            let _ = proxy.set_scheme("ws");
+        }
+
         dst.set_path("");
         let request_string = format!("{}?to={}", proxy.as_str(), dst.as_str());
-        dbg!(&request_string);
 
         // Connect the web socket to the proxy
         let (ws_stream, _response) = connect_async(&request_string)
@@ -163,17 +167,62 @@ impl NativeWebsocketStream {
 
 impl io::Read for NativeWebsocketStream {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        todo!()
+        if buf.is_empty() {
+            return Ok(0);
+        }
+
+        tracing::trace!("Reading from ws stream");
+
+        let mut inner = self.inner.write().unwrap();
+        let new_bytes_len = std::cmp::min(buf.len(), inner.input_buffer.len());
+
+        for (idx, byte) in inner.input_buffer.drain(..new_bytes_len).enumerate() {
+            buf[idx] = byte;
+        }
+
+        if new_bytes_len == 0 {
+            match inner.connection_status.take() {
+                // Connection closed without error
+                Some(Ok(())) => Ok(0),
+                // There was an error, transmit it to upper layer
+                Some(Err(err)) => {
+                    tracing::trace!("ws stream read: sending error {} to upper layer", err);
+                    Err(err)
+                }
+                // Connection is still open, send a would block
+                None => {
+                    tracing::trace!("ws stream read: would block");
+                    Err(io::Error::new(
+                        io::ErrorKind::WouldBlock,
+                        "No new data available".to_string(),
+                    ))
+                }
+            }
+        } else {
+            tracing::trace!("ws stream read {} bytes", new_bytes_len);
+            Ok(new_bytes_len)
+        }
     }
 }
 
 impl io::Write for NativeWebsocketStream {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        todo!()
+        let bytes = buf.to_vec().into();
+        self.sender
+            .send(Message::Binary(bytes))
+            .map_err(|err| io::Error::new(io::ErrorKind::BrokenPipe, err))?;
+
+        tracing::trace!("ws stream wrote {} bytes", buf.len());
+        Ok(buf.len())
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        todo!()
+        // NOTE: The Javascript engine has buffered the data
+        // We do not have any way of checking, whether it has already arrived.
+        // However, the data will still be sent out even if we drop WsStream, as long
+        // the connection to the server persists.
+        // Therefore for our purposes, we can consider the data flushed.
+        Ok(())
     }
 }
 
