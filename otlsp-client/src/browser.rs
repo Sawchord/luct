@@ -81,6 +81,7 @@ impl WebsocketStream for BrowserWebsocketStream {
             } else {
                 tracing::warn!("received unexpected Unknown: {:?}", event.data());
             }
+            // TODO: We need to be able to receive pings here
         });
         websocket.set_onmessage(Some(onmessage_callback.as_ref().unchecked_ref()));
 
