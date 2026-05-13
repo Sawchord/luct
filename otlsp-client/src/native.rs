@@ -1,5 +1,5 @@
 use crate::{OtlspError, WebsocketStream, async_stream::WsAsyncStream};
-use futures::{SinkExt, StreamExt, channel::mpsc::UnboundedSender};
+use futures::{SinkExt, StreamExt};
 use hyper::{body::Body, client::conn::http1::Connection};
 use std::{
     collections::VecDeque,
@@ -7,6 +7,7 @@ use std::{
     sync::{Arc, RwLock},
     task::{Context, Waker},
 };
+use tokio::sync::mpsc::UnboundedSender;
 use tokio_tungstenite::connect_async;
 use tungstenite::Message;
 use url::Url;
@@ -35,8 +36,7 @@ impl WebsocketStream for NativeWebsocketStream {
             .await
             .map_err(|err| OtlspError::UnreachableStd(Arc::new(err)))?;
 
-        // Create unbounded channel and put into stream implementation
-        let (sender, receiver) = futures::channel::mpsc::unbounded();
+        let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
         let stream = Self {
             sender,
             inner: Arc::new(RwLock::new(NativeWebsocketInner {
@@ -46,16 +46,27 @@ impl WebsocketStream for NativeWebsocketStream {
             })),
         };
 
-        // Split websocket stream apart, connect outbound end to channel
-        // This allows to send data from different places
-        let (write, mut read) = ws_stream.split();
-        let write_future = receiver.map(Ok).forward(write);
-        tokio::spawn(write_future);
-        
+        let (mut write, mut read) = ws_stream.split();
+
+        // Handle the outbound traffic
+        tokio::spawn(async move {
+            while let Some(msg) = receiver.recv().await {
+                match write.send(msg).await {
+                    Ok(()) => (),
+                    Err(err) => {
+                        tracing::error!("Error while sending data via websocket: {:?}", err);
+                        // TODO: Need to set error?
+                        break;
+                    }
+                }
+            }
+        });
+
+        // Handle the inbound traffic
         let mut stream2 = stream.clone();
         tokio::spawn(async move {
             while let Some(msg) = read.next().await {
-                stream2.handle_msg(msg).await
+                stream2.handle_inbound(msg).await
             }
         });
 
@@ -67,34 +78,52 @@ impl WebsocketStream for NativeWebsocketStream {
     }
 
     fn enqueue_waker(&self, cx: &Context<'_>) {
-        todo!()
+        self.inner.write().unwrap().waker.push(cx.waker().clone());
     }
 
     fn spawn<B>(connection: Connection<WsAsyncStream<Self>, B>)
     where
-        B: Body,
+        B: Body + Send,
         B::Data: Send,
         B::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
     {
-        todo!()
+        tokio::spawn(async move {
+            if let Err(err) = connection.await {
+                tracing::error!("Connection failed: {:?}", err)
+            }
+        });
     }
 }
 
 impl NativeWebsocketStream {
-    async fn handle_msg(&mut self, msg: Result<Message, tungstenite::Error>) {
+    async fn handle_inbound(&mut self, msg: Result<Message, tungstenite::Error>) {
         match msg {
-            Err(err) => todo!(),
             Ok(msg) => match msg {
-                Message::Binary(bytes) => todo!(),
+                Message::Binary(bytes) => {
+                    tracing::trace!("Received {} bytes", bytes.len());
+
+                    if !bytes.is_empty() {
+                        let mut inner = self.inner.write().unwrap();
+                        inner.input_buffer.extend(bytes.iter());
+                        inner.wake_all();
+                    }
+                }
                 Message::Close(close_frame) => todo!(),
                 Message::Ping(bytes) => {
                     tracing::debug!("Received a ping");
-                    self.sender.send(Message::Pong(bytes)).await;
+                    if let Err(err) = self.sender.send(Message::Pong(bytes)) {
+                        tracing::error!("Failed to send a pong message: {:?}", err);
+                    }
                 }
-                Message::Pong(bytes) => todo!(),
-                Message::Text(utf8_bytes) => todo!(),
-                Message::Frame(frame) => tracing::error!("Received a raw frame. This is a bug"),
+                Message::Pong(_bytes) => {
+                    tracing::debug!("Received a pong message")
+                }
+                Message::Text(txt) => {
+                    tracing::warn!("received unexpected Text: {:?}", txt);
+                }
+                Message::Frame(_frame) => tracing::error!("Received a raw frame. This is a bug"),
             },
+            Err(err) => todo!(),
         };
     }
 }
@@ -112,5 +141,14 @@ impl io::Write for NativeWebsocketStream {
 
     fn flush(&mut self) -> io::Result<()> {
         todo!()
+    }
+}
+
+impl NativeWebsocketInner {
+    fn wake_all(&mut self) {
+        for w in self.waker.drain(..) {
+            w.wake();
+        }
+        tracing::trace!("wake_all called");
     }
 }
