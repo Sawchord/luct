@@ -123,8 +123,17 @@ mod test {
         }";
 
     #[wasm_bindgen_test]
-    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn get_checkpoint_wasm() {
+        get_checkpoint().await
+    }
+
+    #[tokio::test]
+    #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn get_checkpoint_native() {
+        get_checkpoint().await
+    }
+
     async fn get_checkpoint() {
         test_tracing();
 
@@ -133,8 +142,17 @@ mod test {
     }
 
     #[wasm_bindgen_test]
-    //#[tokio::test]
     #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn get_tile_wasm() {
+        get_tile().await
+    }
+
+    #[tokio::test]
+    #[ignore = "Makes an OTSLP call, for manual testing only"]
+    async fn get_tile_native() {
+        get_tile().await
+    }
+
     async fn get_tile() {
         test_tracing();
 
