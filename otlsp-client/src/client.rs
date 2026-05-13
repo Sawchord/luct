@@ -64,7 +64,7 @@ impl<WS: WebsocketStream> OtlspConnectionBuilder<WS> {
     /// - **On failure**: [`OtlspError`] indicating what went wwrong
     pub async fn handshake<B>(self, dst: Url) -> Result<SendRequest<B>, OtlspError>
     where
-        B: Body + 'static,
+        B: Body + Send + 'static,
         B::Data: Send,
         B::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
     {

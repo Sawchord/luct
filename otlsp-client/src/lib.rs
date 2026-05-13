@@ -50,7 +50,7 @@ pub trait WebsocketStream: io::Read + io::Write + Sized + Unpin + 'static {
 
     fn spawn<B>(connection: Connection<async_stream::WsAsyncStream<Self>, B>)
     where
-        B: Body,
+        B: Body + Send,
         B::Data: Send,
         B::Error: Into<Box<dyn std::error::Error + Send + Sync>>;
 }
