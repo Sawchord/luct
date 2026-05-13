@@ -13,9 +13,7 @@ pub struct ReqwestClient {
 impl ReqwestClient {
     pub fn new(agent: &str) -> Self {
         #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
-        rustls_rustcrypto::provider()
-            .install_default()
-            .expect("Failed to initialize rustcrypto");
+        let _ = rustls_rustcrypto::provider().install_default();
 
         Self {
             client: reqwest::Client::builder()
