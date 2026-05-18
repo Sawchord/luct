@@ -1584,6 +1584,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "config",
  "eyre",
  "luct-client",
  "luct-core",
@@ -1592,6 +1593,7 @@ dependencies = [
  "rustls",
  "rustls-platform-verifier",
  "rustls-rustcrypto",
+ "serde",
  "serde_json",
  "tokio",
  "tracing",
