@@ -1,3 +1,4 @@
+use crate::conf::CliConfig;
 use clap::Parser;
 use std::path::PathBuf;
 
@@ -14,15 +15,12 @@ pub(crate) struct Args {
 
     /// Specify the config directory
     #[arg(short, long, value_name = "FILE")]
-    pub(crate) confdir: Option<PathBuf>,
+    pub(crate) log_list: Option<PathBuf>,
 
-    /// Turn debugging information on
-    #[arg(short, long, action = clap::ArgAction::Count)]
-    pub(crate) debug: u8,
-
+    // TODO: Implement
     /// Reads certificate chain from a file, otherwise fetches the certificate from the URL
-    #[arg(short, long)]
-    pub(crate) file: bool,
+    // #[arg(short, long)]
+    // pub(crate) file: bool,
 
     /// Update all logs to the latest signed tree head before checking log inclusions
     #[arg(short, long)]
@@ -37,16 +35,14 @@ pub(crate) struct Args {
     pub(crate) output_certificate: Option<PathBuf>,
 }
 
-pub(crate) fn get_workdir(args: &Args) -> PathBuf {
-    args.workdir.clone().unwrap_or_else(|| {
-        std::env::var("LUCT_WORKDIR").map(PathBuf::from).unwrap_or(
-            std::env::home_dir()
-                .expect("Home directory not set")
-                .join(".luct"),
-        )
-    })
+pub(crate) fn get_workdir(args: &Args, config: &CliConfig) -> PathBuf {
+    args.workdir
+        .clone()
+        .unwrap_or_else(|| PathBuf::from(config.workdir.clone()))
 }
 
-pub(crate) fn log_list_path(args: &Args) -> Option<PathBuf> {
-    args.confdir.clone()
+pub(crate) fn log_list_path(args: &Args, config: &CliConfig) -> Option<PathBuf> {
+    args.log_list
+        .clone()
+        .or_else(|| config.log_list.clone().map(PathBuf::from))
 }

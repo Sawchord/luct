@@ -28,7 +28,9 @@ url = { workspace = true }
 
 clap = { workspace = true, features = ["derive"] }
 eyre = { workspace = true }
+config = { workspace = true }
 chrono = { workspace = true }
+serde = { workspace = true }
 
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }

@@ -2,6 +2,7 @@
 
 use crate::{
     args::{Args, get_workdir, log_list_path},
+    conf::CliConfig,
     fetch::fetch_cert_chain,
 };
 use chrono::DateTime;
@@ -20,6 +21,7 @@ use std::{sync::Arc, time::SystemTime};
 use tracing_subscriber::EnvFilter;
 
 mod args;
+mod conf;
 mod fetch;
 
 const USER_AGENT: &str = concat!(
@@ -41,6 +43,7 @@ impl ScannerImpl for CliScannerImpl {
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
+    let config = CliConfig::parse()?;
     let args = Args::parse();
 
     if let Ok(env_filter) = EnvFilter::try_from_default_env() {
@@ -49,11 +52,11 @@ async fn main() -> eyre::Result<()> {
             .with_env_filter(env_filter)
             .init();
     }
-
-    let workdir = get_workdir(&args);
-    let log_list_path = log_list_path(&args);
+    let workdir = get_workdir(&args, &config);
+    let log_list_path = log_list_path(&args, &config);
     tracing::debug!("Workdir: {:?}, log list path: {:?}", workdir, log_list_path);
 
+    // TODO: Simply fail if we can't parse the log list
     let log_list = log_list_path
         .and_then(|confpath| {
             std::fs::read_to_string(&confpath)
@@ -80,6 +83,7 @@ async fn main() -> eyre::Result<()> {
         store
     };
 
+    // TODO: Generate ScannerConfig from CliConfig
     let config = ScannerConfig::builder().validate_cert_chain(true).build()?;
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
     let time_source = || DateTime::from(SystemTime::now());
