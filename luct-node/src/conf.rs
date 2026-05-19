@@ -1,5 +1,6 @@
 use config::{Config as Conf, Environment, File};
 use serde::{Deserialize, Serialize};
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub(crate) struct Config {
@@ -16,9 +17,16 @@ pub(crate) struct Config {
 impl Config {
     pub(crate) fn parse() -> eyre::Result<Self> {
         let config = Conf::builder()
-            .add_source(File::with_name("/etc/luct/luct.toml").required(false))
-            .add_source(File::with_name("~/.luct/luct.toml").required(false))
-            .add_source(File::with_name("luct.toml").required(false))
+            .add_source(File::from(PathBuf::from("/etc/luct/luct.toml")).required(false))
+            .add_source(
+                File::from(
+                    std::env::home_dir()
+                        .expect("Home directory not set")
+                        .join(".luct/luct.toml"),
+                )
+                .required(false),
+            )
+            .add_source(File::from(PathBuf::from("luct.toml")).required(false))
             .add_source(Environment::with_prefix("LUCT"))
             .build()?;
 
