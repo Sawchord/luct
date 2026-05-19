@@ -1,6 +1,7 @@
 //! Collection of implementations of different [`Stores`](luct_core::store::Store)
-
 #![forbid(unsafe_code)]
+
+// TODO: Move browser store into this crate
 
 mod file;
 mod switch;

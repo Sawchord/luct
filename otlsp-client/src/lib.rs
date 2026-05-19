@@ -54,5 +54,3 @@ pub trait WebsocketStream: io::Read + io::Write + Sized + Unpin + 'static {
         B::Data: Send,
         B::Error: Into<Box<dyn std::error::Error + Send + Sync>>;
 }
-
-// TODO: Native implementation using a native websocket client
