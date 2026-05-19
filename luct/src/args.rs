@@ -38,11 +38,9 @@ pub(crate) struct Args {
 pub(crate) fn get_workdir(args: &Args, config: &CliConfig) -> PathBuf {
     args.workdir
         .clone()
-        .unwrap_or_else(|| PathBuf::from(config.workdir.clone()))
+        .unwrap_or_else(|| config.workdir.clone())
 }
 
 pub(crate) fn log_list_path(args: &Args, config: &CliConfig) -> Option<PathBuf> {
-    args.log_list
-        .clone()
-        .or_else(|| config.log_list.clone().map(PathBuf::from))
+    args.log_list.clone().or_else(|| config.log_list.clone())
 }
