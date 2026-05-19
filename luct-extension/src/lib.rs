@@ -79,16 +79,14 @@ impl Scanner {
                 OtlspClient::builder()
                     .proxy_url(url.clone())
                     .connection_timeout(*scanner_config.otlsp_connection_timeout())
-                    .agent(USER_AGENT.to_string())
-                    .build()
             }
 
             None => {
                 tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
-                OtlspClient::builder().agent(USER_AGENT.to_string()).build()
+                OtlspClient::builder()
             }
         };
-        let client = RequestDeduplicationClient::new(client);
+        let client = RequestDeduplicationClient::new(client.agent(USER_AGENT.to_string()).build());
 
         let report_cache =
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
