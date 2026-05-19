@@ -16,7 +16,6 @@ license = { workspace = true }
 otlsp-core = { version = "0.1.0", path = "../otlsp-core" }
 
 serde = { workspace = true }
-toml = { workspace = true }
 
 axum = { workspace = true }
 tokio = { workspace = true }

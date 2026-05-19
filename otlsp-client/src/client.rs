@@ -98,9 +98,8 @@ impl<WS: WebsocketStream> OtlspConnectionBuilder<WS> {
 
 #[cfg(test)]
 mod tests {
-    use crate::DefaultWebsocketStream;
-
     use super::*;
+    use crate::DefaultWebsocketStream;
     use http_body_util::BodyExt;
     use hyper::{Request, body::Buf, header::HOST};
     use luct_test::utils::test_tracing;

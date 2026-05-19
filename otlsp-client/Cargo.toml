@@ -17,10 +17,8 @@ otlsp-core = { version = "0.1.0", path = "../otlsp-core" }
 
 # HTTP
 hyper = { workspace = true }
-hyper-util = { workspace = true }
 
 url = { workspace = true }
-http-body-util = { workspace = true }
 
 # Crypto
 rustls = { workspace = true }
@@ -60,6 +58,8 @@ luct-test = { version = "0.1.0", path = "../luct-test" }
 
 wasm-bindgen-test = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
+
+http-body-util = { workspace = true }
 
 tracing-wasm = { workspace = true }
 tracing-subscriber = { workspace = true }
