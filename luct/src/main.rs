@@ -31,7 +31,6 @@ const USER_AGENT: &str = concat!(
 );
 const LOG_LIST: &str = include_str!("../log_list.json");
 
-// TODO: Ability to overwrite probe user agent
 struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {

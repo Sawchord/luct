@@ -9,6 +9,11 @@ use std::{
 };
 use url::Url;
 
+// TODO: Ability to overwrite probe user agent
+// TODO: Ability to set webpki verifier with custom roots instead of platform verifier
+// TODO: Factor out into own crate
+// TODO: Add error type
+
 // NOTE: This code is copied and adapted from https://github.com/robjtede/inspect-cert-chain/blob/main/src/fetch.rs
 
 pub(crate) fn fetch_cert_chain(url: &str) -> eyre::Result<CertificateChain> {
