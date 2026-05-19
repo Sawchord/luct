@@ -56,19 +56,12 @@ async fn main() -> eyre::Result<()> {
     let log_list_path = log_list_path(&args, &config);
     tracing::debug!("Workdir: {:?}, log list path: {:?}", workdir, log_list_path);
 
-    // TODO: Simply fail if we can't parse the log list
-    let log_list = log_list_path
-        .and_then(|confpath| {
-            std::fs::read_to_string(&confpath)
-                .inspect_err(|_| {
-                    println!(
-                        "could not read config path \"{}\", will use default config",
-                        confpath.to_str().unwrap()
-                    )
-                })
-                .ok()
-        })
-        .unwrap_or(LOG_LIST.to_string());
+    let log_list = match log_list_path {
+        None => LOG_LIST.to_string(),
+        Some(log_list) => {
+            std::fs::read_to_string(&log_list).with_context(|| "failed to read log_list.json")?
+        }
+    };
 
     let log_list: LogList = serde_json::from_str(&log_list)
         .with_context(|| "failed to parse log list json file".to_string())?;
@@ -83,12 +76,12 @@ async fn main() -> eyre::Result<()> {
         store
     };
 
-    // TODO: Generate ScannerConfig from CliConfig
-    let config = ScannerConfig::builder().validate_cert_chain(true).build()?;
+    let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
     let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
     let time_source = || DateTime::from(SystemTime::now());
 
-    let mut scanner = Scanner::<CliScannerImpl>::new(config, report_cache, client, time_source);
+    let mut scanner =
+        Scanner::<CliScannerImpl>::new(scanner_config, report_cache, client, time_source);
     tracing::info!("Initialized scanner");
 
     for log in logs {
@@ -115,5 +108,6 @@ async fn main() -> eyre::Result<()> {
 
     let report = serde_json::to_string_pretty(&report).unwrap();
     println!("Finished report: {}", report);
+
     Ok(())
 }
