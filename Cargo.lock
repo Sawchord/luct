@@ -1588,6 +1588,7 @@ dependencies = [
  "eyre",
  "luct-client",
  "luct-core",
+ "luct-otlsp",
  "luct-scanner",
  "luct-store",
  "rustls",

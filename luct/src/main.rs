@@ -8,13 +8,14 @@ use crate::{
 use chrono::DateTime;
 use clap::Parser;
 use eyre::Context;
-use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
+use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
     store::{MemoryStore, StoreRead},
     v1::SignedTreeHead,
 };
+use luct_otlsp::OtlspClient;
 use luct_scanner::{Report, Scanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::{FilesystemStore, StoreSwitch};
 use std::{sync::Arc, time::SystemTime};
@@ -34,7 +35,7 @@ const LOG_LIST: &str = include_str!("../log_list.json");
 struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
-    type Client = RequestDeduplicationClient<ReqwestClient>;
+    type Client = RequestDeduplicationClient<OtlspClient>;
     type ReportStore =
         StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>;
     type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
@@ -76,7 +77,18 @@ async fn main() -> eyre::Result<()> {
     };
 
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
-    let client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
+
+    let client = match config.otlsp_url {
+        Some(url) => {
+            tracing::info!("Using oblivious TLS proxy at {}", url);
+            OtlspClient::builder().proxy_url(url)
+        }
+        None => {
+            tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
+            OtlspClient::builder()
+        }
+    };
+    let client = RequestDeduplicationClient::new(client.agent(USER_AGENT.to_string()).build());
     let time_source = || DateTime::from(SystemTime::now());
 
     let mut scanner =
