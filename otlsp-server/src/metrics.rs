@@ -1,15 +1,16 @@
 use prometheus::{
     CounterVec, Opts, Registry, default_registry, register_counter_vec_with_registry,
 };
+use std::io::ErrorKind;
 
 #[derive(Debug, Clone)]
 pub struct OtlspMetrics {
-    pub(crate) connections_opened: CounterVec,
-    pub(crate) connections_closed: CounterVec,
-    pub(crate) connection_errors: CounterVec,
+    connections_opened: CounterVec,
+    connections_closed: CounterVec,
+    connection_errors: CounterVec,
 
-    pub(crate) bytes_tx: CounterVec,
-    pub(crate) bytes_rx: CounterVec,
+    bytes_tx: CounterVec,
+    bytes_rx: CounterVec,
 }
 
 impl OtlspMetrics {
@@ -55,6 +56,37 @@ impl OtlspMetrics {
             )
             .unwrap(),
         }
+    }
+}
+
+impl OtlspMetrics {
+    pub(crate) fn connection_opened(&self, destination: &str) {
+        self.connections_opened
+            .with_label_values(&[destination])
+            .inc();
+    }
+
+    pub(crate) fn connection_closed(
+        &self,
+        destination: &str,
+        client_init: bool,
+        error: Option<ErrorKind>,
+    ) {
+        self.connections_closed
+            .with_label_values(&[
+                destination,
+                &client_init.to_string(),
+                &error
+                    .map(|err| err.to_string())
+                    .unwrap_or("NONE".to_string()),
+            ])
+            .inc();
+    }
+
+    pub(crate) fn connection_error(&self, destination: &str, error_kind: ErrorKind) {
+        self.connection_errors
+            .with_label_values(&[destination, &error_kind.to_string()])
+            .inc()
     }
 }
 
