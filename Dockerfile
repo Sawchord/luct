@@ -16,7 +16,7 @@ WORKDIR /usr/src
 # Set up depdendencies
 COPY ./extension/package.json .
 COPY ./extension/package-lock.json .
-RUN npm install
+RUN npm ci
 
 # Copy source and build
 COPY ./extension/rollup.config.mjs .
