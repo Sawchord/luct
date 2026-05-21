@@ -5,7 +5,7 @@
 use axum::{
     Error,
     extract::{
-        WebSocketUpgrade,
+        State, WebSocketUpgrade,
         ws::{CloseFrame, Message, WebSocket},
     },
     response::Response,
@@ -19,6 +19,9 @@ use tokio::{
     select,
 };
 use url::{Host, Url};
+
+mod metrics;
+pub use metrics::OtlspMetrics;
 
 const FRAME_SIZE: usize = 1500;
 
@@ -47,6 +50,7 @@ impl Destination {
 pub async fn handle_connection<F>(
     destination: Destination,
     ws: WebSocketUpgrade,
+    metrics: State<OtlspMetrics>,
     access: F,
 ) -> Response
 where

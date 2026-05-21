@@ -42,20 +42,21 @@ impl Config {
 
 #[debug_handler]
 pub(crate) async fn handle_otlsp_connection(
-    config: State<NodeState>,
+    state: State<NodeState>,
     destination: Query<Destination>,
     ws: WebSocketUpgrade,
 ) -> Response {
     tracing::trace!("Received a new connection request to {:?}", destination);
 
+    let state_clone = state.clone();
     let has_access = move |destination: Url| {
-        config
+        state_clone
             .otlsp_urls()
             .iter()
             .any(|url| is_valid_destination(url, &destination))
     };
 
-    handle_connection(destination.0, ws, has_access).await
+    handle_connection(destination.0, ws, state.otlsp_metrics(), has_access).await
 }
 
 /// Test whether the [`Url`] `dst` is valid against the [`Url`] `dst`

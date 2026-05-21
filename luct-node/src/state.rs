@@ -1,4 +1,6 @@
 use crate::conf::Config;
+use axum::extract::State;
+use otlsp_server::OtlspMetrics;
 use std::sync::Arc;
 use url::Url;
 
@@ -9,6 +11,7 @@ pub(crate) struct NodeState(Arc<NodeStateInner>);
 struct NodeStateInner {
     config: Config,
     otlsp_urls: Vec<Url>,
+    otlsp_metrics: OtlspMetrics,
 }
 
 impl NodeState {
@@ -18,6 +21,7 @@ impl NodeState {
         Ok(Self(Arc::new(NodeStateInner {
             config,
             otlsp_urls: urls,
+            otlsp_metrics: OtlspMetrics::new(),
         })))
     }
 
@@ -27,5 +31,9 @@ impl NodeState {
 
     pub(crate) fn otlsp_urls(&self) -> &[Url] {
         &self.0.otlsp_urls
+    }
+
+    pub(crate) fn otlsp_metrics(&self) -> State<OtlspMetrics> {
+        State(self.0.otlsp_metrics.clone())
     }
 }
