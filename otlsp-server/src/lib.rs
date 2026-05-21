@@ -62,11 +62,7 @@ where
             let error_kind = ErrorKind::InvalidInput;
 
             tracing::debug!("Failed to parse destination url {}", destination);
-
-            metrics
-                .connection_errors
-                .with_label_values(&[destination, &error_kind.to_string()])
-                .inc();
+            metrics.connection_error(destination, error_kind);
 
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
@@ -79,10 +75,13 @@ where
 
         // Check access
         if !access(destination.clone()) {
+            let error_kind = ErrorKind::PermissionDenied;
+
             tracing::debug!(
                 "Connection request rejected since {:?} is not target enabled URL",
                 destination
             );
+            metrics.connection_error(destination.as_str(), error_kind);
 
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
@@ -99,10 +98,14 @@ where
             (Some(Host::Ipv4(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
             (Some(Host::Ipv6(addr)), Some(port)) => TcpStream::connect((addr, port)).await,
             _ => {
+                let error_kind = ErrorKind::InvalidInput;
+
                 tracing::debug!("Failed to parse destination {}", destination);
+                metrics.connection_error(destination.as_str(), error_kind);
+
                 let _ = ws
                     .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
-                        ErrorKind::InvalidInput,
+                        error_kind,
                         format!(
                             "Destination {} cannot be parsed as OTLSP destionation",
                             destination
@@ -116,6 +119,8 @@ where
         let stream = match stream {
             Err(err) => {
                 tracing::debug!("Failed to connect to connection: {}", destination);
+                metrics.connection_error(destination.as_str(), err.kind());
+
                 let _ = ws
                     .send(Message::Close(Some(io_error_to_close_msg(err))))
                     .await;
@@ -123,16 +128,23 @@ where
             }
             Ok(stream) => stream,
         };
+
         tracing::debug!("TCP stream to target established");
+        metrics.connection_opened(destination.as_str());
 
         let _ = ws.send(Message::Text("accept".into())).await;
         tracing::debug!("OTLSP connection accepted");
 
-        connection_loop(ws, stream, destination).await;
+        connection_loop(ws, stream, destination, metrics.0).await;
     })
 }
 
-async fn connection_loop(mut ws: WebSocket, mut stream: TcpStream, destination: Url) {
+async fn connection_loop(
+    mut ws: WebSocket,
+    mut stream: TcpStream,
+    destination: Url,
+    metrics: OtlspMetrics,
+) {
     // TODO: Make size configurable
     let (to_server_tx, mut to_server_rx) =
         tokio::sync::mpsc::channel::<Option<Result<Message, Error>>>(100);
@@ -150,13 +162,13 @@ async fn connection_loop(mut ws: WebSocket, mut stream: TcpStream, destination: 
 
             // Handle receiving data from the web socket side
             data = to_server_rx.recv() => {
-                if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination).await {
+                if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination, metrics.clone()).await {
                     break;
                 }
             },
             // Handle receiving data from the tcp socket side
             read = to_client_rx.recv() => {
-                if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination).await {
+                if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination, metrics.clone()).await {
                     break;
                 }
             },
@@ -179,6 +191,7 @@ async fn handle_websocket_receive(
     ws: &mut WebSocket,
     stream: &mut TcpStream,
     destination: &Url,
+    metrics: OtlspMetrics,
 ) -> bool {
     match data {
         None => {
@@ -199,8 +212,15 @@ async fn handle_websocket_receive(
                     let _ = stream.write_all(&bytes).await;
                     true
                 }
-                Message::Close(_) => {
+                Message::Close(close_frame) => {
                     tracing::debug!("Shutting down conntextion to {:?}", destination);
+
+                    metrics.connection_closed(
+                        destination.as_str(),
+                        true,
+                        close_frame.map(|frame| close_frame_to_io_error(&frame).kind()),
+                    );
+
                     let _ = stream.shutdown().await;
                     false
                 }
@@ -226,17 +246,21 @@ async fn handle_tcp_stream_receive(
     read: Option<(tokio::io::Result<usize>, [u8; FRAME_SIZE])>,
     ws: &mut WebSocket,
     _stream: &mut TcpStream,
-    _destination: &Url,
+    destination: &Url,
+    metrics: OtlspMetrics,
 ) -> bool {
     match read {
         None => {
-            tracing::warn!("Channel to client closed unexpectedly");
+            tracing::warn!("Channel to client closed");
+            metrics.connection_closed(destination.as_str(), false, None);
 
             let _ = ws.send(Message::Close(None)).await;
             false
         }
         Some((Err(err), _)) => {
             tracing::warn!("Error while reading TCP stream: {:?}", err);
+            metrics.connection_closed(destination.as_str(), false, Some(err.kind()));
+
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(err))))
                 .await;
@@ -268,4 +292,11 @@ fn io_error_to_close_msg(error: io::Error) -> CloseFrame {
         code: code.into(),
         reason: reason.into(),
     }
+}
+
+fn close_frame_to_io_error(frame: &CloseFrame) -> io::Error {
+    let code = OtlspErrorCode::from(frame.code);
+    let reason = frame.reason.as_str().to_string();
+
+    io::Error::new(code.into(), reason)
 }
