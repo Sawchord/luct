@@ -59,11 +59,18 @@ where
     ws.on_upgrade(async move |mut ws: WebSocket| {
         let destination = destination.dst();
         let Ok(destination) = Url::parse(destination) else {
+            let error_kind = ErrorKind::InvalidInput;
+
             tracing::debug!("Failed to parse destination url {}", destination);
+
+            metrics
+                .connection_errors
+                .with_label_values(&[destination, &error_kind.to_string()])
+                .inc();
 
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
-                    ErrorKind::InvalidInput,
+                    error_kind,
                     format!("Destination url {} could not be parsed", destination),
                 )))))
                 .await;

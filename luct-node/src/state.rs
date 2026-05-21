@@ -21,7 +21,7 @@ impl NodeState {
         Ok(Self(Arc::new(NodeStateInner {
             config,
             otlsp_urls: urls,
-            otlsp_metrics: OtlspMetrics::new(),
+            otlsp_metrics: OtlspMetrics::default(),
         })))
     }
 
