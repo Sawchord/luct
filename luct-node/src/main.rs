@@ -1,12 +1,16 @@
 #![forbid(unsafe_code)]
 
-use crate::{args::Args, conf::Config, otlsp::handle_otlsp_connection, state::NodeState};
+use crate::{
+    args::Args, conf::Config, metrics::handle_metrics_request, otlsp::handle_otlsp_connection,
+    state::NodeState,
+};
 use axum::{Router, routing::get};
 use clap::Parser;
 use tracing_subscriber::EnvFilter;
 
 mod args;
 mod conf;
+mod metrics;
 mod otlsp;
 mod state;
 
@@ -33,8 +37,15 @@ async fn main() -> eyre::Result<()> {
 
     tracing::info!("Serving requests at {}", config.endpoint_addr);
     let state = NodeState::new(config)?;
-
     let router = Router::new();
+
+    let router = if let Some(metrics_path) = &state.config().metrics_path {
+        tracing::info!("Serving metrics endpoint at {}", metrics_path);
+        router.route(metrics_path, get(handle_metrics_request))
+    } else {
+        router
+    };
+
     let router = if let Some(otlsp_path) = &state.config().otlsp_path {
         tracing::info!("Serving otlsp endpoint at {}", otlsp_path);
         router.route(otlsp_path, get(handle_otlsp_connection))

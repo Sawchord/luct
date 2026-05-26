@@ -1692,6 +1692,7 @@ dependencies = [
  "futures",
  "luct-core",
  "otlsp-server",
+ "prometheus",
  "serde",
  "serde_json",
  "tokio",
