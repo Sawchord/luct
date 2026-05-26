@@ -19,13 +19,7 @@ pub(crate) struct OtlspConnection {
 }
 
 impl OtlspConnection {
-    pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, OtlspError> {
-        let mut conn = Self::new2(config, url);
-        conn.establish().await?;
-        Ok(conn)
-    }
-
-    pub(crate) fn new2(config: Arc<OtlspClientConfig>, url: Url) -> Self {
+    pub(crate) fn new(config: Arc<OtlspClientConfig>, url: Url) -> Self {
         Self {
             last_access: Instant::now(),
             config,
@@ -114,7 +108,8 @@ impl OtlspConnection {
             .ok_or(OtlspError::Unreachable("Cannot-be-a-base url".to_string()))
     }
 
-    pub(crate) fn has_timed_out(&self) -> bool {
-        Instant::now() - self.last_access > self.config.connection_timeout
-    }
+    // TODO: Implement timeouts
+    // pub(crate) fn has_timed_out(&self) -> bool {
+    //     Instant::now() - self.last_access > self.config.connection_timeout
+    // }
 }
