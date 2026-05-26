@@ -14,17 +14,13 @@ use web_time::Instant;
 pub(crate) struct OtlspConnection {
     last_access: Instant,
     config: Arc<OtlspClientConfig>,
-    host: String,
-    sender: SendRequest<String>,
+    url: Url,
+    sender: Option<SendRequest<String>>,
 }
 
 impl OtlspConnection {
     pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, OtlspError> {
         let proxy_url = config.proxy_url.as_ref().expect("Proxy url unset");
-        let host = url
-            .host_str()
-            .ok_or(OtlspError::Unreachable("Cannot-be-a-base url".to_string()))?;
-
         tracing::trace!("Creating otlsp connection to {} via {}", url, proxy_url);
 
         let sender = OtlspConnectionBuilder::<DefaultWebsocketStream>::new(proxy_url.clone())
@@ -41,8 +37,8 @@ impl OtlspConnection {
         Ok(Self {
             last_access: Instant::now(),
             config,
-            host: host.to_string(),
-            sender,
+            url,
+            sender: Some(sender),
         })
     }
 
@@ -51,7 +47,7 @@ impl OtlspConnection {
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Vec<u8>), OtlspError> {
-        assert_eq!(Some(self.host.as_str()), url.host_str());
+        assert_eq!(Some(self.host()?.as_str()), url.host_str());
 
         let mut url = url.clone();
 
@@ -65,7 +61,7 @@ impl OtlspConnection {
             // Add headers for host, agent and params
             .header(
                 HOST,
-                HeaderValue::from_str(&self.host).expect("Invalid host string"),
+                HeaderValue::from_str(&self.host()?).expect("Invalid host string"),
             )
             .header(
                 USER_AGENT,
@@ -78,7 +74,14 @@ impl OtlspConnection {
         // Nonetheless, we make this access here, since we do not want to keep
         // a reference to self in the future
 
-        let response = self.sender.send_request(request).await?;
+        let response = self
+            .sender
+            .as_mut()
+            .ok_or(OtlspError::Unreachable(
+                "Connection not yet stablished".to_string(),
+            ))?
+            .send_request(request)
+            .await?;
         let status = response.status().as_u16();
         let response: Vec<u8> = response.collect().await?.to_bytes().into();
 
@@ -91,6 +94,13 @@ impl OtlspConnection {
         self.last_access = Instant::now();
 
         Ok((status, response))
+    }
+
+    fn host(&self) -> Result<String, OtlspError> {
+        self.url
+            .host_str()
+            .map(|s| s.to_string())
+            .ok_or(OtlspError::Unreachable("Cannot-be-a-base url".to_string()))
     }
 
     pub(crate) fn has_timed_out(&self) -> bool {
