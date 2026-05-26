@@ -17,6 +17,7 @@ use tungstenite::{
 use url::Url;
 #[derive(Debug, Clone)]
 pub struct NativeWebsocketStream {
+    dst: Url,
     sender: UnboundedSender<Message>,
     inner: Arc<RwLock<NativeWebsocketInner>>,
 }
@@ -26,9 +27,8 @@ struct NativeWebsocketInner {
     input_buffer: VecDeque<u8>,
     waker: Vec<Waker>,
     connection_status: Option<io::Result<()>>,
+    closing: bool,
 }
-
-//(WebSocketStream<MaybeTlsStream<TcpStream>>);
 
 impl WebsocketStream for NativeWebsocketStream {
     async fn new(mut proxy: Url, mut dst: Url) -> Result<Self, OtlspError> {
@@ -53,7 +53,7 @@ impl WebsocketStream for NativeWebsocketStream {
         while let Some(msg) = read.next().await {
             match msg {
                 Ok(Message::Text(txt)) if txt == "accept" => {
-                    tracing::debug!("Established proxy connection");
+                    tracing::debug!("Established proxy connection: {}", dst.as_str());
                     break;
                 }
                 Ok(Message::Close(close_frame)) => match close_frame {
@@ -69,21 +69,29 @@ impl WebsocketStream for NativeWebsocketStream {
 
         let (sender, mut receiver) = tokio::sync::mpsc::unbounded_channel();
         let stream = Self {
+            dst: dst.clone(),
             sender,
             inner: Arc::new(RwLock::new(NativeWebsocketInner {
                 input_buffer: VecDeque::new(),
                 waker: vec![],
                 connection_status: None,
+                closing: false,
             })),
         };
 
         // Handle the outbound traffic
+        let dst_clone = dst.clone();
         tokio::spawn(async move {
             while let Some(msg) = receiver.recv().await {
+                tracing::trace!("Sending outbound: {:?}", msg);
                 match write.send(msg).await {
                     Ok(()) => (),
                     Err(err) => {
-                        tracing::error!("Error while sending data via websocket: {:?}", err);
+                        tracing::error!(
+                            "Error while sending data via websocket: {:?}, dst: {}",
+                            err,
+                            dst_clone.as_str()
+                        );
                     }
                 }
             }
@@ -96,7 +104,11 @@ impl WebsocketStream for NativeWebsocketStream {
                 match msg {
                     Ok(msg) => stream2.handle_inbound(msg),
                     Err(err) => {
-                        tracing::error!("Received error while listening to websocket: {:?}", err);
+                        tracing::error!(
+                            "Received error while listening to websocket: {:?}, dst: {}",
+                            err,
+                            dst.as_str()
+                        );
                     }
                 }
             }
@@ -106,15 +118,26 @@ impl WebsocketStream for NativeWebsocketStream {
     }
 
     fn close(&self) -> io::Result<()> {
-        if let Err(err) = self.sender.send(Message::Close(Some(CloseFrame {
-            code: CloseCode::Normal,
-            reason: "".into(),
-        }))) {
-            tracing::error!("Failed to close the websocket: {:?}", err);
+        let mut inner = self.inner.write().unwrap();
+        if !inner.closing {
+            tracing::debug!("Closing ws stream: {}", self.dst.as_str());
+            if let Err(err) = self.sender.send(Message::Close(Some(CloseFrame {
+                code: CloseCode::Normal,
+                reason: "".into(),
+            }))) {
+                tracing::error!("Failed to close the websocket: {:?}", err);
+            }
+            inner.closing = true;
+        } else {
+            tracing::debug!("Waiting on response for close");
         }
 
-        match self.inner.write().unwrap().connection_status.take() {
-            Some(status) => status,
+        match inner.connection_status.take() {
+            Some(status) => {
+                tracing::debug!("Closing ws stream: received status: {:?}", status);
+                inner.wake_all();
+                status
+            }
             None => {
                 tracing::trace!("ws stream close: would block");
                 Err(io::Error::new(
@@ -139,6 +162,7 @@ impl WebsocketStream for NativeWebsocketStream {
             if let Err(err) = connection.await {
                 tracing::error!("Connection failed: {:?}", err)
             }
+            tracing::debug!("Connection dropped");
         });
     }
 }
@@ -250,7 +274,7 @@ impl NativeWebsocketInner {
     }
 }
 
-impl Drop for NativeWebsocketInner {
+impl Drop for NativeWebsocketStream {
     fn drop(&mut self) {
         tracing::debug!("Dropping ws stream");
     }
