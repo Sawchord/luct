@@ -6,7 +6,7 @@ use futures::lock::Mutex as FutMutex;
 use luct_client::{Client, ClientError, reqwest::ReqwestClient};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{Arc, Mutex, MutexGuard},
 };
 use url::{Host, Url};
 
@@ -67,42 +67,63 @@ impl OtlspClient {
         let domain = domain.to_owned();
 
         // NOTE: In order to prevent data races which lead to unnecessary connections:
-        let mut connections = self.connections.lock().unwrap();
+        let connections = self.connections.lock().unwrap();
+
         // 1. We check if there is an existing connection in the state
         let connection = match connections.get(&domain) {
-            // 2a. If not, we create a new connection and insert it in the state
             None => {
-                let connection = Arc::new(FutMutex::new(OtlspConnection::new(
-                    self.config.clone(),
-                    url.clone(),
-                )));
-                connections.insert(domain, connection.clone());
-
-                // 3. We then take out a lock on the new connection, this should never block since we have still exclusive access
-                let mut connection_lock = connection.lock().await;
-
-                // 4. We release the lock on the overall connections
-                drop(connections);
-
-                // 5. Now we actually establish the handshake. New requests can already see the connection but will
-                // wait on the mutex, until this returns
-                connection_lock
-                    .establish()
-                    .await
-                    .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
-
-                // 6. Return the now established connection. This will drop connection_lock and allow other requesters to use is
-                drop(connection_lock);
-                connection
+                // 2a. If not, we create a new connection and insert it in the state
+                new_connection(connections, self.config.clone(), url.clone(), domain).await?
             }
-            Some(connection) =>
-            // 2a. If we already have a connection, we clone it and let go of the state lock
-            {
+            Some(connection) => {
+                // 2b. If we already have a connection, we clone it and let go of the state lock
                 let connection = connection.clone();
                 drop(connections);
-                connection
+                dbg!("Found existing connection");
+
+                // 3b. If the connection has timed out, we remove it and call get_connection again
+                // We need to take the connections mutex again
+                // NOTE: Holding the existing mutex will lead to a deadlock
+                if connection.lock().await.has_timed_out() {
+                    tracing::debug!(
+                        "Connection timed out, establishing fresh connection: {}",
+                        url.as_str()
+                    );
+                    let mut connections = self.connections.lock().unwrap();
+                    connections.remove(&domain);
+                    new_connection(connections, self.config.clone(), url.clone(), domain).await?
+                } else {
+                    connection
+                }
             }
         };
+
+        async fn new_connection(
+            mut connections: MutexGuard<'_, HashMap<Host, Arc<FutMutex<OtlspConnection>>>>,
+            config: Arc<OtlspClientConfig>,
+            url: Url,
+            domain: Host,
+        ) -> Result<Arc<FutMutex<OtlspConnection>>, ClientError> {
+            let connection = Arc::new(FutMutex::new(OtlspConnection::new(config, url)));
+            connections.insert(domain, connection.clone());
+
+            // 3. We then take out a lock on the new connection, this should never block since we have still exclusive access
+            let mut connection_lock = connection.lock().await;
+
+            // 4. We release the lock on the connection state
+            drop(connections);
+
+            // 5. Now we actually establish the handshake. New requests can already see the connection but will
+            // wait on the mutex, until this returns
+            connection_lock
+                .establish()
+                .await
+                .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
+
+            // 6. Return the now established connection. This will drop connection_lock and allow other requesters to use is
+            drop(connection_lock);
+            Ok(connection)
+        }
 
         Ok(connection)
     }
