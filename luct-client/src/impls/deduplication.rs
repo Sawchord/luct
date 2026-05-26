@@ -41,7 +41,6 @@ impl<C> RequestDeduplicationClient<C> {
 }
 
 impl<C: Client> Client for RequestDeduplicationClient<C> {
-    #[tracing::instrument(level = "trace")]
     async fn get(
         &self,
         url: &url::Url,
@@ -63,7 +62,6 @@ impl<C: Client> Client for RequestDeduplicationClient<C> {
         }
     }
 
-    #[tracing::instrument(level = "trace")]
     async fn get_bin(
         &self,
         url: &url::Url,

@@ -198,7 +198,6 @@ impl<S: ScannerImpl> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<S> {
 }
 
 impl<S: ScannerImpl> TileFetchStore<S> {
-    #[tracing::instrument(level = "trace")]
     async fn fetch_unbalanced_keys(
         &self,
         key: &NodeKey,
@@ -247,7 +246,6 @@ impl<S: ScannerImpl> TileFetchStore<S> {
         Some(nodes)
     }
 
-    #[tracing::instrument(level = "trace")]
     async fn fetch_balanced_keys(
         &self,
         key: &NodeKey,
