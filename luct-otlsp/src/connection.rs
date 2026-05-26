@@ -20,26 +20,37 @@ pub(crate) struct OtlspConnection {
 
 impl OtlspConnection {
     pub(crate) async fn new(config: Arc<OtlspClientConfig>, url: Url) -> Result<Self, OtlspError> {
-        let proxy_url = config.proxy_url.as_ref().expect("Proxy url unset");
-        tracing::trace!("Creating otlsp connection to {} via {}", url, proxy_url);
+        let mut conn = Self::new2(config, url);
+        conn.establish().await?;
+        Ok(conn)
+    }
 
-        let sender = OtlspConnectionBuilder::<DefaultWebsocketStream>::new(proxy_url.clone())
-            .with_webpki_roots()
-            .handshake(url.clone())
-            .await?;
-
-        tracing::debug!(
-            "Created new proxy connection to {} via proxy {}",
-            url,
-            proxy_url
-        );
-
-        Ok(Self {
+    pub(crate) fn new2(config: Arc<OtlspClientConfig>, url: Url) -> Self {
+        Self {
             last_access: Instant::now(),
             config,
             url,
-            sender: Some(sender),
-        })
+            sender: None,
+        }
+    }
+
+    pub(crate) async fn establish(&mut self) -> Result<(), OtlspError> {
+        let proxy_url = self.config.proxy_url.as_ref().expect("Proxy url unset");
+        tracing::trace!(
+            "Creating otlsp connection to {} via {}",
+            self.url,
+            proxy_url
+        );
+
+        let sender = OtlspConnectionBuilder::<DefaultWebsocketStream>::new(proxy_url.clone())
+            .with_webpki_roots()
+            .handshake(self.url.clone())
+            .await?;
+
+        self.sender = Some(sender);
+        self.last_access = Instant::now();
+
+        Ok(())
     }
 
     pub(crate) async fn get_async(
