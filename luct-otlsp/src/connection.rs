@@ -108,8 +108,7 @@ impl OtlspConnection {
             .ok_or(OtlspError::Unreachable("Cannot-be-a-base url".to_string()))
     }
 
-    // TODO: Implement timeouts
-    // pub(crate) fn has_timed_out(&self) -> bool {
-    //     Instant::now() - self.last_access > self.config.connection_timeout
-    // }
+    pub(crate) fn has_timed_out(&self) -> bool {
+        Instant::now() - self.last_access > self.config.connection_timeout
+    }
 }
