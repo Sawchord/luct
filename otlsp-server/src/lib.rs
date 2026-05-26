@@ -209,7 +209,9 @@ async fn handle_websocket_receive(
             Ok(data) => match data {
                 Message::Binary(bytes) => {
                     tracing::trace!("Received {} bytes of data from websocket", bytes.len());
+
                     let _ = stream.write_all(&bytes).await;
+                    metrics.bytes_send(destination.as_str(), bytes.len() as u64);
                     true
                 }
                 Message::Close(close_frame) => {
@@ -274,7 +276,10 @@ async fn handle_tcp_stream_receive(
                 false
             } else {
                 let new_buf = buf[..read].to_vec();
+                let buf_len = new_buf.len();
+
                 let _ = ws.send(Message::Binary(new_buf.into())).await;
+                metrics.bytes_received(destination.as_str(), buf_len as u64);
                 true
             }
         }
