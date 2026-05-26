@@ -47,7 +47,7 @@ pub fn start() -> Result<(), JsValue> {
     let log_level = Level::DEBUG;
 
     #[cfg(not(debug_assertions))]
-    let log_level = Level::INFO;
+    let log_level = Level::DEBUG;
 
     tracing_wasm::set_as_global_default_with_config(
         WASMLayerConfigBuilder::default()

@@ -60,7 +60,7 @@ impl WebsocketStream for BrowserWebsocketStream {
         let websocket = WebSocket::new(&request_string).unwrap();
         websocket.set_binary_type(BinaryType::Arraybuffer);
 
-        Self::await_opened(&websocket).await?;
+        Self::await_opened(&websocket, dst.clone()).await?;
 
         let cloned_buffer = input_buffer.clone();
         let waker_cloned = waker.clone();
@@ -89,8 +89,13 @@ impl WebsocketStream for BrowserWebsocketStream {
         let connection_status_clone = connection_status.clone();
         let waker_cloned = waker.clone();
 
+        let dst_clone = dst.clone();
         let onclose_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-            tracing::debug!("Received close event: {:?}", event.data());
+            tracing::debug!(
+                "Received close event: {:?}, dst: {}",
+                event.data(),
+                dst_clone.as_str()
+            );
 
             let mut connection_status = connection_status_clone.borrow_mut();
             *connection_status = match event.dyn_into::<CloseEvent>().ok() {
@@ -152,7 +157,7 @@ impl WebsocketStream for BrowserWebsocketStream {
 
 impl BrowserWebsocketStream {
     /// Set up the connection or error out
-    async fn await_opened(websocket: &WebSocket) -> Result<(), OtlspError> {
+    async fn await_opened(websocket: &WebSocket, dst: Url) -> Result<(), OtlspError> {
         // These are here to hold the closures until the promise is resolved
         let mut open_cb = None;
         let mut error_cb = None;
@@ -182,14 +187,12 @@ impl BrowserWebsocketStream {
             websocket.set_onopen(Some(onopen_callback.as_ref().unchecked_ref()));
             open_cb = Some(onopen_callback);
 
+            let dst_clone = dst.clone();
             let onmessage_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
                 if let Ok(str) = event.data().dyn_into::<JsString>()
                     && str == "accept"
                 {
-                    tracing::debug!(
-                        "Websocket connection established: {:?}",
-                        event.data().as_string()
-                    );
+                    tracing::debug!("Established proxy connection: {}", dst_clone.as_str());
                     ok.call0(&JsValue::null()).unwrap();
                 } else {
                     tracing::warn!("Ignoring unknown data");
