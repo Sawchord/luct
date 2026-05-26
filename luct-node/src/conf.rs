@@ -12,6 +12,9 @@ pub(crate) struct Config {
 
     /// Path at which to serve the oblivious TLS proxy
     pub(crate) otlsp_path: Option<String>,
+
+    /// Path at which to serve the metrics endpoint
+    pub(crate) metrics_path: Option<String>,
 }
 
 impl Config {
