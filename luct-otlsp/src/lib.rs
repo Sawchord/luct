@@ -2,11 +2,11 @@
 
 pub use crate::config::OtlspClientBuilder;
 use crate::{config::OtlspClientConfig, connection::OtlspConnection};
-use futures::lock::Mutex;
+use futures::lock::Mutex as FutMutex;
 use luct_client::{Client, ClientError, reqwest::ReqwestClient};
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex},
 };
 use url::{Host, Url};
 
@@ -16,7 +16,7 @@ mod connection;
 #[derive(Debug, Clone)]
 pub struct OtlspClient {
     config: Arc<OtlspClientConfig>,
-    connections: Arc<RwLock<HashMap<Host, Arc<Mutex<OtlspConnection>>>>>,
+    connections: Arc<Mutex<HashMap<Host, Arc<FutMutex<OtlspConnection>>>>>,
     fallback: ReqwestClient,
 }
 
@@ -54,13 +54,16 @@ impl Client for OtlspClient {
 }
 
 impl OtlspClient {
-    async fn get_connection(&self, url: &Url) -> Result<Arc<Mutex<OtlspConnection>>, ClientError> {
+    async fn get_connection(
+        &self,
+        url: &Url,
+    ) -> Result<Arc<FutMutex<OtlspConnection>>, ClientError> {
         let Some(domain) = url.host() else {
             return Err(ClientError::ConnectionError("Invalid url".to_string()));
         };
         let domain = domain.to_owned();
 
-        let connection = self.connections.read().unwrap().get(&domain).cloned();
+        let connection = self.connections.lock().unwrap().get(&domain).cloned();
         if let Some(connection) = connection
             && !connection.lock().await.has_timed_out()
         {
@@ -72,9 +75,9 @@ impl OtlspClient {
         let connection = OtlspConnection::new(self.config.clone(), url.clone())
             .await
             .map_err(|err| ClientError::ConnectionErrorStd(Arc::new(err)))?;
-        let connection = Arc::new(Mutex::new(connection));
+        let connection = Arc::new(FutMutex::new(connection));
         self.connections
-            .write()
+            .lock()
             .unwrap()
             .insert(domain, connection.clone());
 
@@ -82,7 +85,7 @@ impl OtlspClient {
     }
 
     async fn request(
-        connection: &Arc<Mutex<OtlspConnection>>,
+        connection: &Arc<FutMutex<OtlspConnection>>,
         url: &Url,
         params: &[(&str, &str)],
     ) -> Result<(u16, Vec<u8>), ClientError> {
