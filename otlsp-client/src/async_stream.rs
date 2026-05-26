@@ -105,3 +105,9 @@ impl<WS: WebsocketStream> rt::Write for WsAsyncStream<WS> {
         }
     }
 }
+
+impl<WS: WebsocketStream> Drop for WsAsyncStream<WS> {
+    fn drop(&mut self) {
+        tracing::debug!("Dropping async stream");
+    }
+}
