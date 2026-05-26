@@ -2,10 +2,12 @@ use crate::OtlspClient;
 use luct_client::reqwest::ReqwestClient;
 use std::{
     collections::HashMap,
-    sync::{Arc, RwLock},
+    sync::{Arc, Mutex},
 };
 use url::Url;
 use web_time::Duration;
+
+// TODO: Use builder crate to canonicalize with the rest of the crates
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) struct OtlspClientConfig {
@@ -45,7 +47,7 @@ impl OtlspClientBuilder {
         OtlspClient {
             fallback: ReqwestClient::new(&config.agent),
             config: Arc::new(config),
-            connections: Arc::new(RwLock::new(HashMap::new())),
+            connections: Arc::new(Mutex::new(HashMap::new())),
         }
     }
 
