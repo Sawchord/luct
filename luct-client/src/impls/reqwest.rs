@@ -25,7 +25,6 @@ impl ReqwestClient {
 }
 
 impl Client for ReqwestClient {
-    #[tracing::instrument(level = "trace")]
     async fn get(
         &self,
         url: &Url,
@@ -41,7 +40,6 @@ impl Client for ReqwestClient {
         Ok((status, Arc::new(data)))
     }
 
-    #[tracing::instrument(level = "trace")]
     async fn get_bin(
         &self,
         url: &Url,
