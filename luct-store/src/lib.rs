@@ -4,9 +4,11 @@
 // TODO: Move browser store into this crate
 
 mod file;
+mod lru;
 mod switch;
 
 pub use file::FilesystemStore;
+pub use lru::LruCacheStore;
 use luct_core::{
     Fingerprint,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
