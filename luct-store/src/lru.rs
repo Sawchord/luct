@@ -3,7 +3,12 @@ use luct_core::store::{
     AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
     StoreRead, StoreWrite,
 };
-use std::{cell::RefCell, fmt::Debug, hash::Hash};
+use std::{
+    cell::RefCell,
+    fmt::Debug,
+    hash::Hash,
+    ops::{Deref, DerefMut},
+};
 
 /// A [`Store`](luct_core::store::Store) implementation that wraps an inner [`Store`](luct_core::store::Store)
 /// and ads an LRU (least-recently-used) cache around it.
@@ -27,6 +32,20 @@ where
             .field("cache", &self.cache)
             .field("inner", &self.inner)
             .finish()
+    }
+}
+
+impl<K, V, S> Deref for LruCacheStore<K, V, S> {
+    type Target = S;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl<K, V, S> DerefMut for LruCacheStore<K, V, S> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.inner
     }
 }
 

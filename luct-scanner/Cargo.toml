@@ -13,9 +13,9 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-luct-core = { version="0.1.0",path = "../luct-core" }
-luct-client = {version="0.1.0", path = "../luct-client" }
-luct-store = { version="0.1.0",path = "../luct-store" }
+luct-core = { version = "0.1.0", path = "../luct-core" }
+luct-client = { version = "0.1.0", path = "../luct-client" }
+luct-store = { version = "0.1.0", path = "../luct-store" }
 
 serde = { workspace = true }
 serde_json = { workspace = true }
@@ -25,7 +25,6 @@ futures = { workspace = true }
 chrono = { workspace = true }
 
 tracing = { workspace = true }
-lru = { workspace = true }
 
 derive_builder = { workspace = true }
 web-time = { workspace = true }
