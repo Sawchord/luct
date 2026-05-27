@@ -1730,7 +1730,6 @@ dependencies = [
  "chrono",
  "derive_builder",
  "futures",
- "lru",
  "luct-client",
  "luct-core",
  "luct-store",

@@ -1,23 +1,23 @@
 use crate::{HashOutput, ScannerImpl, log::ScannerLogInner};
-use lru::LruCache;
 use luct_core::{
     store::{AsyncStoreRead, Hashable, MemoryStore, OrderedStoreRead},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
+use luct_store::LruCacheStore;
 use std::{
     fmt::{self, Debug},
-    num::NonZero,
     sync::{
-        Arc, Mutex,
+        Arc,
         atomic::{AtomicU64, Ordering},
     },
 };
 
 pub(crate) struct TileFetcher<S: ScannerImpl>(
+    #[allow(clippy::type_complexity)]
     Tree<
-        TileFetchStore<S>,
+        LruCacheStore<NodeKey, HashOutput, TileFetchStore<S>>,
         MemoryStore<u64, SignedCertificateTimestamp>,
         SignedCertificateTimestamp,
     >,
@@ -32,7 +32,8 @@ impl<S: ScannerImpl> Debug for TileFetcher<S> {
 impl<S: ScannerImpl> TileFetcher<S> {
     pub(crate) fn new(log: &Arc<ScannerLogInner<S>>) -> Self {
         Self(Tree::new(
-            TileFetchStore::new(log.clone()),
+            // TODO: Make caps configurable
+            LruCacheStore::new(TileFetchStore::new(log.clone()), 1000),
             MemoryStore::default(),
         ))
     }
@@ -126,7 +127,6 @@ impl<S: ScannerImpl> TileFetcher<S> {
 }
 
 pub(crate) struct TileFetchStore<S: ScannerImpl> {
-    node_cache: Mutex<LruCache<NodeKey, HashOutput>>,
     log: Arc<ScannerLogInner<S>>,
     tree_size: AtomicU64,
 }
@@ -140,7 +140,6 @@ impl<S: ScannerImpl> fmt::Debug for TileFetchStore<S> {
 impl<S: ScannerImpl> TileFetchStore<S> {
     fn new(log: Arc<ScannerLogInner<S>>) -> Self {
         Self {
-            node_cache: Mutex::new(LruCache::new(NonZero::new(1000).unwrap())),
             log,
             tree_size: AtomicU64::new(0),
         }
@@ -154,11 +153,6 @@ impl<S: ScannerImpl> TileFetchStore<S> {
 impl<S: ScannerImpl> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<S> {
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
-        // First, try to get the node from the cache
-        if let Some(value) = self.node_cache.lock().unwrap().get(&key) {
-            return Some(*value);
-        }
-
         // If not available, calculate which tile should have the value and fetch it
         let tree_size = self.tree_size.load(Ordering::Acquire);
         if tree_size == 0 {
@@ -179,12 +173,6 @@ impl<S: ScannerImpl> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<S> {
             .map(|(_, hash)| *hash)
             .expect("Node was not included in result. This is a bug");
 
-        let mut node_cache = self.node_cache.lock().unwrap();
-        // Put the nodes into the cache
-        nodes.into_iter().for_each(|(key, hash)| {
-            node_cache.put(key, hash);
-        });
-
         Some(result)
     }
 
@@ -203,10 +191,6 @@ impl<S: ScannerImpl> TileFetchStore<S> {
         key: &NodeKey,
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        if let Some(value) = self.node_cache.lock().unwrap().get(key) {
-            return Some(vec![(key.clone(), *value)]);
-        }
-
         let nodes = if key.is_balanced() {
             // If the key is balanced, we know it is contained within exactly one tile.
             // We call `fetch_balanced_tile` to fetch the tile and then recompute the nodes
@@ -251,10 +235,6 @@ impl<S: ScannerImpl> TileFetchStore<S> {
         key: &NodeKey,
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        if let Some(value) = self.node_cache.lock().unwrap().get(key) {
-            return Some(vec![(key.clone(), *value)]);
-        }
-
         let tile_id = TileId::from_node_key(key, tree_size)?;
         let tile = self.log.client.get_tile(tile_id.clone()).await;
 
