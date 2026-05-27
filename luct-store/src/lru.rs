@@ -1,0 +1,83 @@
+use lru::LruCache;
+use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
+use std::{cell::RefCell, fmt::Debug, hash::Hash};
+
+/// A [`Store`](luct_core::store::Store) implementation that wraps an inner [`Store`](luct_core::store::Store)
+/// and ads an LRU (least-recently-used) cache around it.
+///
+/// The cache is write-through, i.e. there is no speedup when writing to the store.
+/// Furthermore, the implementation is not [`Send`] or [`Sync`].
+/// A common patthern would be to have one [`LruCacheStore`] per thread wrapping an inner store.
+pub struct LruCacheStore<K, V, S> {
+    cache: RefCell<LruCache<K, V>>,
+    inner: S,
+}
+
+impl<K, V, S> Debug for LruCacheStore<K, V, S>
+where
+    K: Debug + Hash + Eq,
+    V: Debug,
+    S: Debug,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LruCacheStore")
+            .field("cache", &self.cache)
+            .field("inner", &self.inner)
+            .finish()
+    }
+}
+
+impl<K: Hash + Eq, V, S> LruCacheStore<K, V, S> {
+    pub fn new(store: S, caps: usize) -> Self {
+        Self {
+            cache: RefCell::new(LruCache::new(caps.try_into().unwrap())),
+            inner: store,
+        }
+    }
+}
+
+impl<K, V, S> StoreRead<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq,
+    V: Clone,
+    S: StoreRead<K, V>,
+{
+    fn get(&self, key: &K) -> Option<V> {
+        match self.cache.borrow_mut().get(key) {
+            Some(val) => Some(val.clone()),
+            None => self.inner.get(key),
+        }
+    }
+
+    fn len(&self) -> usize {
+        self.inner.len()
+    }
+}
+
+impl<K, V, S> StoreWrite<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq,
+    V: Clone,
+    S: StoreWrite<K, V>,
+{
+    fn insert(&self, key: K, value: V) {
+        self.inner.insert(key, value);
+    }
+
+    fn delete(&self, key: &K) -> bool {
+        let contained = self.inner.delete(key);
+        self.cache.borrow_mut().pop(key);
+        contained
+    }
+}
+
+impl<K, V, S> OrderedStoreRead<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq + Ord,
+    V: Clone,
+    S: OrderedStoreRead<K, V>,
+{
+    fn last(&self) -> Option<(K, V)> {
+        self.inner.last()
+    }
+}

@@ -1751,6 +1751,7 @@ name = "luct-store"
 version = "0.1.0"
 dependencies = [
  "hex",
+ "lru",
  "luct-core",
  "luct-test",
  "serde",
