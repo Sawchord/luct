@@ -34,8 +34,12 @@ impl Report {
 }
 
 impl<S: ScannerImpl> Scanner<S> {
-    pub(crate) fn evaluate_policy(&self, report: Report, current_time: DateTime<Local>) -> Report {
-        // TODO: Check that expiration date matches logs submission bracket?
+    pub(crate) fn evaluate_policy(
+        &self,
+        mut report: Report,
+        current_time: DateTime<Local>,
+    ) -> Report {
+        // TODO: Check that expiration date matches logs expiration bracket?
 
         // Calculate the number of scts we expect
         let num_expected_scts = match report.not_after - report.not_before {
@@ -62,7 +66,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         let mut fresh_inclusion_proofs = 0;
         let mut old_inclusion_proofs = 0;
-        for sct in report.scts.iter() {
+        for sct in report.scts.iter_mut() {
             // Scts with error cannot be valid
             if sct.error_description.is_some() {
                 continue;
@@ -70,13 +74,15 @@ impl<S: ScannerImpl> Scanner<S> {
 
             // Check that the SCT has a a fresh STH
             let Some(latest_sth) = &sct.latest_sth else {
-                // Could not find a fresh STH for this SCT
+                sct.set_error_description("Could not find a fresh STH for this SCT".to_string());
                 continue;
             };
             if latest_sth.verification_time
                 < current_time - time_delta_from_duration(self.config.sth_freshness_threshold)
             {
-                // The logs latest STH is too old and the log is considered state
+                sct.set_error_description(
+                    "This logs latest STH is too old and the log is considered stale".to_string(),
+                );
                 continue;
             }
 
@@ -178,6 +184,10 @@ impl SctReport {
     pub(crate) fn error_description(mut self, err: String) -> Self {
         self.error_description = Some(err);
         self
+    }
+
+    pub(crate) fn set_error_description(&mut self, err: String) {
+        self.error_description = Some(err);
     }
 }
 
