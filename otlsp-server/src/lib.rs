@@ -129,11 +129,11 @@ where
             Ok(stream) => stream,
         };
 
-        tracing::debug!("TCP stream to target established");
+        tracing::debug!("TCP stream established to {}", destination.as_str());
         metrics.connection_opened(destination.as_str());
 
         let _ = ws.send(Message::Text("accept".into())).await;
-        tracing::debug!("OTLSP connection accepted");
+        tracing::debug!("OTLSP connection accepted to {}", destination.as_str());
 
         connection_loop(ws, stream, destination, metrics.0).await;
     })
@@ -202,7 +202,11 @@ async fn handle_websocket_receive(
         }
         Some(data) => match data {
             Err(err) => {
-                tracing::warn!("Error while reading from websocket: {:?}", err);
+                tracing::warn!(
+                    "Error while reading from websocket: {:?}, dst: {}",
+                    err,
+                    destination.as_str()
+                );
                 let _ = stream.shutdown().await;
                 false
             }
@@ -215,7 +219,7 @@ async fn handle_websocket_receive(
                     true
                 }
                 Message::Close(close_frame) => {
-                    tracing::debug!("Shutting down conntextion to {:?}", destination);
+                    tracing::debug!("Shutting down conntextion to {}", destination.as_str());
 
                     metrics.connection_closed(
                         destination.as_str(),
@@ -253,14 +257,18 @@ async fn handle_tcp_stream_receive(
 ) -> bool {
     match read {
         None => {
-            tracing::warn!("Channel to client closed");
+            tracing::warn!("Channel to client closed, dst: {}", destination.as_str());
             metrics.connection_closed(destination.as_str(), false, None);
 
             let _ = ws.send(Message::Close(None)).await;
             false
         }
         Some((Err(err), _)) => {
-            tracing::warn!("Error while reading TCP stream: {:?}", err);
+            tracing::warn!(
+                "Error while reading TCP stream: {:?}, dst: {}",
+                err,
+                destination.as_str()
+            );
             metrics.connection_closed(destination.as_str(), false, Some(err.kind()));
 
             let _ = ws

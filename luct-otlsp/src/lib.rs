@@ -79,7 +79,6 @@ impl OtlspClient {
                 // 2b. If we already have a connection, we clone it and let go of the state lock
                 let connection = connection.clone();
                 drop(connections);
-                dbg!("Found existing connection");
 
                 // 3b. If the connection has timed out, we remove it and call get_connection again
                 // We need to take the connections mutex again
