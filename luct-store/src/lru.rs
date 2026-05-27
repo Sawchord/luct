@@ -1,5 +1,8 @@
 use lru::LruCache;
-use luct_core::store::{OrderedStoreRead, StoreRead, StoreWrite};
+use luct_core::store::{
+    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
+    StoreRead, StoreWrite,
+};
 use std::{cell::RefCell, fmt::Debug, hash::Hash};
 
 /// A [`Store`](luct_core::store::Store) implementation that wraps an inner [`Store`](luct_core::store::Store)
@@ -79,5 +82,86 @@ where
 {
     fn last(&self) -> Option<(K, V)> {
         self.inner.last()
+    }
+}
+
+impl<K, V, S> AppendableStore<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq + Ord,
+    V: Clone,
+    S: AppendableStore<K, V>,
+{
+    fn append(&self, value: V) -> K {
+        self.inner.append(value)
+    }
+}
+
+impl<K, V, S> SearchableStoreRead<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq + Ord,
+    V: Clone,
+    S: SearchableStoreRead<K, V>,
+{
+    fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+        self.inner.filter(pred)
+    }
+
+    fn find(&self, pred: impl FnMut(&K, &V) -> bool) -> Option<(K, V)> {
+        self.inner.find(pred)
+    }
+}
+
+impl<K, V, S> AsyncStoreRead<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq,
+    V: Clone,
+    S: AsyncStoreRead<K, V>,
+{
+    async fn get(&self, key: K) -> Option<V> {
+        if let Some(val) = self.cache.borrow_mut().get(&key) {
+            Some(val.clone())
+        } else {
+            self.inner.get(key).await
+        }
+    }
+
+    async fn len(&self) -> usize {
+        self.inner.len().await
+    }
+}
+
+impl<K, V, S> AsyncStoreWrite<K, V> for LruCacheStore<K, V, S>
+where
+    K: Hash + Eq,
+    V: Clone,
+    S: AsyncStoreWrite<K, V>,
+{
+    async fn insert(&self, key: K, value: V) {
+        self.inner.insert(key, value).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use luct_core::store::MemoryStore;
+    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
+
+    #[test]
+    fn memory_store() {
+        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
+        store_test(store);
+    }
+
+    #[test]
+    fn memory_ordered_store() {
+        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
+        ordered_store_test(store);
+    }
+
+    #[test]
+    fn memory_searchable_store() {
+        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
+        searchable_store_test(store);
     }
 }
