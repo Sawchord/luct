@@ -41,14 +41,17 @@ impl<K: Hash + Eq, V, S> LruCacheStore<K, V, S> {
 
 impl<K, V, S> StoreRead<K, V> for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq,
+    K: Clone + Hash + Eq,
     V: Clone,
     S: StoreRead<K, V>,
 {
     fn get(&self, key: &K) -> Option<V> {
-        match self.cache.borrow_mut().get(key) {
-            Some(val) => Some(val.clone()),
-            None => self.inner.get(key),
+        if let Some(val) = self.cache.borrow_mut().get(key) {
+            Some(val.clone())
+        } else {
+            let val = self.inner.get(key)?;
+            self.cache.borrow_mut().put(key.clone(), val.clone());
+            Some(val)
         }
     }
 
@@ -64,6 +67,7 @@ where
     S: StoreWrite<K, V>,
 {
     fn insert(&self, key: K, value: V) {
+        self.cache.borrow_mut().pop(&key);
         self.inner.insert(key, value);
     }
 
@@ -76,7 +80,7 @@ where
 
 impl<K, V, S> OrderedStoreRead<K, V> for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq + Ord,
+    K: Clone + Hash + Eq + Ord,
     V: Clone,
     S: OrderedStoreRead<K, V>,
 {
@@ -87,7 +91,7 @@ where
 
 impl<K, V, S> AppendableStore<K, V> for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq + Ord,
+    K: Clone + Hash + Eq + Ord,
     V: Clone,
     S: AppendableStore<K, V>,
 {
@@ -98,7 +102,7 @@ where
 
 impl<K, V, S> SearchableStoreRead<K, V> for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq + Ord,
+    K: Clone + Hash + Eq + Ord,
     V: Clone,
     S: SearchableStoreRead<K, V>,
 {
@@ -113,7 +117,7 @@ where
 
 impl<K, V, S> AsyncStoreRead<K, V> for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq,
+    K: Clone + Hash + Eq,
     V: Clone,
     S: AsyncStoreRead<K, V>,
 {
@@ -121,7 +125,9 @@ where
         if let Some(val) = self.cache.borrow_mut().get(&key) {
             Some(val.clone())
         } else {
-            self.inner.get(key).await
+            let val = self.inner.get(key.clone()).await?;
+            self.cache.borrow_mut().put(key, val.clone());
+            Some(val)
         }
     }
 
@@ -137,6 +143,7 @@ where
     S: AsyncStoreWrite<K, V>,
 {
     async fn insert(&self, key: K, value: V) {
+        self.cache.borrow_mut().pop(&key);
         self.inner.insert(key, value).await
     }
 }
@@ -148,19 +155,19 @@ mod tests {
     use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
 
     #[test]
-    fn memory_store() {
+    fn lru_cache_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
         store_test(store);
     }
 
     #[test]
-    fn memory_ordered_store() {
+    fn lru_cache_ordered_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
         ordered_store_test(store);
     }
 
     #[test]
-    fn memory_searchable_store() {
+    fn lru_cache_searchable_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
         searchable_store_test(store);
     }
