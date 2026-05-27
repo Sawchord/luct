@@ -54,8 +54,8 @@ impl Client for OtlspClient {
 }
 
 impl OtlspClient {
-    // NOTE: We have one await statement where we need to do this.
-    // The await should actually return immidiately. See comments in the function
+    // NOTE: We do not actually await in a locked state. In all execution paths, we manually drop
+    // the lock before an await is called. Clippy does not seem to take this into account,
     #[allow(clippy::await_holding_lock)]
     async fn get_connection(
         &self,
@@ -108,7 +108,9 @@ impl OtlspClient {
             connections.insert(domain, connection.clone());
 
             // 3. We then take out a lock on the new connection, this should never block since we have still exclusive access
-            let mut connection_lock = connection.lock().await;
+            let mut connection_lock = connection
+                .try_lock()
+                .expect("luct-otlsp: Failed to acquire lock with exclusive access. This is a bug");
 
             // 4. We release the lock on the connection state
             drop(connections);
