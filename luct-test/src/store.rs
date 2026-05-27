@@ -120,6 +120,6 @@ mod tests {
     #[test]
     fn memory_searchable_store() {
         let store = MemoryStore::<u64, String>::default();
-        ordered_store_test(store);
+        searchable_store_test(store);
     }
 }
