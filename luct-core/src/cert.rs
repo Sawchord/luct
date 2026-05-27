@@ -157,7 +157,7 @@ impl Certificate {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Fingerprint(pub [u8; 32]);
 
 impl Display for Fingerprint {

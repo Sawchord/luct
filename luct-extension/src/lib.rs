@@ -9,6 +9,7 @@ use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
 use luct_otlsp::OtlspClient;
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
+use luct_store::LruCacheStore;
 use std::sync::Arc;
 use tracing::Level;
 use tracing_wasm::WASMLayerConfigBuilder;
@@ -29,7 +30,7 @@ struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
-    type ReportStore = BrowserStore<Fingerprint, Report>;
+    type ReportStore = LruCacheStore<Fingerprint, Report, BrowserStore<Fingerprint, Report>>;
     type SthStore = BrowserStore<u64, Validated<SignedTreeHead>>;
 }
 
@@ -90,6 +91,8 @@ impl Scanner {
 
         let report_cache =
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
+        // TODO: Make caps configurable
+        let report_cache = LruCacheStore::new(report_cache, 10);
 
         let time_source = || {
             DateTime::from_timestamp_millis(
