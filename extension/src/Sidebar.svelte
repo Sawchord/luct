@@ -1,5 +1,6 @@
 <script>
     import Report from "./components/Report.svelte";
+    import Page from "./components/Page.svelte";
 
     let windowId;
     let tabId;
@@ -78,16 +79,17 @@
     }
 </script>
 
-{#await update_content()}
-    <p>Loading</p>
-{:then report}
-    {#each reports as report}
-        <Report {report}></Report>
-    {/each}
-{/await}
-
-<footer class="footer fixed-footer">
-    <div class="content">
+<Page>
+    <div slot="content">
+        {#await update_content()}
+            <p>Loading</p>
+        {:then report}
+            {#each reports as report}
+                <Report {report}></Report>
+            {/each}
+        {/await}
+    </div>
+    <div slot="footer">
         <p>
             <b class="card-footer-item"
                 ><div class="control">
@@ -107,4 +109,4 @@
             </b>
         </p>
     </div>
-</footer>
+</Page>
