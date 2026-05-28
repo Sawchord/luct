@@ -27,7 +27,7 @@ impl Report {
         self.error_description.clone()
     }
 
-    fn error_description(mut self, err: String) -> Self {
+    pub(crate) fn error_description(mut self, err: String) -> Self {
         self.error_description = Some(err);
         self
     }
