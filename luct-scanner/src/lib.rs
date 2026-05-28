@@ -7,7 +7,7 @@ use chrono::{DateTime, Local};
 use futures::future::{self, join_all};
 use luct_client::{Client, ClientError};
 use luct_core::{
-    CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
+    Certificate, CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
     store::{SearchableStore, StoreRead, StoreWrite},
     tiling::TilingError,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
@@ -169,6 +169,7 @@ impl<S: ScannerImpl> Scanner<S> {
         sct: SignedCertificateTimestamp,
         chain: &Arc<CertificateChain>,
     ) -> SctReport {
+        let now = SystemTime::now();
         let report = SctReport::new(sct.log_id());
 
         // Find the log this sct belongs to
@@ -184,17 +185,14 @@ impl<S: ScannerImpl> Scanner<S> {
         };
         let report = report.signature_validation_time(
             DateTime::from_timestamp_millis(
-                SystemTime::now()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as i64,
+                now.duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
             )
             .unwrap()
             .into(),
         );
 
         // Get a fresh sth
-        let fresh_sth = match self.get_fresh_sth(log).await {
+        let fresh_sth = match self.update_fresh_sth(now, log, chain.cert()).await {
             Ok(sth) => sth,
             Err(err) => {
                 return report.error_description(format!("Failed to fetch a fresh STH: {}", err));
@@ -223,31 +221,55 @@ impl<S: ScannerImpl> Scanner<S> {
     ///
     /// Checks whether the latest STH is still new enough.
     /// If it is too old, it will fetch a fresh one
-    async fn get_fresh_sth(
+    async fn update_fresh_sth(
         &self,
+        now: SystemTime,
         log: &ScannerLog<S>,
+        cert: &Certificate,
     ) -> Result<Validated<SignedTreeHead>, ScannerError> {
+        match self.get_fresh_sth(now, log, cert) {
+            Some(sth) => Ok(sth),
+            None => log.update_sth().await,
+        }
+    }
+
+    fn get_fresh_sth(
+        &self,
+        now: SystemTime,
+        log: &ScannerLog<S>,
+        cert: &Certificate,
+    ) -> Option<Validated<SignedTreeHead>> {
         let log_name = log.client().log().description();
 
         // If we have no STH whatsoever, simply fetch it
         let Some(last_sth) = log.get_latest_sth() else {
-            tracing::debug!("No prior known STHs for {}, fetching fresh STH", log_name);
-            return log.update_sth().await;
+            tracing::debug!("No prior known STHs for {}", log_name);
+            return None;
         };
 
-        let now = SystemTime::now();
-        let timestamp = UNIX_EPOCH + Duration::from_millis(last_sth.timestamp());
-        if timestamp + self.config.sth_update_threshold < now {
+        // Check if the update threshold has expired
+        let sth_timestamp = UNIX_EPOCH + Duration::from_millis(last_sth.timestamp());
+        if sth_timestamp + self.config.sth_update_threshold < now {
             tracing::debug!(
-                "Updating STH for log {} because update threshold has been met",
+                "STH for {} needs update because update threshold has been met",
                 log_name
             );
-            return log.update_sth().await;
+            return None;
         }
 
-        // TODO: Update STH if cert is younger than latest STH
+        // Update STH if cert is younger than latest STH
+        let cert_timestamp = cert.get_validity().0;
+        let cert_timestamp =
+            UNIX_EPOCH + Duration::from_millis(cert_timestamp.timestamp_millis() as u64);
+        if cert_timestamp > sth_timestamp {
+            tracing::debug!(
+                "STH for {} needs update because certificate is newer than STH",
+                log_name
+            );
+            return None;
+        }
 
-        Ok(last_sth)
+        Some(last_sth)
     }
 }
 
