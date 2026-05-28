@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 use web_time::UNIX_EPOCH;
 
 mod evaluate;
+mod generate;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {
