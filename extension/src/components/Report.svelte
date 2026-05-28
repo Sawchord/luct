@@ -1,26 +1,18 @@
 <script>
     import Expandable from "./Expandable.svelte";
     import SctsDisplay from "./SctsDisplay.svelte";
+    import StatusIcon from "./StatusIcon.svelte";
     import TimeDisplay from "./TimeDisplay.svelte";
     // import UrlDisplay from "./UrlDisplay.svelte";
 
     export let report;
-
-    var icon = "";
-    if (report && report.status === "safe") {
-        icon = "fa fa-check";
-    }
 </script>
 
 {#if report}
     <div class="card">
         <header class="card-header">
             <p class="card-header-title">{report.report.cert_subject}</p>
-            <button class="card-header-icon" aria-label="more options">
-                <span class="icon has-text-success">
-                    <i class={icon} aria-hidden="true"></i>
-                </span>
-            </button>
+            <StatusIcon status={report.status}></StatusIcon>
         </header>
         <div class="card-content">
             <div class="content">
