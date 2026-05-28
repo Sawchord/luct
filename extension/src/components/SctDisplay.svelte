@@ -10,8 +10,7 @@
     <Expandable>
         <span slot="name">
             {#if sct.log_name}
-                <b>Log name:</b>
-                {sct.log_name}
+                <b>{sct.log_name}</b>
             {:else}
                 <b>Unrecognized log</b>
             {/if}
