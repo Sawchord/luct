@@ -1,9 +1,9 @@
 use crate::utils::{
     codec::{CodecError, Decode, Encode},
     codec_vec::CodecVec,
-    hex_with_colons,
     u24::U24,
 };
+use base64::{Engine, prelude::BASE64_STANDARD};
 pub(crate) use sct::SctList;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -42,7 +42,17 @@ impl fmt::Debug for LogId {
 
 impl Display for LogId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", hex_with_colons(&self.0))
+        write!(f, "{}", BASE64_STANDARD.encode(self.0))
+    }
+}
+
+impl TryFrom<&str> for LogId {
+    type Error = ();
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let vec = BASE64_STANDARD.decode(value).map_err(|_| ())?;
+        let array = vec.try_into().map_err(|_| ())?;
+        Ok(Self(array))
     }
 }
 
