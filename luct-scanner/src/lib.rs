@@ -109,6 +109,7 @@ impl<S: ScannerImpl> Scanner<S> {
         self.collect_report(cert_chain).await
     }
 
+    // TODO: Remove Result here
     pub async fn collect_report(
         &self,
         chain: Arc<CertificateChain>,
@@ -124,7 +125,7 @@ impl<S: ScannerImpl> Scanner<S> {
             }
             None => {
                 tracing::debug!("Could not find report for {} in cache", cert_fp.to_string());
-                self.create_report(chain).await?
+                self.create_report(chain).await
             }
         };
 
@@ -136,12 +137,19 @@ impl<S: ScannerImpl> Scanner<S> {
         Ok(report)
     }
 
-    async fn create_report(&self, chain: Arc<CertificateChain>) -> Result<Report, ScannerError> {
+    async fn create_report(&self, chain: Arc<CertificateChain>) -> Report {
         let cert = chain.cert();
 
         let mut report = Report::from(chain.as_ref());
 
-        let embedded_scts = cert.extract_scts_v1()?;
+        let embedded_scts = match cert.extract_scts_v1() {
+            Err(err) => {
+                return report
+                    .error_description(format!("Failed to parse SCTs from certificate:s {}", err));
+            }
+            Ok(scts) => scts,
+        };
+
         let sct_reports = join_all(
             embedded_scts
                 .into_iter()
@@ -150,10 +158,10 @@ impl<S: ScannerImpl> Scanner<S> {
         .await;
 
         report.scts = sct_reports;
-        Ok(report)
+        report
     }
 
-    pub(crate) async fn collect_embedded_sct_report(
+    async fn collect_embedded_sct_report(
         &self,
         sct: SignedCertificateTimestamp,
         chain: &Arc<CertificateChain>,
