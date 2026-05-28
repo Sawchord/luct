@@ -108,7 +108,29 @@ impl OtlspConnection {
             .ok_or(OtlspError::Unreachable("Cannot-be-a-base url".to_string()))
     }
 
-    pub(crate) fn has_timed_out(&self) -> bool {
-        Instant::now() - self.last_access > self.config.connection_timeout
+    pub(crate) fn is_usable(&self) -> bool {
+        if self.has_timed_out() {
+            tracing::debug!("Proxy connection timed out");
+            return false;
+        }
+
+        match &self.sender {
+            None => {
+                tracing::debug!("Proxy connection not yet established");
+                false
+            }
+            Some(sender) => {
+                if sender.is_closed() {
+                    tracing::debug!("Proxy connection is closed");
+                    false
+                } else {
+                    true
+                }
+            }
+        }
+    }
+
+    fn has_timed_out(&self) -> bool {
+        self.last_access + self.config.connection_timeout < Instant::now()
     }
 }
