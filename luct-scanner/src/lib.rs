@@ -214,6 +214,50 @@ impl<S: ScannerImpl> Scanner<S> {
         report.inclusion_proof(SthReport::from(&oldest_sth))
     }
 
+    async fn update_report(
+        &self,
+        mut report: Report,
+        chain: &Arc<CertificateChain>,
+    ) -> Result<Report, ()> {
+        let new_sct_reports = join_all(
+            report
+                .scts
+                .drain(..)
+                .map(|sct_report| self.update_sct_report(sct_report, chain)),
+        )
+        .await;
+
+        report.scts = new_sct_reports.into_iter().collect::<Result<_, _>>()?;
+        Ok(report)
+    }
+
+    async fn update_sct_report(
+        &self,
+        report: SctReport,
+        chain: &Arc<CertificateChain>,
+    ) -> Result<SctReport, ()> {
+        let now = SystemTime::now();
+
+        // Find the log this sct belongs to
+        let log_id = v1::LogId::try_from(report.log_id.as_str())?;
+        let log_id = LogId::V1(log_id);
+
+        let Some(log) = self.logs.get(&log_id) else {
+            return Ok(report.error_description("Unknown log id".to_string()));
+        };
+
+        let fresh_sth = match self.update_fresh_sth(now, log, chain.cert()).await {
+            Ok(sth) => sth,
+            Err(err) => {
+                return Ok(
+                    report.error_description(format!("Failed to fetch a fresh STH: {}", err))
+                );
+            }
+        };
+
+        Ok(report.latest_sth(SthReport::from(&fresh_sth)))
+    }
+
     /// Get a fresh STH
     ///
     /// Checks whether the latest STH is still new enough.
