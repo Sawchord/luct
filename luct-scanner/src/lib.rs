@@ -5,19 +5,17 @@
 use crate::log::{ScannerLog, builder::LogImpls};
 use chrono::{DateTime, Local};
 use futures::future::{self, join_all};
-use luct_client::{Client, ClientError};
+use luct_client::Client;
 use luct_core::{
-    Certificate, CertificateChain, CertificateError, CtLog, CtLogConfig, Fingerprint, LogId,
+    CertificateChain, CtLog, Fingerprint, LogId,
     store::{SearchableStore, StoreRead, StoreWrite},
-    tiling::TilingError,
     v1::{self, SignedCertificateTimestamp, SignedTreeHead},
 };
-use serde::{Deserialize, Serialize};
-use std::{collections::BTreeMap, fmt::Debug, sync::Arc};
-use thiserror::Error;
-use web_time::{Duration, SystemTime, UNIX_EPOCH};
+use std::{collections::BTreeMap, sync::Arc};
+use web_time::{SystemTime, UNIX_EPOCH};
 pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
+    error::ScannerError,
     report::{Report, SctReport, SthReport},
     utils::Validated,
 };
@@ -25,8 +23,10 @@ pub use {
 type HashOutput = [u8; 32];
 
 mod config;
+mod error;
 mod log;
 mod report;
+mod sth;
 mod utils;
 
 /// Bundle trait for [`Scanner`]
@@ -267,77 +267,4 @@ impl<S: ScannerImpl> Scanner<S> {
 
         Ok(report.latest_sth(SthReport::from(&fresh_sth)))
     }
-
-    /// Get a fresh STH
-    ///
-    /// Checks whether the latest STH is still new enough.
-    /// If it is too old, it will fetch a fresh one
-    async fn update_fresh_sth(
-        &self,
-        now: SystemTime,
-        log: &ScannerLog<S>,
-        cert: &Certificate,
-    ) -> Result<Validated<SignedTreeHead>, ScannerError> {
-        match self.get_fresh_sth(now, log, cert) {
-            Some(sth) => Ok(sth),
-            None => log.update_sth().await,
-        }
-    }
-
-    fn get_fresh_sth(
-        &self,
-        now: SystemTime,
-        log: &ScannerLog<S>,
-        cert: &Certificate,
-    ) -> Option<Validated<SignedTreeHead>> {
-        let log_name = log.client().log().description();
-
-        // If we have no STH whatsoever, simply fetch it
-        let Some(last_sth) = log.get_latest_sth() else {
-            tracing::debug!("No prior known STHs for {}", log_name);
-            return None;
-        };
-
-        // Check if the update threshold has expired
-        let sth_timestamp = UNIX_EPOCH + Duration::from_millis(last_sth.timestamp());
-        if sth_timestamp + self.config.sth_update_threshold < now {
-            tracing::debug!(
-                "STH for {} needs update because update threshold has been met",
-                log_name
-            );
-            return None;
-        }
-
-        // Update STH if cert is younger than latest STH
-        let cert_timestamp = cert.get_validity().0;
-        let cert_timestamp =
-            UNIX_EPOCH + Duration::from_millis(cert_timestamp.timestamp_millis() as u64);
-        if cert_timestamp > sth_timestamp {
-            tracing::debug!(
-                "STH for {} needs update because certificate is newer than STH",
-                log_name
-            );
-            return None;
-        }
-
-        Some(last_sth)
-    }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct ScannerBuilder {
-    config: ScannerConfig,
-    logs: Vec<CtLogConfig>,
-}
-
-#[derive(Debug, Clone, Error)]
-pub enum ScannerError {
-    #[error("Invalid certificate: {0}")]
-    CertificateError(#[from] CertificateError),
-
-    #[error("HTTP client error: {0}")]
-    ClientError(#[from] ClientError),
-
-    #[error("Failed to construct proof from tiles {0}")]
-    TilingError(#[from] TilingError),
 }
