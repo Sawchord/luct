@@ -150,19 +150,19 @@ impl StringStoreValue for Report {
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SctReport {
-    log_id: String,
+    pub(crate) log_id: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    signature_validation_time: Option<DateTime<Local>>,
+    pub(crate) signature_validation_time: Option<DateTime<Local>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    log_name: Option<String>,
+    pub(crate) log_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    latest_sth: Option<SthReport>,
+    pub(crate) latest_sth: Option<SthReport>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    index: Option<u64>,
+    pub(crate) index: Option<u64>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    inclusion_proof: Option<SthReport>,
+    pub(crate) inclusion_proof: Option<SthReport>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    error_description: Option<String>,
+    pub(crate) error_description: Option<String>,
 }
 
 impl SctReport {
