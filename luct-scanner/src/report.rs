@@ -49,6 +49,8 @@ impl<S: ScannerImpl> Scanner<S> {
 
         // Calculate the number of scts that the report contains from known logs
         // TODO: Make sure that the logs are from different operators
+        // TODO: Use log ids here and check that logs are not retired. This has better UI, as it might
+        // also recognize retired logs
         let num_scts_from_known_logs = report
             .scts
             .iter()
@@ -91,6 +93,7 @@ impl<S: ScannerImpl> Scanner<S> {
                 // Could not find an inclusion proof for this SCT
                 continue;
             };
+
             if inclusion_proof.verification_time
                 < current_time - time_delta_from_duration(self.config.sth_freshness_threshold)
             {
