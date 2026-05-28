@@ -139,9 +139,9 @@ impl<S: ScannerImpl> Scanner<S> {
     async fn create_report(&self, chain: Arc<CertificateChain>) -> Result<Report, ScannerError> {
         let cert = chain.cert();
 
-        let (not_before, not_after) = cert.get_validity();
-        let embedded_scts = cert.extract_scts_v1()?;
+        let mut report = Report::from(chain.as_ref());
 
+        let embedded_scts = cert.extract_scts_v1()?;
         let sct_reports = join_all(
             embedded_scts
                 .into_iter()
@@ -149,18 +149,7 @@ impl<S: ScannerImpl> Scanner<S> {
         )
         .await;
 
-        let report = Report {
-            ca_issuer: chain.root().get_issuer_name(),
-            ca_subject: chain.root().get_subject_name(),
-            cert_issuer: chain.cert().get_issuer_name(),
-            cert_subject: chain.cert().get_subject_name(),
-            fingerprint: chain.cert().fingerprint_sha256().to_string(),
-            ca_fingerprint: chain.root().fingerprint_sha256().to_string(),
-            not_before: not_before.into(),
-            not_after: not_after.into(),
-            scts: sct_reports,
-            error_description: None,
-        };
+        report.scts = sct_reports;
         Ok(report)
     }
 

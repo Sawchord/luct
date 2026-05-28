@@ -1,6 +1,6 @@
 use crate::{Scanner, ScannerImpl, Validated};
 use chrono::{DateTime, Local, TimeDelta};
-use luct_core::{LogId, v1::SignedTreeHead};
+use luct_core::{CertificateChain, LogId, v1::SignedTreeHead};
 use luct_store::StringStoreValue;
 use serde::{Deserialize, Serialize};
 use web_time::{Duration, UNIX_EPOCH};
@@ -30,6 +30,25 @@ impl Report {
     fn error_description(mut self, err: String) -> Self {
         self.error_description = Some(err);
         self
+    }
+}
+
+impl From<&CertificateChain> for Report {
+    fn from(chain: &CertificateChain) -> Self {
+        let (not_before, not_after) = chain.cert().get_validity();
+
+        Self {
+            ca_issuer: chain.root().get_issuer_name(),
+            ca_subject: chain.root().get_subject_name(),
+            cert_issuer: chain.cert().get_issuer_name(),
+            cert_subject: chain.cert().get_subject_name(),
+            fingerprint: chain.cert().fingerprint_sha256().to_string(),
+            ca_fingerprint: chain.root().fingerprint_sha256().to_string(),
+            not_before: not_before.into(),
+            not_after: not_after.into(),
+            scts: vec![],
+            error_description: None,
+        }
     }
 }
 
