@@ -5,9 +5,21 @@
     var color = "";
 
     switch (status) {
+        case "processing":
+            icon = "fa-refresh";
+            color = "";
+            break;
         case "safe":
             icon = "fa-check";
             color = "has-text-success";
+            break;
+        case "warn":
+            icon = "fa-warning";
+            color = "has-text-warning";
+            break;
+        case "unsafe":
+            icon = "fa-times";
+            color = "has-text-danger";
             break;
         default:
             icon = "";

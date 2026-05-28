@@ -6,13 +6,20 @@
     // import UrlDisplay from "./UrlDisplay.svelte";
 
     export let report;
+
+    var status = "";
+    if (report.report.error_description) {
+        status = "unsafe";
+    } else {
+        status = report.status;
+    }
 </script>
 
 {#if report}
     <div class="card">
         <header class="card-header">
             <p class="card-header-title">{report.report.cert_subject}</p>
-            <StatusIcon status={report.status}></StatusIcon>
+            <StatusIcon {status}></StatusIcon>
         </header>
         <div class="card-content">
             <div class="content">
