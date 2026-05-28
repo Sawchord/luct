@@ -116,15 +116,33 @@ impl<S: ScannerImpl> Scanner<S> {
         let cert = chain.cert();
         let cert_fp = cert.fingerprint_sha256();
 
-        if let Some(report) = self.report_store.get(&cert_fp) {
-            tracing::debug!("Found report for {} in cache", cert_fp.to_string());
-            return Ok(report);
+        let report = match self.report_store.get(&cert_fp) {
+            Some(report) => {
+                tracing::debug!("Found report for {} in cache", cert_fp.to_string());
+                // TODO: Update report
+                report
+            }
+            None => {
+                tracing::debug!("Could not find report for {} in cache", cert_fp.to_string());
+                self.create_report(chain).await?
+            }
+        };
+
+        let report = self.evaluate_policy(report, (self.time_source)());
+        if report.get_error().is_none() {
+            self.report_store.insert(cert_fp, report.clone());
         }
+
+        Ok(report)
+    }
+
+    async fn create_report(&self, chain: Arc<CertificateChain>) -> Result<Report, ScannerError> {
+        let cert = chain.cert();
 
         let (not_before, not_after) = cert.get_validity();
         let embedded_scts = cert.extract_scts_v1()?;
 
-        let scts = join_all(
+        let sct_reports = join_all(
             embedded_scts
                 .into_iter()
                 .map(|sct| self.collect_embedded_sct_report(sct, &chain)),
@@ -140,15 +158,9 @@ impl<S: ScannerImpl> Scanner<S> {
             ca_fingerprint: chain.root().fingerprint_sha256().to_string(),
             not_before: not_before.into(),
             not_after: not_after.into(),
-            scts,
+            scts: sct_reports,
             error_description: None,
         };
-
-        let report = self.evaluate_policy(report, (self.time_source)());
-        if report.get_error().is_none() {
-            self.report_store.insert(cert_fp, report.clone());
-        }
-
         Ok(report)
     }
 
@@ -168,7 +180,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         // Validate the signature
         if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
-            return report.error_description(err.to_string());
+            return report.error_description(format!("Failed to validate signature: {}", err));
         };
         let report = report.signature_validation_time(
             DateTime::from_timestamp_millis(
@@ -184,7 +196,9 @@ impl<S: ScannerImpl> Scanner<S> {
         // Get a fresh sth
         let fresh_sth = match self.get_fresh_sth(log).await {
             Ok(sth) => sth,
-            Err(err) => return report.error_description(err.to_string()),
+            Err(err) => {
+                return report.error_description(format!("Failed to fetch a fresh STH: {}", err));
+            }
         };
         let report = report.latest_sth(SthReport::from(&fresh_sth));
 
@@ -224,11 +238,16 @@ impl<S: ScannerImpl> Scanner<S> {
         let now = SystemTime::now();
         let timestamp = UNIX_EPOCH + Duration::from_millis(last_sth.timestamp());
         if timestamp + self.config.sth_update_threshold < now {
-            tracing::debug!("Updating old STH for log {}", log_name);
-            log.update_sth().await
-        } else {
-            Ok(last_sth)
+            tracing::debug!(
+                "Updating STH for log {} because update threshold has been met",
+                log_name
+            );
+            return log.update_sth().await;
         }
+
+        // TODO: Update STH if cert is younger than latest STH
+
+        Ok(last_sth)
     }
 }
 
@@ -243,7 +262,7 @@ pub enum ScannerError {
     #[error("Invalid certificate: {0}")]
     CertificateError(#[from] CertificateError),
 
-    #[error("HTTP client error {0}")]
+    #[error("HTTP client error: {0}")]
     ClientError(#[from] ClientError),
 
     #[error("Failed to construct proof from tiles {0}")]
