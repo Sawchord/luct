@@ -78,20 +78,22 @@ impl OtlspClient {
             Some(connection) => {
                 // 2b. If we already have a connection, we clone it and let go of the state lock
                 let connection = connection.clone();
+                tracing::debug!("Establishing new proxy connection to{}", domain);
                 drop(connections);
 
                 // 3b. If the connection has timed out, we remove it and call get_connection again
                 // We need to take the connections mutex again
                 // NOTE: Holding the existing mutex will lead to a deadlock
-                if connection.lock().await.has_timed_out() {
+                if !connection.lock().await.is_usable() {
                     tracing::debug!(
-                        "Connection timed out, establishing fresh connection: {}",
-                        url.as_str()
+                        "Proxy connection no longer usable, establishing fresh connection: {}",
+                        domain
                     );
                     let mut connections = self.connections.lock().unwrap();
                     connections.remove(&domain);
                     new_connection(connections, self.config.clone(), url.clone(), domain).await?
                 } else {
+                    tracing::debug!("Reusing proxy connection to {}", domain);
                     connection
                 }
             }
