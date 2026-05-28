@@ -23,6 +23,13 @@
         </header>
         <div class="card-content">
             <div class="content">
+                {#if report.report.error_description}
+                    <div class="has-text-warning">
+                        <b>Error: </b>
+                        {report.report.error_description}
+                    </div>
+                {/if}
+
                 <ul>
                     <li><b> CA: </b> <span>{report.report.ca_issuer}</span></li>
                     <li>
@@ -56,12 +63,6 @@
                     <!-- <li>
                         <UrlDisplay urls={report.urls} />
                     </li> -->
-                    {#if report.report.error_description}
-                        <li>
-                            <b>Error: </b>
-                            {report.report.error_description}
-                        </li>
-                    {/if}
                 </ul>
             </div>
         </div>
