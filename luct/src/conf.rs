@@ -76,7 +76,6 @@ impl TryFrom<&CliConfig> for ScannerConfig {
     fn try_from(config: &CliConfig) -> Result<Self, Self::Error> {
         let config = ScannerConfig::builder()
             .validate_cert_chain(config.validate_cert_chain)
-            .otlsp_url(config.otlsp_url.clone())
             .sth_freshness_threshold(Duration::from_secs(config.sth_freshness_threshold))
             .sth_update_threshold(Duration::from_secs(config.sth_update_threshold))
             .build()

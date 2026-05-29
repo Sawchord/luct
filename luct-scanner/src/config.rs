@@ -1,6 +1,5 @@
 use derive_builder::Builder;
 use serde::{Deserialize, Serialize};
-use url::Url;
 use web_time::Duration;
 
 /// Configuration values of the [`ScannerConfig`].
@@ -16,16 +15,6 @@ pub struct ScannerConfig {
     /// chain from a file system.
     #[builder(default)]
     pub(crate) validate_cert_chain: bool,
-
-    /// The url of the otlsp proxy
-    ///
-    /// If unset, no proxy is used
-    #[builder(default = "None")]
-    pub(crate) otlsp_url: Option<Url>,
-
-    /// Time until an otlsp connection is considered stale and will not be reused
-    #[builder(default = "Duration::from_secs(30)")]
-    pub(crate) otlsp_connection_timeout: Duration,
 
     /// A STH that is younger than this time is considered fresh an STH that is older mature
     ///
@@ -51,16 +40,5 @@ impl ScannerConfig {
     /// Returns `true`, if certificate chain validation is activated
     pub fn validate_cert_chain(&self) -> bool {
         self.validate_cert_chain
-    }
-
-    /// Returns the [`Url`] of the oblivious TLS proxy, if it exists
-    pub fn otlsp_url(&self) -> &Option<Url> {
-        &self.otlsp_url
-    }
-
-    /// Return the timeout value, after which a connection to an oblivious
-    /// TLS proxy is considered stale
-    pub fn otlsp_connection_timeout(&self) -> &Duration {
-        &self.otlsp_connection_timeout
     }
 }
