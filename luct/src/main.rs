@@ -77,20 +77,9 @@ async fn main() -> eyre::Result<()> {
     };
 
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
+    let client_config = OtlspClientConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
 
-    let mut otlsp_config = OtlspClientConfig::builder();
-    otlsp_config.agent(USER_AGENT.to_string());
-    match config.otlsp_url {
-        Some(url) => {
-            tracing::info!("Using oblivious TLS proxy at {}", url);
-            otlsp_config.proxy_url(url);
-        }
-        None => {
-            tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
-        }
-    }
-    let client = OtlspClient::new(otlsp_config.build()?);
-    let client = RequestDeduplicationClient::new(client);
+    let client = RequestDeduplicationClient::new(OtlspClient::new(client_config));
     let time_source = || DateTime::from(SystemTime::now());
 
     let mut scanner =

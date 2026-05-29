@@ -1,8 +1,11 @@
 use config::{Config as Conf, Environment, File};
+use luct_otlsp::OtlspClientConfig;
 use luct_scanner::ScannerConfig;
 use serde::{Deserialize, Serialize};
 use std::{path::PathBuf, time::Duration};
 use url::Url;
+
+use crate::USER_AGENT;
 
 #[derive(Debug, Clone, PartialEq, Eq, Deserialize, Serialize)]
 pub(crate) struct CliConfig {
@@ -76,6 +79,20 @@ impl TryFrom<&CliConfig> for ScannerConfig {
             .otlsp_url(config.otlsp_url.clone())
             .sth_freshness_threshold(Duration::from_secs(config.sth_freshness_threshold))
             .sth_update_threshold(Duration::from_secs(config.sth_update_threshold))
+            .build()
+            .map_err(|err| err.to_string())?;
+
+        Ok(config)
+    }
+}
+
+impl TryFrom<&CliConfig> for OtlspClientConfig {
+    type Error = String;
+
+    fn try_from(config: &CliConfig) -> Result<Self, Self::Error> {
+        let config = OtlspClientConfig::builder()
+            .agent(USER_AGENT.to_string())
+            .proxy_url(config.otlsp_url.clone())
             .build()
             .map_err(|err| err.to_string())?;
 
