@@ -15,7 +15,7 @@ use luct_core::{
     store::{MemoryStore, StoreRead},
     v1::SignedTreeHead,
 };
-use luct_otlsp::OtlspClient;
+use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::{FilesystemStore, StoreSwitch};
 use std::{sync::Arc, time::SystemTime};
@@ -78,17 +78,19 @@ async fn main() -> eyre::Result<()> {
 
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
 
-    let client = match config.otlsp_url {
+    let mut otlsp_config = OtlspClientConfig::builder();
+    otlsp_config.agent(USER_AGENT.to_string());
+    match config.otlsp_url {
         Some(url) => {
             tracing::info!("Using oblivious TLS proxy at {}", url);
-            OtlspClient::builder().proxy_url(url)
+            otlsp_config.proxy_url(url);
         }
         None => {
             tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
-            OtlspClient::builder()
         }
-    };
-    let client = RequestDeduplicationClient::new(client.agent(USER_AGENT.to_string()).build());
+    }
+    let client = OtlspClient::new(otlsp_config.build()?);
+    let client = RequestDeduplicationClient::new(client);
     let time_source = || DateTime::from(SystemTime::now());
 
     let mut scanner =

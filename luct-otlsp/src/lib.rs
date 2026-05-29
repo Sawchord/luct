@@ -1,7 +1,7 @@
 #![forbid(unsafe_code)]
 
-pub use crate::config::OtlspClientBuilder;
-use crate::{config::OtlspClientConfig, connection::OtlspConnection};
+pub use crate::config::OtlspClientConfig;
+use crate::connection::OtlspConnection;
 use futures::lock::Mutex as FutMutex;
 use luct_client::{Client, ClientError, reqwest::ReqwestClient};
 use std::{
@@ -148,7 +148,7 @@ impl OtlspClient {
 
 #[cfg(test)]
 mod test {
-    use crate::OtlspClient;
+    use crate::{OtlspClient, config::OtlspClientConfig};
     use luct_client::CtClient;
     use luct_core::{CtLogConfig, tiling::TileId, tree::NodeKey};
     use luct_test::utils::test_tracing;
@@ -219,10 +219,13 @@ mod test {
 
     fn get_client(log: &str) -> CtClient<OtlspClient> {
         let config: CtLogConfig = serde_json::from_str(log).unwrap();
-        let client = OtlspClient::builder()
-            .proxy_url(Url::parse("https://node.luct.dev/otlsp").unwrap())
-            .agent("luct-otlsp-test".to_string())
-            .build();
+        let client = OtlspClient::new(
+            OtlspClientConfig::builder()
+                .proxy_url(Url::parse("https://node.luct.dev/otlsp").unwrap())
+                .agent("luct-otlsp-test".to_string())
+                .build()
+                .unwrap(),
+        );
         CtClient::new(config, client)
     }
 }
