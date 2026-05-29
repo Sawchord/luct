@@ -40,18 +40,34 @@ pub struct ExtensionConfig {
     #[serde(default = "default_otlsp_url")]
     otlsp_url: String,
 
+    #[serde(default = "default_otlsp_connection_timeout")]
+    otlsp_connection_timeout: u64,
+
     #[serde(default = "default_sth_freshness_threshold")]
     sth_freshness_threshold: u64,
 
     #[serde(default = "default_sth_update_threshold")]
     sth_update_threshold: u64,
 
+    #[serde(default = "default_report_lru_cache")]
+    report_lru_cache: usize,
+
     #[serde(default = "default_false")]
     debug_output: bool,
 }
 
+impl ExtensionConfig {
+    pub fn report_lru_cache(&self) -> usize {
+        self.report_lru_cache
+    }
+}
+
 fn default_otlsp_url() -> String {
     "https://node.luct.dev/otlsp".to_string()
+}
+
+fn default_otlsp_connection_timeout() -> u64 {
+    30
 }
 
 fn default_sth_freshness_threshold() -> u64 {
@@ -60,6 +76,10 @@ fn default_sth_freshness_threshold() -> u64 {
 
 fn default_sth_update_threshold() -> u64 {
     8 * 60 * 60
+}
+
+fn default_report_lru_cache() -> usize {
+    10
 }
 
 fn default_true() -> bool {
@@ -96,8 +116,7 @@ impl TryFrom<&ExtensionConfig> for OtlspClientConfig {
             } else {
                 None
             })
-            // TODO: Surface to user
-            .connection_timeout(Duration::from_secs(30))
+            .connection_timeout(Duration::from_secs(config.otlsp_connection_timeout))
             .build()
             .map_err(|err| err.to_string())?;
 
