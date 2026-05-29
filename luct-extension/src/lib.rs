@@ -79,8 +79,7 @@ impl Scanner {
 
         let report_cache =
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
-        // TODO: Make caps configurable
-        let report_cache = LruCacheStore::new(report_cache, 10);
+        let report_cache = LruCacheStore::new(report_cache, extension_config.report_lru_cache());
 
         let time_source = || {
             DateTime::from_timestamp_millis(
