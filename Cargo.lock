@@ -1706,6 +1706,7 @@ dependencies = [
 name = "luct-otlsp"
 version = "0.1.0"
 dependencies = [
+ "derive_builder",
  "futures",
  "http-body-util",
  "hyper",

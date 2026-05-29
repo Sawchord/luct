@@ -7,7 +7,7 @@ use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
-use luct_otlsp::OtlspClient;
+use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::LruCacheStore;
 use std::sync::Arc;
@@ -74,20 +74,24 @@ impl Scanner {
         let extension_config = load_config()?;
         let scanner_config = ScannerConfig::try_from(&extension_config)?;
 
-        let client = match scanner_config.otlsp_url() {
+        // TODO: This can be simplified and moved into a From Implementation
+        let mut otlsp_config = OtlspClientConfig::builder();
+        otlsp_config.agent(USER_AGENT.to_string());
+        match scanner_config.otlsp_url() {
             Some(url) => {
                 tracing::info!("Using oblivious TLS proxy at {}", url);
-                OtlspClient::builder()
+                otlsp_config
                     .proxy_url(url.clone())
-                    .connection_timeout(*scanner_config.otlsp_connection_timeout())
+                    .connection_timeout(*scanner_config.otlsp_connection_timeout());
             }
 
             None => {
                 tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
-                OtlspClient::builder()
             }
-        };
-        let client = RequestDeduplicationClient::new(client.agent(USER_AGENT.to_string()).build());
+        }
+
+        let client = OtlspClient::new(otlsp_config.build().map_err(|err| err.to_string())?);
+        let client = RequestDeduplicationClient::new(client);
 
         let report_cache =
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
