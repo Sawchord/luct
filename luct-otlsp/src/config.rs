@@ -12,7 +12,7 @@ use web_time::Duration;
 pub struct OtlspClientConfig {
     #[builder(default = "Duration::from_secs(30)")]
     pub(crate) connection_timeout: Duration,
-    #[builder(setter(into, strip_option), default = "None")]
+    #[builder(default = "None")]
     pub(crate) proxy_url: Option<Url>,
     pub(crate) agent: String,
 }

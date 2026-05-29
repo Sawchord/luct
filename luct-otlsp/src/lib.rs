@@ -221,7 +221,7 @@ mod test {
         let config: CtLogConfig = serde_json::from_str(log).unwrap();
         let client = OtlspClient::new(
             OtlspClientConfig::builder()
-                .proxy_url(Url::parse("https://node.luct.dev/otlsp").unwrap())
+                .proxy_url(Some(Url::parse("https://node.luct.dev/otlsp").unwrap()))
                 .agent("luct-otlsp-test".to_string())
                 .build()
                 .unwrap(),

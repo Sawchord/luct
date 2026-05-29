@@ -73,25 +73,9 @@ impl Scanner {
 
         let extension_config = load_config()?;
         let scanner_config = ScannerConfig::try_from(&extension_config)?;
+        let otlsp_config = OtlspClientConfig::try_from(&extension_config)?;
 
-        // TODO: This can be simplified and moved into a From Implementation
-        let mut otlsp_config = OtlspClientConfig::builder();
-        otlsp_config.agent(USER_AGENT.to_string());
-        match scanner_config.otlsp_url() {
-            Some(url) => {
-                tracing::info!("Using oblivious TLS proxy at {}", url);
-                otlsp_config
-                    .proxy_url(url.clone())
-                    .connection_timeout(*scanner_config.otlsp_connection_timeout());
-            }
-
-            None => {
-                tracing::info!("No oblivious TLS proxy configured. Will use direct connection");
-            }
-        }
-
-        let client = OtlspClient::new(otlsp_config.build().map_err(|err| err.to_string())?);
-        let client = RequestDeduplicationClient::new(client);
+        let client = RequestDeduplicationClient::new(OtlspClient::new(otlsp_config));
 
         let report_cache =
             BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
