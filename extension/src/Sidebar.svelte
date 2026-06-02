@@ -33,6 +33,8 @@
 
                 reports = Array.from(response.reports, ([_, value]) => value);
                 //console.log(reports);
+            } else {
+                reports = [];
             }
         } catch (err) {
             console.log(
