@@ -6,7 +6,9 @@ use crate::{config::load_config, store::BrowserStore};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
-use luct_core::{CertificateChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead};
+use luct_core::{
+    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead,
+};
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::LruCacheStore;
@@ -60,6 +62,35 @@ pub fn start() -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
+pub struct CertificateChain {
+    cert_chain: CertChain,
+}
+
+#[wasm_bindgen]
+impl CertificateChain {
+    #[wasm_bindgen(constructor)]
+    pub fn new(certs: Array) -> Result<Self, String> {
+        let cert_chain_bytes = certs
+            .to_vec()
+            .into_iter()
+            .map(|value| Uint8Array::from(value).to_vec())
+            .collect::<Vec<_>>();
+
+        let cert_chain =
+            CertChain::from_der_chain(&cert_chain_bytes).map_err(|err| err.to_string())?;
+
+        Ok(Self { cert_chain })
+    }
+
+    #[wasm_bindgen]
+    pub fn report(&self) -> Result<JsValue, String> {
+        let report = Report::from(&self.cert_chain);
+        let report = serde_wasm_bindgen::to_value(&report).map_err(|err| format!("{err}"))?;
+
+        Ok(report)
+    }
+}
+#[wasm_bindgen]
 pub struct Scanner {
     scanner: CtScanner<ExtensionScannerImpl>,
 }
@@ -107,7 +138,7 @@ impl Scanner {
     pub async fn collect_report(
         &self,
         url: String,
-        certs: Array,
+        certs: CertificateChain,
     ) -> Result<Option<JsValue>, String> {
         // Check that this is not a recursion
         if self.is_recursion(&url)? {
@@ -115,20 +146,10 @@ impl Scanner {
             return Ok(None);
         }
 
-        // Parse the certificate
-        let cert_chain_bytes = certs
-            .to_vec()
-            .into_iter()
-            .map(|value| Uint8Array::from(value).to_vec())
-            .collect::<Vec<_>>();
-
-        let cert_chain =
-            CertificateChain::from_der_chain(&cert_chain_bytes).map_err(|err| err.to_string())?;
-
         // Generate the report
         let report = self
             .scanner
-            .collect_report(Arc::new(cert_chain))
+            .collect_report(Arc::new(certs.cert_chain))
             .await
             .map_err(|err| err.to_string())?;
 

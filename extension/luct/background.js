@@ -1,4 +1,4 @@
-import init, { Scanner } from './wasm/luct_extension.js';
+import init, { Scanner, CertificateChain } from './wasm/luct_extension.js';
 
 let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }
@@ -114,8 +114,8 @@ function add_listener() {
                 return;
             }
 
-            let certs = securityInfo.certificates.map((info) => info.rawDER);
-            tabState.updateTab(details.tabId, details.url, null, null);
+            let certs = new CertificateChain(securityInfo.certificates.map((info) => info.rawDER));
+            tabState.updateTab(details.tabId, details.url, certs.report(), "processing");
             let report = await scanner.collect_report(details.url, certs);
 
             // Skip the recursive calls
@@ -128,7 +128,7 @@ function add_listener() {
                 tabState.updateTab(details.tabId, details.url, report, "safe");
             }
             else {
-                tabState.updateTab(details.tabId, details.url, report, error);
+                tabState.updateTab(details.tabId, details.url, report, "unsafe");
             }
         });
 
