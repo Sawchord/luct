@@ -124,10 +124,10 @@ function add_listener() {
                 return;
             }
 
-            try {
-                Scanner.evaluate_report(report);
+            if (Scanner.is_report_safe(report)) {
                 tabState.updateTab(details.tabId, details.url, report, "safe");
-            } catch (error) {
+            }
+            else {
                 tabState.updateTab(details.tabId, details.url, report, error);
             }
         });
