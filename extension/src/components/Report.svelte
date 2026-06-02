@@ -5,21 +5,13 @@
     import TimeDisplay from "./TimeDisplay.svelte";
 
     export let report;
-
-    // TODO: Remove. This should not be needed anymore!
-    var status = "";
-    if (report.report.error_description) {
-        status = "unsafe";
-    } else {
-        status = report.status;
-    }
 </script>
 
 {#if report}
     <div class="card">
         <header class="card-header">
             <p class="card-header-title">{report.report.cert_subject}</p>
-            <StatusIcon {status}></StatusIcon>
+            <StatusIcon status={report.status}></StatusIcon>
         </header>
         <div class="card-content">
             <div class="content">
@@ -53,9 +45,11 @@
                         </span>
                     </li>
 
-                    <li>
-                        <SctsDisplay scts={report.report.scts} />
-                    </li>
+                    {#if report.report.scts}
+                        <li>
+                            <SctsDisplay scts={report.report.scts} />
+                        </li>
+                    {/if}
                 </ul>
             </div>
         </div>

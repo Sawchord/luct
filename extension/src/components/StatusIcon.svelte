@@ -1,36 +1,41 @@
 <script>
     export let status;
 
-    var icon = "";
-    var color = "";
-
-    switch (status) {
-        case "processing":
-            icon = "fa-refresh";
-            color = "";
-            break;
-        case "safe":
-            icon = "fa-check";
-            color = "has-text-success";
-            break;
-        case "warn":
-            icon = "fa-warning";
-            color = "has-text-warning";
-            break;
-        case "unsafe":
-            icon = "fa-times";
-            color = "has-text-danger";
-            break;
-        default:
-            icon = "";
-            color = "";
+    function getIcon(status) {
+        switch (status) {
+            case "processing":
+                return "fa fa-refresh";
+            case "safe":
+                return "fa fa-check";
+            case "warn":
+                return "fa fa-warning";
+            case "unsafe":
+                return "fa fa-times";
+            default:
+                return "fa";
+        }
     }
-    icon = `fa ${icon}`;
-    color = `icon ${color}`;
+
+    function getColor(status) {
+        switch (status) {
+            case "processing":
+                return "icon";
+            case "safe":
+                return "icon has-text-success";
+            case "warn":
+                return "icon has-text-warning";
+            case "unsafe":
+                return "icon has-text-danger";
+            default:
+                return "icon";
+        }
+    }
 </script>
 
 <button class="card-header-icon">
-    <span class={color}>
-        <i class={icon} aria-hidden="true"></i>
-    </span>
+    {#key status}
+        <span class={getColor(status)}>
+            <i class={getIcon(status)} aria-hidden="true"></i>
+        </span>
+    {/key}
 </button>
