@@ -24,44 +24,20 @@
     });
 
     async function update_content() {
-        var report;
         try {
-            report = await browser.runtime.sendMessage({ tabId });
+            let response = await browser.runtime.sendMessage({ tabId });
+
+            if (response) {
+                //console.log("Updating report");
+                //console.log(response);
+
+                reports = Array.from(response.reports, ([_, value]) => value);
+                //console.log(reports);
+            }
         } catch (err) {
             console.log(
                 "Updating content failed because background script has not started yet",
             );
-        }
-
-        if (report) {
-            let certs = new Map();
-
-            for (const [url, rep] of report.urls) {
-                if (!rep.report) {
-                    continue;
-                }
-
-                let fingerprint = rep.report.fingerprint;
-                let existing_entry = certs.get(fingerprint);
-                if (existing_entry) {
-                    existing_entry.urls.push(url);
-                    if (
-                        existing_entry.status === "safe" &&
-                        rep.status !== "safe"
-                    ) {
-                        existing_entry.status = rep.status;
-                    }
-                    certs.set(fingerprint, existing_entry);
-                } else {
-                    certs.set(fingerprint, {
-                        report: rep.report,
-                        urls: [],
-                        status: rep.status,
-                    });
-                }
-            }
-
-            reports = Array.from(certs, ([_name, value]) => value);
         }
     }
 
