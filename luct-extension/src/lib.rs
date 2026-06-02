@@ -138,13 +138,13 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub fn evaluate_report(report: JsValue) -> Result<(), String> {
+    pub fn is_report_safe(report: JsValue) -> Result<bool, String> {
         let report: Report =
             serde_wasm_bindgen::from_value(report).map_err(|err| format!("{err}"))?;
 
         match report.get_error() {
-            Some(err) => Err(err),
-            None => Ok(()),
+            Some(_) => Ok(false),
+            None => Ok(true),
         }
     }
 
