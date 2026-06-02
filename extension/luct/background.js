@@ -14,7 +14,7 @@ class TabState {
         this.tabs = new Map();
     }
 
-    async updateTab(tabId, url, report, status) {
+    async updateTab(tabId, report, status) {
         if (tabId === -1) {
             // Calls to -1 are calls of the extension itself
             return;
@@ -23,10 +23,10 @@ class TabState {
         var tab = this.tabs.get(tabId);
         if (!tab) {
             log("Initializing new tab: " + tabId);
-            tab = new TabSecurity(tabId, url);
+            tab = new TabSecurity(tabId);
         }
 
-        await tab.update_status(url, report, status);
+        await tab.update_status(report, status);
         await tab.update_page_action();
         this.tabs.set(tabId, tab);
     }
@@ -47,24 +47,22 @@ let scanner;
 let tabState = new TabState();
 
 class TabSecurity {
-    constructor(tabId, document_url) {
+    constructor(tabId) {
         this.tabId = tabId;
-        this.document_url = document_url;
-        this.urls = new Map();
+        this.reports = new Map();
     }
 
-    async update_status(url, report, status) {
-        this.urls.set(url, { report, status })
-
+    async update_status(report, status) {
+        // TODO: Only update, if the report is new
+        this.reports.set(report.fingerprint, { report, status })
         if (this.tabId === activeTab && await browser.sidebarAction.isOpen({})) {
-            browser.runtime.sendMessage(this)
+            browser.runtime.sendMessage("update")
         }
     }
 
     get_status() {
         var status = "safe";
-
-        for (let [_url, rep] of this.urls) {
+        for (let [_fp, rep] of this.reports) {
             if (!rep || !rep.status) {
                 status = null;
             } else if (rep.status !== "safe") {
@@ -115,7 +113,7 @@ function add_listener() {
             }
 
             let certs = new CertificateChain(securityInfo.certificates.map((info) => info.rawDER));
-            tabState.updateTab(details.tabId, details.url, certs.report(), "processing");
+            tabState.updateTab(details.tabId, certs.report(), "processing");
             let report = await scanner.collect_report(details.url, certs);
 
             // Skip the recursive calls
@@ -125,10 +123,10 @@ function add_listener() {
             }
 
             if (Scanner.is_report_safe(report)) {
-                tabState.updateTab(details.tabId, details.url, report, "safe");
+                tabState.updateTab(details.tabId, report, "safe");
             }
             else {
-                tabState.updateTab(details.tabId, details.url, report, "unsafe");
+                tabState.updateTab(details.tabId, report, "unsafe");
             }
         });
 

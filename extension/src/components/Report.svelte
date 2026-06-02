@@ -6,6 +6,7 @@
 
     export let report;
 
+    // TODO: Remove. This should not be needed anymore!
     var status = "";
     if (report.report.error_description) {
         status = "unsafe";
