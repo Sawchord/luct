@@ -3,7 +3,6 @@
     import SctsDisplay from "./SctsDisplay.svelte";
     import StatusIcon from "./StatusIcon.svelte";
     import TimeDisplay from "./TimeDisplay.svelte";
-    // import UrlDisplay from "./UrlDisplay.svelte";
 
     export let report;
 
@@ -56,13 +55,6 @@
                     <li>
                         <SctsDisplay scts={report.report.scts} />
                     </li>
-                    <!-- 
-                        NOTE: Displaying URLs can be overwhelming and processing them takes a lot of resources
-                        TODO: Remove URL reporting to sidebar altogether
-                    -->
-                    <!-- <li>
-                        <UrlDisplay urls={report.urls} />
-                    </li> -->
                 </ul>
             </div>
         </div>
