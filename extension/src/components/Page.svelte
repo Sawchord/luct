@@ -26,6 +26,7 @@ $footer-height: 6rem
     bottom: 0
     width: 100%
     text-align: center
+    align-content: center
     padding: 1rem
     height: $footer-height;
 </style>

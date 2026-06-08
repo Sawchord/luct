@@ -19,14 +19,16 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
         None => {
             tracing::info!("Could not find a config. Initalizing with default");
             let settings = serde_json::from_str::<ExtensionConfig>("{}").unwrap();
-            store
-                .set_item("settings", &serde_json::to_string(&settings).unwrap())
-                .map_err(|err| err.as_string().unwrap())?;
             Ok(settings)
         }
-    };
+    }
+    .map_err(|err| err.to_string())?;
 
-    settings.map_err(|err| err.to_string())
+    store
+        .set_item("settings", &serde_json::to_string(&settings).unwrap())
+        .map_err(|err| err.as_string().unwrap())?;
+
+    Ok(settings)
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

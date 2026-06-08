@@ -38,18 +38,34 @@
                     <input bind:checked={settings.use_otlsp} type="checkbox" />
                     Use oblivious TLS proxy
                 </label>
-                <div class="control">
-                    <input
-                        bind:value={settings.otlsp_url}
-                        class="input"
-                        type="text"
-                        placeholder=""
-                    />
+                <div>
+                    <div class="control">
+                        <input
+                            bind:value={settings.otlsp_url}
+                            class="input"
+                            type="text"
+                            placeholder=""
+                        />
+                    </div>
+                    <p class="help">
+                        Full url to the OTLSP endpoint. E.g.
+                        "https://node.luct.dev/otlsp"
+                    </p>
                 </div>
-                <p class="help">
-                    Full url to the OTLSP endpoint. E.g.
-                    "https://node.luct.dev/otlsp"
-                </p>
+                <div>
+                    <div class="control">
+                        <input
+                            bind:value={settings.otlsp_connection_timeout}
+                            class="input"
+                            type="number"
+                            placeholder=""
+                        />
+                    </div>
+                    <p class="help">
+                        Time (in seconds) after which a connectino to an
+                        oblivious TLS proxy is considered stale
+                    </p>
+                </div>
             </div>
 
             <div class="field">
@@ -84,6 +100,23 @@
                 <p class="help">
                     luCT will fetch a fresh STH for a log, if the existing one
                     is older than this value.
+                </p>
+            </div>
+
+            <div class="field">
+                <!-- svelte-ignore a11y-label-has-associated-control -->
+                <label class="label">Report LRU cache size</label>
+                <div class="control">
+                    <input
+                        bind:value={settings.report_lru_cache}
+                        class="input"
+                        type="number"
+                        placeholder=""
+                    />
+                </div>
+                <p class="help">
+                    Larger number accelerates luCT's update speed but may
+                    consume more RAM.
                 </p>
             </div>
 
