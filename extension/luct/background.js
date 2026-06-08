@@ -6,9 +6,6 @@ let extraInfoSpec = ['blocking'];
 
 let activeTab = -1;
 
-// TODO: Introduce in progress state
-// TODO: Better management of tab security
-
 class TabState {
     constructor() {
         this.tabs = new Map();
