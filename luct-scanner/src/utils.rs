@@ -1,4 +1,5 @@
 use luct_store::StringStoreValue;
+use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use std::ops::Deref;
 use web_time::{Duration, SystemTime};
 
@@ -6,7 +7,7 @@ use web_time::{Duration, SystemTime};
 ///
 /// When wrapping a `T` into [`Validated`], it means that the value has been validated and will be
 /// trusted from now on.
-#[derive(Debug, Clone, Eq, PartialOrd, Ord)]
+#[derive(Debug, Clone, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Validated<T> {
     inner: T,
     validated_at: SystemTime,
@@ -40,19 +41,21 @@ impl<T> Deref for Validated<T> {
     }
 }
 
-impl<T: StringStoreValue> StringStoreValue for Validated<T> {
+impl<T: StringStoreValue + Serialize + DeserializeOwned> StringStoreValue for Validated<T> {
     fn serialize_value(&self) -> String {
-        let inner = self.inner.serialize_value();
-        let validated_at: u64 = self
-            .validated_at
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_millis() as u64;
-
-        serde_json::to_string(&(validated_at, inner)).unwrap()
+        serde_json::to_string(self).unwrap()
     }
 
     fn deserialize_value(value: &str) -> Option<Self> {
+        serde_json::from_str(value)
+            .ok()
+            .or_else(|| Self::deserialize_value_legacy(value))
+    }
+}
+
+impl<T: StringStoreValue> Validated<T> {
+    // NOTE: Version 0.1 parses STHs this way. We can drop this, once we have implemented log sth removal
+    fn deserialize_value_legacy(value: &str) -> Option<Self> {
         let (validated_at, inner): (u64, String) = serde_json::from_str(value).ok()?;
 
         let validated_at =
