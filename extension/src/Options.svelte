@@ -9,6 +9,34 @@
 
         const _report = await browser.runtime.sendMessage("reload");
     }
+
+    function download(filename, data) {
+        var element = document.createElement("a");
+        element.setAttribute(
+            "href",
+            "data:text/plain;charset=utf-8," + encodeURIComponent(data),
+        );
+        element.setAttribute("download", filename);
+
+        element.style.display = "none";
+        document.body.appendChild(element);
+
+        element.click();
+
+        document.body.removeChild(element);
+    }
+
+    async function export_store() {
+        var output = [];
+
+        for (let key of Object.keys(window.localStorage)) {
+            let value = JSON.parse(window.localStorage.getItem(key));
+            output.push([key, value]);
+        }
+        let output_string = JSON.stringify(output);
+
+        download("luct.json", output_string);
+    }
 </script>
 
 <Page>
@@ -131,6 +159,12 @@
                         on:click={store_and_reload}
                         class="button is-primary"
                         >Save settings and reload</button
+                    >
+                    <button on:click={export_store} class="button"
+                        >Export store</button
+                    >
+                    <button on:click={export_store} class="button"
+                        >Import store</button
                     >
                 </div>
             </div>
