@@ -111,7 +111,7 @@ futures = { version = "0.3" }
 wasm-bindgen = { version = "= 0.2.120" }
 wasm-bindgen-futures = { version = "0.4" }
 wasm-bindgen-test = { version = "0.3" }
-web-time = { version = "1.1" }
+web-time = { version = "1.1", features = ["serde"] }
 console_error_panic_hook = { version = "0.1" }
 js-sys = { version = "0.3" }
 web-sys = { version = "0.3", features = [
