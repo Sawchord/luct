@@ -120,7 +120,6 @@ impl Scanner {
                     .as_millis() as i64,
             )
             .unwrap()
-            .into()
         };
 
         let mut scanner = CtScanner::new(scanner_config, report_cache, client, time_source);

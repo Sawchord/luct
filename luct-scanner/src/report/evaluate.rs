@@ -1,12 +1,12 @@
 use crate::{Report, Scanner, ScannerImpl};
-use chrono::{DateTime, Local, TimeDelta};
+use chrono::{DateTime, TimeDelta, Utc};
 use web_time::Duration;
 
 impl<S: ScannerImpl> Scanner<S> {
     pub(crate) fn evaluate_policy(
         &self,
         mut report: Report,
-        current_time: DateTime<Local>,
+        current_time: DateTime<Utc>,
     ) -> Report {
         // TODO: Check that expiration date matches logs expiration bracket?
 

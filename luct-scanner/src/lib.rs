@@ -3,7 +3,7 @@
 #![forbid(unsafe_code)]
 
 use crate::log::{ScannerLog, builder::LogImpls};
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use luct_client::Client;
 use luct_core::{CtLog, Fingerprint, LogId, store::SearchableStore, v1::SignedTreeHead};
@@ -45,7 +45,7 @@ pub struct Scanner<S: ScannerImpl> {
     logs: BTreeMap<LogId, ScannerLog<S>>,
     report_store: S::ReportStore,
     client: S::Client,
-    time_source: Box<dyn Fn() -> DateTime<Local>>,
+    time_source: Box<dyn Fn() -> DateTime<Utc>>,
 }
 
 #[allow(clippy::type_complexity)]
@@ -54,7 +54,7 @@ impl<S: ScannerImpl> Scanner<S> {
         Box::new(self.logs.values().map(|val| val.client().log()))
     }
 
-    pub fn new<F: Fn() -> DateTime<Local> + 'static>(
+    pub fn new<F: Fn() -> DateTime<Utc> + 'static>(
         config: ScannerConfig,
         report_store: S::ReportStore,
         client: S::Client,
