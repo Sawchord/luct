@@ -17,16 +17,12 @@
             "data:text/plain;charset=utf-8," + encodeURIComponent(data),
         );
         element.setAttribute("download", filename);
-
         element.style.display = "none";
-        document.body.appendChild(element);
 
         element.click();
-
-        document.body.removeChild(element);
     }
 
-    async function export_store() {
+    function export_store() {
         var output = [];
 
         for (let key of Object.keys(window.localStorage)) {
@@ -36,6 +32,33 @@
         let output_string = JSON.stringify(output);
 
         download("luct.json", output_string);
+    }
+
+    function load_store(input) {
+        const data = JSON.parse(input);
+
+        window.localStorage.clear();
+        for (let [key, value] of data) {
+            window.localStorage.setItem(key, JSON.stringify(value));
+        }
+    }
+
+    function import_store() {
+        const input = document.createElement("input");
+        input.type = "file";
+
+        input.onchange = (event) => {
+            const file = event.target.files[0];
+            const reader = new FileReader();
+
+            reader.addEventListener("load", () => {
+                const data = reader.result;
+                load_store(data);
+                //console.log(data);
+            });
+            reader.readAsText(file);
+        };
+        input.click();
     }
 </script>
 
@@ -163,7 +186,7 @@
                     <button on:click={export_store} class="button"
                         >Export store</button
                     >
-                    <button on:click={export_store} class="button"
+                    <button on:click={import_store} class="button"
                         >Import store</button
                     >
                 </div>
