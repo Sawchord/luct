@@ -28,11 +28,7 @@
             let response = await browser.runtime.sendMessage({ tabId });
 
             if (response) {
-                //console.log("Updating report");
-                //console.log(response);
-
                 reports = Array.from(response.reports, ([_, value]) => value);
-                //console.log(reports);
             } else {
                 reports = [];
             }
