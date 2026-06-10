@@ -54,7 +54,6 @@
             reader.addEventListener("load", () => {
                 const data = reader.result;
                 load_store(data);
-                //console.log(data);
             });
             reader.readAsText(file);
         };
