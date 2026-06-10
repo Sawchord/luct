@@ -1,5 +1,5 @@
 use crate::Validated;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Local, Utc};
 use luct_core::{CertificateChain, LogId, v1::SignedTreeHead};
 use luct_store::StringStoreValue;
 use serde::{Deserialize, Serialize};
@@ -16,8 +16,8 @@ pub struct Report {
     pub(crate) cert_subject: String,
     pub(crate) fingerprint: String,
     pub(crate) ca_fingerprint: String,
-    pub(crate) not_before: DateTime<Local>,
-    pub(crate) not_after: DateTime<Local>,
+    pub(crate) not_before: DateTime<Utc>,
+    pub(crate) not_after: DateTime<Utc>,
     // TODO: Precert fingerprint
     #[serde(skip_serializing_if = "Vec::is_empty", default)]
     pub(crate) scts: Vec<SctReport>,
@@ -47,8 +47,8 @@ impl From<&CertificateChain> for Report {
             cert_subject: chain.cert().get_subject_name(),
             fingerprint: chain.cert().fingerprint_sha256().to_string(),
             ca_fingerprint: chain.root().fingerprint_sha256().to_string(),
-            not_before: not_before.into(),
-            not_after: not_after.into(),
+            not_before,
+            not_after,
             scts: vec![],
             error_description: None,
         }
@@ -133,17 +133,15 @@ impl SctReport {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SthReport {
     height: u64,
-    timestamp: DateTime<Local>,
-    verification_time: DateTime<Local>,
+    timestamp: DateTime<Utc>,
+    verification_time: DateTime<Utc>,
 }
 
 impl From<&Validated<SignedTreeHead>> for SthReport {
     fn from(value: &Validated<SignedTreeHead>) -> Self {
         Self {
             height: value.tree_size(),
-            timestamp: DateTime::from_timestamp_millis(value.timestamp() as i64)
-                .unwrap()
-                .into(),
+            timestamp: DateTime::from_timestamp_millis(value.timestamp() as i64).unwrap(),
             verification_time: DateTime::from_timestamp_millis(
                 value
                     .validated_at()
@@ -151,8 +149,7 @@ impl From<&Validated<SignedTreeHead>> for SthReport {
                     .unwrap()
                     .as_millis() as i64,
             )
-            .unwrap()
-            .into(),
+            .unwrap(),
         }
     }
 }
