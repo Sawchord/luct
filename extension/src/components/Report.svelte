@@ -1,4 +1,5 @@
 <script>
+    import CertLifetime from "./CertLifetime.svelte";
     import Expandable from "./Expandable.svelte";
     import SctsDisplay from "./SctsDisplay.svelte";
     import StatusIcon from "./StatusIcon.svelte";
@@ -32,18 +33,10 @@
                             </ul>
                         </Expandable>
                     </li>
-                    <li>
-                        <b> Not valid before: </b>
-                        <span>
-                            <TimeDisplay time={report.report.not_before} />
-                        </span>
-                    </li>
-                    <li>
-                        <b> Not valid after: </b>
-                        <span>
-                            <TimeDisplay time={report.report.not_after} />
-                        </span>
-                    </li>
+                    <CertLifetime
+                        not_before={report.report.not_before}
+                        not_after={report.report.not_after}
+                    ></CertLifetime>
 
                     {#if report.report.scts}
                         <li>
