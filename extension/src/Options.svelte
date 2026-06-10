@@ -26,8 +26,13 @@
         var output = [];
 
         for (let key of Object.keys(window.localStorage)) {
-            let value = JSON.parse(window.localStorage.getItem(key));
-            output.push([key, value]);
+            try {
+                let value = JSON.parse(window.localStorage.getItem(key));
+                output.push([key, value]);
+            } catch (error) {
+                console.log("Failed to export key: " + key);
+                console.log(error);
+            }
         }
         let output_string = JSON.stringify(output);
 
