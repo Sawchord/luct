@@ -4,10 +4,9 @@ use crate::{
 };
 use futures::{FutureExt, future::join_all};
 
-impl<N, L, V> Tree<N, L, V>
+impl<N, L> Tree<N, L>
 where
     N: StoreRead<Key = NodeKey, Value = HashOutput>,
-    V: Hashable,
 {
     /// This follows RFC 9162 2.1.4.1
     pub fn get_consistency_proof(
@@ -36,10 +35,9 @@ where
     }
 }
 
-impl<N, L, V> Tree<N, L, V>
+impl<N, L> Tree<N, L>
 where
     N: AsyncStoreRead<Key = NodeKey, Value = HashOutput>,
-    V: Hashable,
 {
     pub async fn get_consistency_proof_async(
         &self,
@@ -197,7 +195,7 @@ mod tests {
 
     #[test]
     fn compute_inclusion_proofs() {
-        let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>, String>::new(
+        let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>>::new(
             MemoryStore::default(),
             MemoryStore::default(),
         );
@@ -253,11 +251,10 @@ mod tests {
         let second_size = 5009;
         let mut rng = ChaCha8Rng::seed_from_u64(1337);
 
-        let tree =
-            Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, HashOutput>, HashOutput>::new(
-                MemoryStore::default(),
-                MemoryStore::default(),
-            );
+        let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, HashOutput>>::new(
+            MemoryStore::default(),
+            MemoryStore::default(),
+        );
 
         for _ in 0..first_size {
             let mut entry = [0; 32];

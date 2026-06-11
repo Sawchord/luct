@@ -5,7 +5,6 @@ pub use crate::tree::{
     node::{Node, NodeKey},
 };
 use serde::{Deserialize, Serialize};
-use std::marker::PhantomData;
 use thiserror::Error;
 
 mod consistency;
@@ -48,19 +47,17 @@ pub enum ProofValidationError {
 }
 
 #[derive(Debug, Clone)]
-// TODO: Remove V generic
-pub struct Tree<N, L, V> {
+
+pub struct Tree<N, L> {
     nodes: N,
     leafs: L,
-    values: PhantomData<V>,
 }
 
-impl<N, L, V> Tree<N, L, V> {
+impl<N, L> Tree<N, L> {
     pub fn new(node_store: N, leaf_store: L) -> Self {
         Self {
             nodes: node_store,
             leafs: leaf_store,
-            values: PhantomData,
         }
     }
 
@@ -69,13 +66,12 @@ impl<N, L, V> Tree<N, L, V> {
     }
 }
 
-impl<N, L, V> Tree<N, L, V>
+impl<N, L> Tree<N, L>
 where
     N: Store<Key = NodeKey, Value = HashOutput>,
-    L: AppendableStore<Key = u64, Value = V>,
-    V: Hashable,
+    L: AppendableStore<Key = u64, Value: Hashable>,
 {
-    pub fn insert_entry(&self, entry: V) {
+    pub fn insert_entry(&self, entry: L::Value) {
         let entry_hash = entry.hash();
         let idx = self.leafs.append(entry);
         let entry_key = NodeKey::leaf(idx);
