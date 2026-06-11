@@ -1,6 +1,6 @@
 use crate::store::{
     AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
-    StoreRead, StoreWrite,
+    StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     collections::BTreeMap,
@@ -20,10 +20,12 @@ impl<K, V> Default for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord, V: Clone> StoreRead for MemoryStore<K, V> {
+impl<K, V> StoreBase for MemoryStore<K, V> {
     type Key = K;
     type Value = V;
+}
 
+impl<K: Ord, V: Clone> StoreRead for MemoryStore<K, V> {
     fn get(&self, key: &K) -> Option<V> {
         self.0.read().unwrap().get(key).cloned()
     }

@@ -1,5 +1,5 @@
 use luct_core::store::{
-    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite,
+    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 
 /// [`Store`](luct_core::store::Store) implementation that switches between two different
@@ -12,14 +12,20 @@ pub enum StoreSwitch<A, B> {
     B(B),
 }
 
+impl<A, B, K, V> StoreBase for StoreSwitch<A, B>
+where
+    A: StoreBase<Key = K, Value = V>,
+    B: StoreBase<Key = K, Value = V>,
+{
+    type Key = K;
+    type Value = V;
+}
+
 impl<A, B, K, V> StoreRead for StoreSwitch<A, B>
 where
     A: StoreRead<Key = K, Value = V>,
     B: StoreRead<Key = K, Value = V>,
 {
-    type Key = K;
-    type Value = V;
-
     fn get(&self, key: &K) -> Option<V> {
         match self {
             StoreSwitch::A(a) => a.get(key),

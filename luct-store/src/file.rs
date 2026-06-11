@@ -1,4 +1,4 @@
-use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite};
+use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -84,10 +84,12 @@ impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> StoreRead for FilesystemStore<K, V> {
+impl<K, V> StoreBase for FilesystemStore<K, V> {
     type Key = K;
     type Value = V;
+}
 
+impl<K: StringStoreKey, V: StringStoreValue> StoreRead for FilesystemStore<K, V> {
     fn get(&self, key: &K) -> Option<V> {
         let _lock = self.access.lock().unwrap();
         let data = std::fs::read_to_string(self.path.join(key.serialize_key())).ok()?;

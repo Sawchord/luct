@@ -1,5 +1,5 @@
 use js_sys::Object;
-use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite};
+use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite};
 use luct_store::{StringStoreKey, StringStoreValue};
 use std::marker::PhantomData;
 use web_sys::{Storage, window};
@@ -65,14 +65,16 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     }
 }
 
+impl<K, V> StoreBase for BrowserStore<K, V> {
+    type Key = K;
+    type Value = V;
+}
+
 impl<K, V> StoreRead for BrowserStore<K, V>
 where
     K: StringStoreKey,
     V: StringStoreValue,
 {
-    type Key = K;
-    type Value = V;
-
     fn get(&self, key: &K) -> Option<V> {
         let key = self.get_key_string(key);
 

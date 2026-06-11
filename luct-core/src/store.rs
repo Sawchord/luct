@@ -14,10 +14,12 @@ pub trait Hashable {
     fn hash(&self) -> HashOutput;
 }
 
-pub trait StoreRead {
+pub trait StoreBase {
     type Key;
     type Value;
+}
 
+pub trait StoreRead: StoreBase {
     /// Returns the value associated with `key` from the [`Store`]
     ///
     /// # Arguments:
@@ -37,7 +39,7 @@ pub trait StoreRead {
     }
 }
 
-pub trait StoreWrite: StoreRead {
+pub trait StoreWrite: StoreBase {
     /// Insert a value into the store
     ///
     /// # Arguments:
