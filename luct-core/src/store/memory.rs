@@ -73,9 +73,6 @@ impl<V: Clone> AppendableStore for MemoryStore<u64, V> {
 }
 
 impl<K: Ord, V: Clone> AsyncStoreRead for MemoryStore<K, V> {
-    type Key = K;
-    type Value = V;
-
     async fn get(&self, key: K) -> Option<V> {
         self.0.read().unwrap().get(&key).cloned()
     }
