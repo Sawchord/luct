@@ -38,7 +38,7 @@ where
 
 impl<N, L, V> Tree<N, L, V>
 where
-    N: AsyncStoreRead<NodeKey, HashOutput>,
+    N: AsyncStoreRead<Key = NodeKey, Value = HashOutput>,
     V: Hashable,
 {
     pub async fn get_audit_proof_async(

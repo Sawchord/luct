@@ -150,7 +150,10 @@ impl<S: ScannerImpl> TileFetchStore<S> {
     }
 }
 
-impl<S: ScannerImpl> AsyncStoreRead<NodeKey, HashOutput> for TileFetchStore<S> {
+impl<S: ScannerImpl> AsyncStoreRead for TileFetchStore<S> {
+    type Key = NodeKey;
+    type Value = HashOutput;
+
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // If not available, calculate which tile should have the value and fetch it
