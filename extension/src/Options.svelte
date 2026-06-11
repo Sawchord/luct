@@ -31,6 +31,7 @@
                 output.push([key, value]);
             } catch (error) {
                 console.log("Failed to export key: " + key);
+                console.log("Failed value: " + value);
                 console.log(error);
             }
         }
@@ -59,6 +60,7 @@
             reader.addEventListener("load", () => {
                 const data = reader.result;
                 load_store(data);
+                console.log("Import complete");
             });
             reader.readAsText(file);
         };

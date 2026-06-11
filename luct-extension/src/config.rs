@@ -81,7 +81,7 @@ fn default_sth_update_threshold() -> u64 {
 }
 
 fn default_report_lru_cache() -> usize {
-    10
+    1000
 }
 
 fn default_true() -> bool {
