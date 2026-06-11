@@ -20,7 +20,10 @@ impl<K, V> Default for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord, V: Clone> StoreRead<K, V> for MemoryStore<K, V> {
+impl<K: Ord, V: Clone> StoreRead for MemoryStore<K, V> {
+    type Key = K;
+    type Value = V;
+
     fn get(&self, key: &K) -> Option<V> {
         self.0.read().unwrap().get(key).cloned()
     }
@@ -30,7 +33,7 @@ impl<K: Ord, V: Clone> StoreRead<K, V> for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord, V> StoreWrite<K, V> for MemoryStore<K, V> {
+impl<K: Ord, V: Clone> StoreWrite for MemoryStore<K, V> {
     fn insert(&self, key: K, value: V) {
         self.0.write().unwrap().insert(key, value);
     }
@@ -40,7 +43,7 @@ impl<K: Ord, V> StoreWrite<K, V> for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord + Clone, V: Clone> OrderedStoreRead<K, V> for MemoryStore<K, V> {
+impl<K: Ord + Clone, V: Clone> OrderedStoreRead for MemoryStore<K, V> {
     fn last(&self) -> Option<(K, V)> {
         self.0
             .read()
@@ -51,7 +54,7 @@ impl<K: Ord + Clone, V: Clone> OrderedStoreRead<K, V> for MemoryStore<K, V> {
     }
 }
 
-impl<V: Clone> AppendableStore<u64, V> for MemoryStore<u64, V> {
+impl<V: Clone> AppendableStore for MemoryStore<u64, V> {
     fn append(&self, value: V) -> u64 {
         let mut store = self.0.write().unwrap();
 
@@ -86,7 +89,7 @@ impl<K: Ord, V: Clone> AsyncStoreWrite for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord + Clone, V: Clone> SearchableStoreRead<K, V> for MemoryStore<K, V> {
+impl<K: Ord + Clone, V: Clone> SearchableStoreRead for MemoryStore<K, V> {
     fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         self.0
             .read()

@@ -48,6 +48,7 @@ pub enum ProofValidationError {
 }
 
 #[derive(Debug, Clone)]
+// TODO: Remove V generic
 pub struct Tree<N, L, V> {
     nodes: N,
     leafs: L,
@@ -70,8 +71,8 @@ impl<N, L, V> Tree<N, L, V> {
 
 impl<N, L, V> Tree<N, L, V>
 where
-    N: Store<NodeKey, HashOutput>,
-    L: AppendableStore<u64, V>,
+    N: Store<Key = NodeKey, Value = HashOutput>,
+    L: AppendableStore<Key = u64, Value = V>,
     V: Hashable,
 {
     pub fn insert_entry(&self, entry: V) {

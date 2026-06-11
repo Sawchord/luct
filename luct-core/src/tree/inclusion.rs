@@ -6,7 +6,7 @@ use futures::{FutureExt, future::join_all};
 
 impl<N, L, V> Tree<N, L, V>
 where
-    N: StoreRead<NodeKey, HashOutput>,
+    N: StoreRead<Key = NodeKey, Value = HashOutput>,
     V: Hashable,
 {
     /// This follows RFC 9162 2.1.3.1
@@ -160,7 +160,10 @@ mod tests {
 
     #[test]
     fn compute_audit_proofs() {
-        let tree = Tree::<_, _, String>::new(MemoryStore::default(), MemoryStore::default());
+        let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>, String>::new(
+            MemoryStore::default(),
+            MemoryStore::default(),
+        );
 
         tree.insert_entry("A".to_string());
         tree.insert_entry("B".to_string());

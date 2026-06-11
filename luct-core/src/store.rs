@@ -14,7 +14,10 @@ pub trait Hashable {
     fn hash(&self) -> HashOutput;
 }
 
-pub trait StoreRead<K, V> {
+pub trait StoreRead {
+    type Key;
+    type Value;
+
     /// Returns the value associated with `key` from the [`Store`]
     ///
     /// # Arguments:
@@ -23,7 +26,7 @@ pub trait StoreRead<K, V> {
     /// # Returns:
     /// - `Some(value)`, if the value exists
     /// - `None` otherwise
-    fn get(&self, key: &K) -> Option<V>;
+    fn get(&self, key: &Self::Key) -> Option<Self::Value>;
 
     /// Returns the number of elements in the [`Store`]
     fn len(&self) -> usize;
@@ -34,13 +37,13 @@ pub trait StoreRead<K, V> {
     }
 }
 
-pub trait StoreWrite<K, V> {
+pub trait StoreWrite: StoreRead {
     /// Insert a value into the store
     ///
     /// # Arguments:
     /// - `key`: the key associated with the value
     /// - `value`: the value itself
-    fn insert(&self, key: K, value: V);
+    fn insert(&self, key: <Self as StoreRead>::Key, value: <Self as StoreRead>::Value);
 
     /// Remove a value from the store
     ///
@@ -50,17 +53,17 @@ pub trait StoreWrite<K, V> {
     /// # Returns
     /// - `true` if the key existed and has been removed
     /// - `false` otherwise
-    fn delete(&self, key: &K) -> bool;
+    fn delete(&self, key: &<Self as StoreRead>::Key) -> bool;
 }
 
 /// The [`Store`] trait is a basic key-value store trait
 ///
 /// Note that there is no ACID requirement in the trait.
-pub trait Store<K, V>: StoreRead<K, V> + StoreWrite<K, V> {}
-impl<K, V, T> Store<K, V> for T where T: StoreRead<K, V> + StoreWrite<K, V> {}
+pub trait Store: StoreRead + StoreWrite {}
+impl<T> Store for T where T: StoreRead + StoreWrite {}
 
 /// Extension to regular [`Stores`](Store), which have ordered keys
-pub trait OrderedStoreRead<K: Ord, V>: StoreRead<K, V> {
+pub trait OrderedStoreRead: StoreRead<Key: Ord> {
     /// Returns the last element in the store
     ///
     /// The last element is the largest element with respect to the keys [`Ord`] implementation.
@@ -68,22 +71,19 @@ pub trait OrderedStoreRead<K: Ord, V>: StoreRead<K, V> {
     /// # Returns
     /// - `Some(key, value)` if the store is non-empty
     /// - `None` otherwise
-    fn last(&self) -> Option<(K, V)>;
+    fn last(&self) -> Option<(<Self as StoreRead>::Key, <Self as StoreRead>::Value)>;
 }
 
-pub trait OrderedStore<K: Ord, V>: OrderedStoreRead<K, V> + StoreWrite<K, V> {}
-
-impl<K, V, T> OrderedStore<K, V> for T
-where
-    K: Ord,
-    T: OrderedStoreRead<K, V> + StoreWrite<K, V>,
-{
-}
+pub trait OrderedStore: OrderedStoreRead + StoreWrite {}
+impl<T> OrderedStore for T where T: OrderedStoreRead + StoreWrite {}
 
 /// Extension to regular [`Stores`](Store), which use an index as a key
 ///
-/// The main difference is, that the key is a [`u64`] and the store determines the key when inserting
-pub trait AppendableStore<K: Ord, V>: OrderedStoreRead<K, V> {
+/// The main difference is, that the values can be inserted without providing a key.
+/// The key is then returned after insertion.
+///
+/// The key that was returned last must have be the largest value wrt [`Ord`].
+pub trait AppendableStore: OrderedStoreRead {
     /// Insert a value into the store and return the index
     ///
     /// # Arguments:
@@ -91,12 +91,12 @@ pub trait AppendableStore<K: Ord, V>: OrderedStoreRead<K, V> {
     ///
     /// # Returns:
     /// - the index of the new value. This is the key under which the value can later be retreived
-    fn append(&self, value: V) -> K;
+    fn append(&self, value: <Self as StoreRead>::Value) -> <Self as StoreRead>::Key;
 }
 
 /// Extension to a [`OrderedStoreRead`], that allows looking through the store to look for specific
 /// entries,
-pub trait SearchableStoreRead<K: Ord, V>: OrderedStoreRead<K, V> {
+pub trait SearchableStoreRead: OrderedStoreRead {
     /// Search for all entries in the store, that fulfill a certain predicate
     ///
     /// Note that the elements are being searched through in the order specified by [`Ord`] of key
@@ -106,9 +106,15 @@ pub trait SearchableStoreRead<K: Ord, V>: OrderedStoreRead<K, V> {
     ///
     /// # Returns
     /// - An array of key-value pairs, for which `pred` holds true
-    fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)>;
+    fn filter(
+        &self,
+        pred: impl FnMut(&<Self as StoreRead>::Key, &<Self as StoreRead>::Value) -> bool,
+    ) -> Vec<(<Self as StoreRead>::Key, <Self as StoreRead>::Value)>;
 
-    fn find(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Option<(K, V)> {
+    fn find(
+        &self,
+        mut pred: impl FnMut(&<Self as StoreRead>::Key, &<Self as StoreRead>::Value) -> bool,
+    ) -> Option<(<Self as StoreRead>::Key, <Self as StoreRead>::Value)> {
         let mut found = false;
 
         let vals = self.filter(|key, value| {
@@ -129,11 +135,5 @@ pub trait SearchableStoreRead<K: Ord, V>: OrderedStoreRead<K, V> {
     }
 }
 
-pub trait SearchableStore<K: Ord, V>: SearchableStoreRead<K, V> + StoreWrite<K, V> {}
-
-impl<K, V, T> SearchableStore<K, V> for T
-where
-    K: Ord,
-    T: SearchableStoreRead<K, V> + StoreWrite<K, V>,
-{
-}
+pub trait SearchableStore: SearchableStoreRead + StoreWrite {}
+impl<T> SearchableStore for T where T: SearchableStoreRead + StoreWrite {}
