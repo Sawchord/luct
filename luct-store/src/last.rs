@@ -12,13 +12,13 @@ use luct_core::store::{
 /// A [`OrderedStore`](luct_core::store::OrderedStore) that caches the `last` value in memory
 ///
 /// If you need to call [`OrderedStoreRead::last`], this will speed up access
-pub struct LastValCache<K, V, S> {
+pub struct LastValCacheStore<K, V, S> {
     last: RefCell<Option<(K, V)>>,
     inner: S,
     _key: PhantomData<K>,
 }
 
-impl<K, V, S> Deref for LastValCache<K, V, S> {
+impl<K, V, S> Deref for LastValCacheStore<K, V, S> {
     type Target = S;
 
     fn deref(&self) -> &Self::Target {
@@ -26,13 +26,13 @@ impl<K, V, S> Deref for LastValCache<K, V, S> {
     }
 }
 
-impl<K, V, S> DerefMut for LastValCache<K, V, S> {
+impl<K, V, S> DerefMut for LastValCacheStore<K, V, S> {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<K, V, S> LastValCache<K, V, S> {
+impl<K, V, S> LastValCacheStore<K, V, S> {
     pub fn new(store: S) -> Self {
         Self {
             last: RefCell::new(None),
@@ -42,7 +42,7 @@ impl<K, V, S> LastValCache<K, V, S> {
     }
 }
 
-impl<K, V, S> StoreRead<K, V> for LastValCache<K, V, S>
+impl<K, V, S> StoreRead<K, V> for LastValCacheStore<K, V, S>
 where
     S: StoreRead<K, V>,
 {
@@ -55,7 +55,7 @@ where
     }
 }
 
-impl<K, V, S> StoreWrite<K, V> for LastValCache<K, V, S>
+impl<K, V, S> StoreWrite<K, V> for LastValCacheStore<K, V, S>
 where
     S: StoreWrite<K, V>,
 {
@@ -70,7 +70,7 @@ where
     }
 }
 
-impl<K, V, S> OrderedStoreRead<K, V> for LastValCache<K, V, S>
+impl<K, V, S> OrderedStoreRead<K, V> for LastValCacheStore<K, V, S>
 where
     K: Ord + Clone,
     V: Clone,
@@ -89,7 +89,7 @@ where
     }
 }
 
-impl<K, V, S> AppendableStore<K, V> for LastValCache<K, V, S>
+impl<K, V, S> AppendableStore<K, V> for LastValCacheStore<K, V, S>
 where
     K: Ord + Clone,
     V: Clone,
@@ -101,7 +101,7 @@ where
     }
 }
 
-impl<K, V, S> SearchableStoreRead<K, V> for LastValCache<K, V, S>
+impl<K, V, S> SearchableStoreRead<K, V> for LastValCacheStore<K, V, S>
 where
     K: Ord + Clone,
     V: Clone,
@@ -116,7 +116,7 @@ where
     }
 }
 
-impl<K, V, S> AsyncStoreRead<K, V> for LastValCache<K, V, S>
+impl<K, V, S> AsyncStoreRead<K, V> for LastValCacheStore<K, V, S>
 where
     K: Clone,
     S: AsyncStoreRead<K, V>,
@@ -130,7 +130,7 @@ where
     }
 }
 
-impl<K, V, S> AsyncStoreWrite<K, V> for LastValCache<K, V, S>
+impl<K, V, S> AsyncStoreWrite<K, V> for LastValCacheStore<K, V, S>
 where
     S: AsyncStoreWrite<K, V>,
 {
@@ -148,19 +148,19 @@ mod tests {
 
     #[test]
     fn last_val_store() {
-        let store = LastValCache::new(MemoryStore::<u64, String>::default());
+        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         store_test(store);
     }
 
     #[test]
     fn last_val_ordered_store() {
-        let store = LastValCache::new(MemoryStore::<u64, String>::default());
+        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         ordered_store_test(store);
     }
 
     #[test]
     fn last_val_searchable_store() {
-        let store = LastValCache::new(MemoryStore::<u64, String>::default());
+        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         searchable_store_test(store);
     }
 }

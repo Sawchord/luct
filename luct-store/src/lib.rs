@@ -9,7 +9,7 @@ mod lru;
 mod switch;
 
 pub use file::FilesystemStore;
-pub use last::LastValCache;
+pub use last::LastValCacheStore;
 pub use lru::LruCacheStore;
 use luct_core::{
     Fingerprint,
