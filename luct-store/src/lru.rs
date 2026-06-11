@@ -1,6 +1,6 @@
 use lru::LruCache;
 use luct_core::store::{
-    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
+    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, Store,
     StoreBase, StoreRead, StoreWrite,
 };
 use std::{
@@ -16,26 +16,29 @@ use std::{
 /// The cache is write-through, i.e. there is no speedup when writing to the store.
 /// Furthermore, the implementation is not [`Send`] or [`Sync`].
 /// A common patthern would be to have one [`LruCacheStore`] per thread wrapping an inner store.
-pub struct LruCacheStore<K, V, S> {
-    cache: RefCell<LruCache<K, V>>,
+pub struct LruCacheStore<S>
+where
+    S: StoreBase,
+{
+    cache: RefCell<LruCache<S::Key, S::Value>>,
     inner: S,
 }
 
-impl<K, V, S> Debug for LruCacheStore<K, V, S>
+impl<S> Debug for LruCacheStore<S>
 where
-    K: Debug + Hash + Eq,
-    V: Debug,
-    S: Debug,
+    S: StoreBase<Key: Debug, Value: Debug> + Debug,
 {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LruCacheStore")
-            .field("cache", &self.cache)
             .field("inner", &self.inner)
             .finish()
     }
 }
 
-impl<K, V, S> Deref for LruCacheStore<K, V, S> {
+impl<S> Deref for LruCacheStore<S>
+where
+    S: StoreBase,
+{
     type Target = S;
 
     fn deref(&self) -> &Self::Target {
@@ -43,13 +46,19 @@ impl<K, V, S> Deref for LruCacheStore<K, V, S> {
     }
 }
 
-impl<K, V, S> DerefMut for LruCacheStore<K, V, S> {
+impl<S> DerefMut for LruCacheStore<S>
+where
+    S: Store,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<K: Hash + Eq, V, S> LruCacheStore<K, V, S> {
+impl<S> LruCacheStore<S>
+where
+    S: StoreBase<Key: Hash + Eq>,
+{
     pub fn new(store: S, caps: usize) -> Self {
         Self {
             cache: RefCell::new(LruCache::new(caps.try_into().unwrap())),
@@ -58,19 +67,17 @@ impl<K: Hash + Eq, V, S> LruCacheStore<K, V, S> {
     }
 }
 
-impl<K, V, S> StoreBase for LruCacheStore<K, V, S>
+impl<S> StoreBase for LruCacheStore<S>
 where
-    S: StoreBase<Key = K, Value = V>,
+    S: StoreBase,
 {
     type Key = S::Key;
     type Value = S::Value;
 }
 
-impl<K, V, S> StoreRead for LruCacheStore<K, V, S>
+impl<S> StoreRead for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq,
-    V: Clone,
-    S: StoreRead<Key = K, Value = V>,
+    S: StoreRead<Key: Clone + Hash + Eq, Value: Clone>,
 {
     fn get(&self, key: &Self::Key) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(key) {
@@ -87,11 +94,9 @@ where
     }
 }
 
-impl<K, V, S> StoreWrite for LruCacheStore<K, V, S>
+impl<S> StoreWrite for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq,
-    V: Clone,
-    S: StoreWrite<Key = K, Value = V>,
+    S: StoreWrite<Key: Hash + Eq>,
 {
     fn insert(&self, key: Self::Key, value: Self::Value) {
         self.cache.borrow_mut().pop(&key);
@@ -105,50 +110,48 @@ where
     }
 }
 
-impl<K, V, S> OrderedStoreRead for LruCacheStore<K, V, S>
+impl<S> OrderedStoreRead for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq + Ord,
-    V: Clone,
-    S: OrderedStoreRead<Key = K, Value = V>,
+    S: OrderedStoreRead<Key: Clone + Hash, Value: Clone>,
 {
     fn last(&self) -> Option<(Self::Key, Self::Value)> {
         self.inner.last()
     }
 }
 
-impl<K, V, S> AppendableStore for LruCacheStore<K, V, S>
+impl<S> AppendableStore for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq + Ord,
-    V: Clone,
-    S: AppendableStore<Key = K, Value = V>,
+    S: AppendableStore<Key: Clone + Hash, Value: Clone>,
 {
-    fn append(&self, value: V) -> K {
+    fn append(&self, value: Self::Value) -> Self::Key {
         self.inner.append(value)
     }
 }
 
-impl<K, V, S> SearchableStoreRead for LruCacheStore<K, V, S>
+impl<S> SearchableStoreRead for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq + Ord,
-    V: Clone,
-    S: SearchableStoreRead<Key = K, Value = V>,
+    S: SearchableStoreRead<Key: Clone + Hash, Value: Clone>,
 {
-    fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+    fn filter(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Vec<(Self::Key, Self::Value)> {
         self.inner.filter(pred)
     }
 
-    fn find(&self, pred: impl FnMut(&K, &V) -> bool) -> Option<(K, V)> {
+    fn find(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Option<(Self::Key, Self::Value)> {
         self.inner.find(pred)
     }
 }
 
-impl<K, V, S> AsyncStoreRead for LruCacheStore<K, V, S>
+impl<S> AsyncStoreRead for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq,
-    V: Clone,
-    S: AsyncStoreRead<Key = K, Value = V>,
+    S: AsyncStoreRead<Key: Clone + Hash + Eq, Value: Clone>,
 {
-    async fn get(&self, key: K) -> Option<Self::Value> {
+    async fn get(&self, key: Self::Key) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(&key) {
             Some(val.clone())
         } else {
@@ -163,11 +166,9 @@ where
     }
 }
 
-impl<K, V, S> AsyncStoreWrite for LruCacheStore<K, V, S>
+impl<S> AsyncStoreWrite for LruCacheStore<S>
 where
-    K: Clone + Hash + Eq,
-    V: Clone,
-    S: AsyncStoreWrite<Key = K, Value = V>,
+    S: AsyncStoreWrite<Key: Clone + Hash + Eq, Value: Clone>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         self.cache.borrow_mut().pop(&key);
