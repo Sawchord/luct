@@ -1,24 +1,27 @@
-use std::{
-    cell::RefCell,
-    marker::PhantomData,
-    ops::{Deref, DerefMut},
-};
-
 use luct_core::store::{
     AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
     StoreBase, StoreRead, StoreWrite,
+};
+use std::{
+    cell::RefCell,
+    ops::{Deref, DerefMut},
 };
 
 /// A [`OrderedStore`](luct_core::store::OrderedStore) that caches the `last` value in memory
 ///
 /// If you need to call [`OrderedStoreRead::last`], this will speed up access
-pub struct LastValCacheStore<K, V, S> {
-    last: RefCell<Option<(K, V)>>,
+pub struct LastValCacheStore<S>
+where
+    S: StoreBase,
+{
+    last: RefCell<Option<(S::Key, S::Value)>>,
     inner: S,
-    _key: PhantomData<K>,
 }
 
-impl<K, V, S> Deref for LastValCacheStore<K, V, S> {
+impl<S> Deref for LastValCacheStore<S>
+where
+    S: StoreBase,
+{
     type Target = S;
 
     fn deref(&self) -> &Self::Target {
@@ -26,35 +29,40 @@ impl<K, V, S> Deref for LastValCacheStore<K, V, S> {
     }
 }
 
-impl<K, V, S> DerefMut for LastValCacheStore<K, V, S> {
+impl<S> DerefMut for LastValCacheStore<S>
+where
+    S: StoreBase,
+{
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
     }
 }
 
-impl<K, V, S> LastValCacheStore<K, V, S> {
+impl<S> LastValCacheStore<S>
+where
+    S: StoreBase,
+{
     pub fn new(store: S) -> Self {
         Self {
             last: RefCell::new(None),
             inner: store,
-            _key: PhantomData,
         }
     }
 }
 
-impl<K, V, S> StoreBase for LastValCacheStore<K, V, S>
+impl<S> StoreBase for LastValCacheStore<S>
 where
-    S: StoreBase<Key = K, Value = V>,
+    S: StoreBase,
 {
     type Key = S::Key;
     type Value = S::Value;
 }
 
-impl<K, V, S> StoreRead for LastValCacheStore<K, V, S>
+impl<S> StoreRead for LastValCacheStore<S>
 where
-    S: StoreRead<Key = K, Value = V>,
+    S: StoreRead,
 {
-    fn get(&self, key: &K) -> Option<V> {
+    fn get(&self, key: &Self::Key) -> Option<Self::Value> {
         self.inner.get(key)
     }
 
@@ -63,28 +71,26 @@ where
     }
 }
 
-impl<K, V, S> StoreWrite for LastValCacheStore<K, V, S>
+impl<S> StoreWrite for LastValCacheStore<S>
 where
-    S: StoreWrite<Key = K, Value = V>,
+    S: StoreWrite,
 {
-    fn insert(&self, key: K, value: V) {
+    fn insert(&self, key: Self::Key, value: Self::Value) {
         *self.last.borrow_mut() = None;
         self.inner.insert(key, value);
     }
 
-    fn delete(&self, key: &K) -> bool {
+    fn delete(&self, key: &Self::Key) -> bool {
         *self.last.borrow_mut() = None;
         self.inner.delete(key)
     }
 }
 
-impl<K, V, S> OrderedStoreRead for LastValCacheStore<K, V, S>
+impl<S> OrderedStoreRead for LastValCacheStore<S>
 where
-    K: Ord + Clone,
-    V: Clone,
-    S: OrderedStoreRead<Key = K, Value = V>,
+    S: OrderedStoreRead<Key: Clone, Value: Clone>,
 {
-    fn last(&self) -> Option<(K, V)> {
+    fn last(&self) -> Option<(Self::Key, Self::Value)> {
         let mut last_borrow = self.last.borrow_mut();
         match last_borrow.as_ref() {
             Some(last) => Some(last.clone()),
@@ -97,37 +103,38 @@ where
     }
 }
 
-impl<K, V, S> AppendableStore for LastValCacheStore<K, V, S>
+impl<S> AppendableStore for LastValCacheStore<S>
 where
-    K: Ord + Clone,
-    V: Clone,
-    S: AppendableStore<Key = K, Value = V>,
+    S: AppendableStore<Key: Clone, Value: Clone>,
 {
-    fn append(&self, value: V) -> K {
+    fn append(&self, value: Self::Value) -> Self::Key {
         *self.last.borrow_mut() = None;
         self.inner.append(value)
     }
 }
 
-impl<K, V, S> SearchableStoreRead for LastValCacheStore<K, V, S>
+impl<S> SearchableStoreRead for LastValCacheStore<S>
 where
-    K: Ord + Clone,
-    V: Clone,
-    S: SearchableStoreRead<Key = K, Value = V>,
+    S: SearchableStoreRead<Key: Clone, Value: Clone>,
 {
-    fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+    fn filter(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Vec<(Self::Key, Self::Value)> {
         self.inner.filter(pred)
     }
 
-    fn find(&self, pred: impl FnMut(&K, &V) -> bool) -> Option<(K, V)> {
+    fn find(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Option<(Self::Key, Self::Value)> {
         self.inner.find(pred)
     }
 }
 
-impl<K, V, S> AsyncStoreRead for LastValCacheStore<K, V, S>
+impl<S> AsyncStoreRead for LastValCacheStore<S>
 where
-    K: Clone,
-    S: AsyncStoreRead<Key = K, Value = V>,
+    S: AsyncStoreRead<Key: Clone>,
 {
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
         self.inner.get(key.clone()).await
@@ -138,10 +145,9 @@ where
     }
 }
 
-impl<K, V, S> AsyncStoreWrite for LastValCacheStore<K, V, S>
+impl<S> AsyncStoreWrite for LastValCacheStore<S>
 where
-    K: Clone,
-    S: AsyncStoreWrite<Key = K, Value = V>,
+    S: AsyncStoreWrite<Key: Clone>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         *self.last.borrow_mut() = None;
