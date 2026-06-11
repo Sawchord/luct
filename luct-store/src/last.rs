@@ -6,7 +6,7 @@ use std::{
 
 use luct_core::store::{
     AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
-    StoreRead, StoreWrite,
+    StoreBase, StoreRead, StoreWrite,
 };
 
 /// A [`OrderedStore`](luct_core::store::OrderedStore) that caches the `last` value in memory
@@ -42,13 +42,18 @@ impl<K, V, S> LastValCacheStore<K, V, S> {
     }
 }
 
+impl<K, V, S> StoreBase for LastValCacheStore<K, V, S>
+where
+    S: StoreBase<Key = K, Value = V>,
+{
+    type Key = S::Key;
+    type Value = S::Value;
+}
+
 impl<K, V, S> StoreRead for LastValCacheStore<K, V, S>
 where
     S: StoreRead<Key = K, Value = V>,
 {
-    type Key = S::Key;
-    type Value = S::Value;
-
     fn get(&self, key: &K) -> Option<V> {
         self.inner.get(key)
     }

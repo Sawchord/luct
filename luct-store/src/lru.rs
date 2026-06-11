@@ -1,7 +1,7 @@
 use lru::LruCache;
 use luct_core::store::{
     AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
-    StoreRead, StoreWrite,
+    StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -58,15 +58,20 @@ impl<K: Hash + Eq, V, S> LruCacheStore<K, V, S> {
     }
 }
 
+impl<K, V, S> StoreBase for LruCacheStore<K, V, S>
+where
+    S: StoreBase<Key = K, Value = V>,
+{
+    type Key = S::Key;
+    type Value = S::Value;
+}
+
 impl<K, V, S> StoreRead for LruCacheStore<K, V, S>
 where
     K: Clone + Hash + Eq,
     V: Clone,
     S: StoreRead<Key = K, Value = V>,
 {
-    type Key = S::Key;
-    type Value = S::Value;
-
     fn get(&self, key: &Self::Key) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(key) {
             Some(val.clone())
