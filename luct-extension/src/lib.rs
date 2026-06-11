@@ -33,11 +33,7 @@ struct ExtensionScannerImpl;
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = LruCacheStore<Fingerprint, Report, BrowserStore<Fingerprint, Report>>;
-    type SthStore = LastValCacheStore<
-        u64,
-        Validated<SignedTreeHead>,
-        BrowserStore<u64, Validated<SignedTreeHead>>,
-    >;
+    type SthStore = LastValCacheStore<BrowserStore<u64, Validated<SignedTreeHead>>>;
 }
 
 #[wasm_bindgen]
