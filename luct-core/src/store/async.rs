@@ -1,6 +1,6 @@
-pub trait AsyncStoreRead {
-    type Key;
-    type Value;
+use crate::store::StoreBase;
+
+pub trait AsyncStoreRead: StoreBase {
     /// Returns the value associated with `key` from the [`Store`](crate::store::Store)
     ///
     /// # Arguments:
@@ -26,11 +26,7 @@ pub trait AsyncStoreWrite: AsyncStoreRead {
     /// # Arguments:
     /// - `key`: the key associated with the value
     /// - `value`: the value itself
-    fn insert(
-        &self,
-        key: <Self as AsyncStoreRead>::Key,
-        value: <Self as AsyncStoreRead>::Value,
-    ) -> impl Future<Output = ()>;
+    fn insert(&self, key: Self::Key, value: Self::Value) -> impl Future<Output = ()>;
 }
 
 /// The [`AsyncStore`] trait is a version of the [`Store`](crate::store::Store) that is asynchrounous

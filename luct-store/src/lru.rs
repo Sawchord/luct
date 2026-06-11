@@ -148,9 +148,6 @@ where
     V: Clone,
     S: AsyncStoreRead<Key = K, Value = V>,
 {
-    type Key = <S as AsyncStoreRead>::Key;
-    type Value = <S as AsyncStoreRead>::Value;
-
     async fn get(&self, key: K) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(&key) {
             Some(val.clone())

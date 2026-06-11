@@ -127,11 +127,8 @@ where
 impl<K, V, S> AsyncStoreRead for LastValCacheStore<K, V, S>
 where
     K: Clone,
-    S: AsyncStoreRead<Key = K>,
+    S: AsyncStoreRead<Key = K, Value = V>,
 {
-    type Key = <S as AsyncStoreRead>::Key;
-    type Value = <S as AsyncStoreRead>::Value;
-
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
         self.inner.get(key.clone()).await
     }
@@ -144,7 +141,7 @@ where
 impl<K, V, S> AsyncStoreWrite for LastValCacheStore<K, V, S>
 where
     K: Clone,
-    S: AsyncStoreWrite<Key = K>,
+    S: AsyncStoreWrite<Key = K, Value = V>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         *self.last.borrow_mut() = None;
