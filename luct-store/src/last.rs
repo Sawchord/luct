@@ -42,10 +42,13 @@ impl<K, V, S> LastValCacheStore<K, V, S> {
     }
 }
 
-impl<K, V, S> StoreRead<K, V> for LastValCacheStore<K, V, S>
+impl<K, V, S> StoreRead for LastValCacheStore<K, V, S>
 where
-    S: StoreRead<K, V>,
+    S: StoreRead<Key = K, Value = V>,
 {
+    type Key = S::Key;
+    type Value = S::Value;
+
     fn get(&self, key: &K) -> Option<V> {
         self.inner.get(key)
     }
@@ -55,9 +58,9 @@ where
     }
 }
 
-impl<K, V, S> StoreWrite<K, V> for LastValCacheStore<K, V, S>
+impl<K, V, S> StoreWrite for LastValCacheStore<K, V, S>
 where
-    S: StoreWrite<K, V>,
+    S: StoreWrite<Key = K, Value = V>,
 {
     fn insert(&self, key: K, value: V) {
         *self.last.borrow_mut() = None;
@@ -70,11 +73,11 @@ where
     }
 }
 
-impl<K, V, S> OrderedStoreRead<K, V> for LastValCacheStore<K, V, S>
+impl<K, V, S> OrderedStoreRead for LastValCacheStore<K, V, S>
 where
     K: Ord + Clone,
     V: Clone,
-    S: OrderedStoreRead<K, V>,
+    S: OrderedStoreRead<Key = K, Value = V>,
 {
     fn last(&self) -> Option<(K, V)> {
         let mut last_borrow = self.last.borrow_mut();
@@ -89,11 +92,11 @@ where
     }
 }
 
-impl<K, V, S> AppendableStore<K, V> for LastValCacheStore<K, V, S>
+impl<K, V, S> AppendableStore for LastValCacheStore<K, V, S>
 where
     K: Ord + Clone,
     V: Clone,
-    S: AppendableStore<K, V>,
+    S: AppendableStore<Key = K, Value = V>,
 {
     fn append(&self, value: V) -> K {
         *self.last.borrow_mut() = None;
@@ -101,11 +104,11 @@ where
     }
 }
 
-impl<K, V, S> SearchableStoreRead<K, V> for LastValCacheStore<K, V, S>
+impl<K, V, S> SearchableStoreRead for LastValCacheStore<K, V, S>
 where
     K: Ord + Clone,
     V: Clone,
-    S: SearchableStoreRead<K, V>,
+    S: SearchableStoreRead<Key = K, Value = V>,
 {
     fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         self.inner.filter(pred)

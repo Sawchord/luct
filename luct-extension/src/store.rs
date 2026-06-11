@@ -65,7 +65,14 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for BrowserStore<K, V> {
+impl<K, V> StoreRead for BrowserStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
+    type Key = K;
+    type Value = V;
+
     fn get(&self, key: &K) -> Option<V> {
         let key = self.get_key_string(key);
 
@@ -80,7 +87,11 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for BrowserStore<K,
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K, V> {
+impl<K, V> StoreWrite for BrowserStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
     fn insert(&self, key: K, value: V) {
         let key = self.get_key_string(&key);
         let val = value.serialize_value();
@@ -119,7 +130,11 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for BrowserStore<K
     }
 }
 
-impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for BrowserStore<K, V> {
+impl<K, V> OrderedStoreRead for BrowserStore<K, V>
+where
+    K: StringStoreKey + Ord,
+    V: StringStoreValue,
+{
     fn last(&self) -> Option<(K, V)> {
         let key = Object::keys(&self.storage)
             .iter()
@@ -138,8 +153,10 @@ impl<K: StringStoreKey + Ord, V: StringStoreValue> OrderedStoreRead<K, V> for Br
     }
 }
 
-impl<K: StringStoreKey + Ord, V: StringStoreValue> SearchableStoreRead<K, V>
-    for BrowserStore<K, V>
+impl<K, V> SearchableStoreRead for BrowserStore<K, V>
+where
+    K: StringStoreKey + Ord,
+    V: StringStoreValue,
 {
     fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         Object::keys(&self.storage)

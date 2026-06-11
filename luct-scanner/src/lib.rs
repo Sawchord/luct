@@ -31,9 +31,9 @@ pub trait ScannerImpl {
     /// [`Client`] implementation to make connections to logs to
     type Client: Client + Clone;
     /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) of audit results
-    type ReportStore: SearchableStore<Fingerprint, Report>;
+    type ReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
     /// The [`Store`](luct_core::store::Store) use to store [`SignedTreeHeads`](SignedTreeHead)
-    type SthStore: SearchableStore<u64, Validated<SignedTreeHead>>;
+    type SthStore: SearchableStore<Key = u64, Value = Validated<SignedTreeHead>>;
 }
 
 /// The scanner holds the state that is necessary to perform audits as well as the auditing logic

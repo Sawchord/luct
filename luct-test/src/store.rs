@@ -1,7 +1,7 @@
 use luct_core::store::{OrderedStore, SearchableStore, Store};
 
 /// Basic store test that tests abillity to store and retreive items
-pub fn store_test<S: Store<u64, String>>(store: S) {
+pub fn store_test<S: Store<Key = u64, Value = String>>(store: S) {
     assert!(store.is_empty());
 
     // Check that store persists values
@@ -34,7 +34,7 @@ pub fn store_test<S: Store<u64, String>>(store: S) {
 }
 
 /// Tests capabilities of an ordered store
-pub fn ordered_store_test<S: OrderedStore<u64, String>>(store: S) {
+pub fn ordered_store_test<S: OrderedStore<Key = u64, Value = String>>(store: S) {
     assert!(store.is_empty());
 
     // Insert an element
@@ -73,7 +73,7 @@ pub fn ordered_store_test<S: OrderedStore<u64, String>>(store: S) {
     assert_eq!(store.last(), Some((2, "two".to_string())));
 }
 
-pub fn searchable_store_test<S: SearchableStore<u64, String>>(store: S) {
+pub fn searchable_store_test<S: SearchableStore<Key = u64, Value = String>>(store: S) {
     assert!(store.is_empty());
 
     // Insert some element out of ourder
