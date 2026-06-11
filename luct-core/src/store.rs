@@ -43,7 +43,7 @@ pub trait StoreWrite: StoreRead {
     /// # Arguments:
     /// - `key`: the key associated with the value
     /// - `value`: the value itself
-    fn insert(&self, key: <Self as StoreRead>::Key, value: <Self as StoreRead>::Value);
+    fn insert(&self, key: Self::Key, value: Self::Value);
 
     /// Remove a value from the store
     ///
@@ -53,7 +53,7 @@ pub trait StoreWrite: StoreRead {
     /// # Returns
     /// - `true` if the key existed and has been removed
     /// - `false` otherwise
-    fn delete(&self, key: &<Self as StoreRead>::Key) -> bool;
+    fn delete(&self, key: &Self::Key) -> bool;
 }
 
 /// The [`Store`] trait is a basic key-value store trait
@@ -71,7 +71,7 @@ pub trait OrderedStoreRead: StoreRead<Key: Ord> {
     /// # Returns
     /// - `Some(key, value)` if the store is non-empty
     /// - `None` otherwise
-    fn last(&self) -> Option<(<Self as StoreRead>::Key, <Self as StoreRead>::Value)>;
+    fn last(&self) -> Option<(Self::Key, Self::Value)>;
 }
 
 pub trait OrderedStore: OrderedStoreRead + StoreWrite {}
@@ -91,7 +91,7 @@ pub trait AppendableStore: OrderedStoreRead {
     ///
     /// # Returns:
     /// - the index of the new value. This is the key under which the value can later be retreived
-    fn append(&self, value: <Self as StoreRead>::Value) -> <Self as StoreRead>::Key;
+    fn append(&self, value: Self::Value) -> Self::Key;
 }
 
 /// Extension to a [`OrderedStoreRead`], that allows looking through the store to look for specific
@@ -108,13 +108,13 @@ pub trait SearchableStoreRead: OrderedStoreRead {
     /// - An array of key-value pairs, for which `pred` holds true
     fn filter(
         &self,
-        pred: impl FnMut(&<Self as StoreRead>::Key, &<Self as StoreRead>::Value) -> bool,
-    ) -> Vec<(<Self as StoreRead>::Key, <Self as StoreRead>::Value)>;
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Vec<(Self::Key, Self::Value)>;
 
     fn find(
         &self,
-        mut pred: impl FnMut(&<Self as StoreRead>::Key, &<Self as StoreRead>::Value) -> bool,
-    ) -> Option<(<Self as StoreRead>::Key, <Self as StoreRead>::Value)> {
+        mut pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Option<(Self::Key, Self::Value)> {
         let mut found = false;
 
         let vals = self.filter(|key, value| {
