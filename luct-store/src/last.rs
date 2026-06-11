@@ -77,11 +77,12 @@ where
     S: OrderedStoreRead<K, V>,
 {
     fn last(&self) -> Option<(K, V)> {
-        match self.last.borrow().as_ref() {
+        let mut last_borrow = self.last.borrow_mut();
+        match last_borrow.as_ref() {
             Some(last) => Some(last.clone()),
             None => {
                 let last = self.inner.last();
-                *self.last.borrow_mut() = last.clone();
+                *last_borrow = last.clone();
                 last
             }
         }
@@ -136,5 +137,30 @@ where
     async fn insert(&self, key: K, value: V) {
         *self.last.borrow_mut() = None;
         self.inner.insert(key, value).await
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use luct_core::store::MemoryStore;
+    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
+
+    #[test]
+    fn last_val_store() {
+        let store = LastValCache::new(MemoryStore::<u64, String>::default());
+        store_test(store);
+    }
+
+    #[test]
+    fn last_val_ordered_store() {
+        let store = LastValCache::new(MemoryStore::<u64, String>::default());
+        ordered_store_test(store);
+    }
+
+    #[test]
+    fn last_val_searchable_store() {
+        let store = LastValCache::new(MemoryStore::<u64, String>::default());
+        searchable_store_test(store);
     }
 }
