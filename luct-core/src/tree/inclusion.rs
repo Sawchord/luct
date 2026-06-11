@@ -4,10 +4,9 @@ use crate::{
 };
 use futures::{FutureExt, future::join_all};
 
-impl<N, L, V> Tree<N, L, V>
+impl<N, L> Tree<N, L>
 where
     N: StoreRead<Key = NodeKey, Value = HashOutput>,
-    V: Hashable,
 {
     /// This follows RFC 9162 2.1.3.1
     pub fn get_audit_proof(
@@ -36,10 +35,9 @@ where
     }
 }
 
-impl<N, L, V> Tree<N, L, V>
+impl<N, L> Tree<N, L>
 where
     N: AsyncStoreRead<Key = NodeKey, Value = HashOutput>,
-    V: Hashable,
 {
     pub async fn get_audit_proof_async(
         &self,
@@ -160,7 +158,7 @@ mod tests {
 
     #[test]
     fn compute_audit_proofs() {
-        let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>, String>::new(
+        let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>>::new(
             MemoryStore::default(),
             MemoryStore::default(),
         );
