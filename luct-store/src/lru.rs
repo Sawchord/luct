@@ -58,13 +58,16 @@ impl<K: Hash + Eq, V, S> LruCacheStore<K, V, S> {
     }
 }
 
-impl<K, V, S> StoreRead<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> StoreRead for LruCacheStore<K, V, S>
 where
     K: Clone + Hash + Eq,
     V: Clone,
-    S: StoreRead<K, V>,
+    S: StoreRead<Key = K, Value = V>,
 {
-    fn get(&self, key: &K) -> Option<V> {
+    type Key = S::Key;
+    type Value = S::Value;
+
+    fn get(&self, key: &Self::Key) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(key) {
             Some(val.clone())
         } else {
@@ -79,51 +82,51 @@ where
     }
 }
 
-impl<K, V, S> StoreWrite<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> StoreWrite for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq,
+    K: Clone + Hash + Eq,
     V: Clone,
-    S: StoreWrite<K, V>,
+    S: StoreWrite<Key = K, Value = V>,
 {
-    fn insert(&self, key: K, value: V) {
+    fn insert(&self, key: Self::Key, value: Self::Value) {
         self.cache.borrow_mut().pop(&key);
         self.inner.insert(key, value);
     }
 
-    fn delete(&self, key: &K) -> bool {
+    fn delete(&self, key: &Self::Key) -> bool {
         let contained = self.inner.delete(key);
         self.cache.borrow_mut().pop(key);
         contained
     }
 }
 
-impl<K, V, S> OrderedStoreRead<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> OrderedStoreRead for LruCacheStore<K, V, S>
 where
     K: Clone + Hash + Eq + Ord,
     V: Clone,
-    S: OrderedStoreRead<K, V>,
+    S: OrderedStoreRead<Key = K, Value = V>,
 {
-    fn last(&self) -> Option<(K, V)> {
+    fn last(&self) -> Option<(Self::Key, Self::Value)> {
         self.inner.last()
     }
 }
 
-impl<K, V, S> AppendableStore<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> AppendableStore for LruCacheStore<K, V, S>
 where
     K: Clone + Hash + Eq + Ord,
     V: Clone,
-    S: AppendableStore<K, V>,
+    S: AppendableStore<Key = K, Value = V>,
 {
     fn append(&self, value: V) -> K {
         self.inner.append(value)
     }
 }
 
-impl<K, V, S> SearchableStoreRead<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> SearchableStoreRead for LruCacheStore<K, V, S>
 where
     K: Clone + Hash + Eq + Ord,
     V: Clone,
-    S: SearchableStoreRead<K, V>,
+    S: SearchableStoreRead<Key = K, Value = V>,
 {
     fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         self.inner.filter(pred)

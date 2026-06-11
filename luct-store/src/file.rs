@@ -84,7 +84,10 @@ impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for FilesystemStore<K, V> {
+impl<K: StringStoreKey, V: StringStoreValue> StoreRead for FilesystemStore<K, V> {
+    type Key = K;
+    type Value = V;
+
     fn get(&self, key: &K) -> Option<V> {
         let _lock = self.access.lock().unwrap();
         let data = std::fs::read_to_string(self.path.join(key.serialize_key())).ok()?;
@@ -101,7 +104,11 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreRead<K, V> for FilesystemStore
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStore<K, V> {
+impl<K, V> StoreWrite for FilesystemStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
     fn insert(&self, key: K, value: V) {
         let _lock = self.access.lock().unwrap();
         let store_path = self.path.join(key.serialize_key());
@@ -126,7 +133,11 @@ impl<K: StringStoreKey, V: StringStoreValue> StoreWrite<K, V> for FilesystemStor
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for FilesystemStore<K, V> {
+impl<K, V> OrderedStoreRead for FilesystemStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
     fn last(&self) -> Option<(K, V)> {
         let _lock = self.access.lock().unwrap();
         let keys = self.get_sorted_keys()?;
@@ -140,7 +151,11 @@ impl<K: StringStoreKey, V: StringStoreValue> OrderedStoreRead<K, V> for Filesyst
     }
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> SearchableStoreRead<K, V> for FilesystemStore<K, V> {
+impl<K, V> SearchableStoreRead for FilesystemStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
     fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         let _lock = self.access.lock().unwrap();
         let Some(keys) = self.get_sorted_keys() else {

@@ -12,11 +12,14 @@ pub enum StoreSwitch<A, B> {
     B(B),
 }
 
-impl<A, B, K, V> StoreRead<K, V> for StoreSwitch<A, B>
+impl<A, B, K, V> StoreRead for StoreSwitch<A, B>
 where
-    A: StoreRead<K, V>,
-    B: StoreRead<K, V>,
+    A: StoreRead<Key = K, Value = V>,
+    B: StoreRead<Key = K, Value = V>,
 {
+    type Key = K;
+    type Value = V;
+
     fn get(&self, key: &K) -> Option<V> {
         match self {
             StoreSwitch::A(a) => a.get(key),
@@ -32,10 +35,10 @@ where
     }
 }
 
-impl<A, B, K, V> StoreWrite<K, V> for StoreSwitch<A, B>
+impl<A, B, K, V> StoreWrite for StoreSwitch<A, B>
 where
-    A: StoreWrite<K, V>,
-    B: StoreWrite<K, V>,
+    A: StoreWrite<Key = K, Value = V>,
+    B: StoreWrite<Key = K, Value = V>,
 {
     fn insert(&self, key: K, value: V) {
         match self {
@@ -52,11 +55,11 @@ where
     }
 }
 
-impl<A, B, K, V> OrderedStoreRead<K, V> for StoreSwitch<A, B>
+impl<A, B, K, V> OrderedStoreRead for StoreSwitch<A, B>
 where
     K: Ord,
-    A: OrderedStoreRead<K, V>,
-    B: OrderedStoreRead<K, V>,
+    A: OrderedStoreRead<Key = K, Value = V>,
+    B: OrderedStoreRead<Key = K, Value = V>,
 {
     fn last(&self) -> Option<(K, V)> {
         match self {
@@ -66,11 +69,11 @@ where
     }
 }
 
-impl<A, B, K, V> AppendableStore<K, V> for StoreSwitch<A, B>
+impl<A, B, K, V> AppendableStore for StoreSwitch<A, B>
 where
     K: Ord,
-    A: AppendableStore<K, V>,
-    B: AppendableStore<K, V>,
+    A: AppendableStore<Key = K, Value = V>,
+    B: AppendableStore<Key = K, Value = V>,
 {
     fn append(&self, value: V) -> K {
         match self {
@@ -80,11 +83,11 @@ where
     }
 }
 
-impl<A, B, K, V> SearchableStoreRead<K, V> for StoreSwitch<A, B>
+impl<A, B, K, V> SearchableStoreRead for StoreSwitch<A, B>
 where
     K: Ord,
-    A: SearchableStoreRead<K, V>,
-    B: SearchableStoreRead<K, V>,
+    A: SearchableStoreRead<Key = K, Value = V>,
+    B: SearchableStoreRead<Key = K, Value = V>,
 {
     fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         match self {
