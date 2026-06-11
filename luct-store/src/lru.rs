@@ -134,13 +134,16 @@ where
     }
 }
 
-impl<K, V, S> AsyncStoreRead<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> AsyncStoreRead for LruCacheStore<K, V, S>
 where
     K: Clone + Hash + Eq,
     V: Clone,
-    S: AsyncStoreRead<K, V>,
+    S: AsyncStoreRead<Key = K, Value = V>,
 {
-    async fn get(&self, key: K) -> Option<V> {
+    type Key = <S as AsyncStoreRead>::Key;
+    type Value = <S as AsyncStoreRead>::Value;
+
+    async fn get(&self, key: K) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(&key) {
             Some(val.clone())
         } else {
@@ -155,13 +158,13 @@ where
     }
 }
 
-impl<K, V, S> AsyncStoreWrite<K, V> for LruCacheStore<K, V, S>
+impl<K, V, S> AsyncStoreWrite for LruCacheStore<K, V, S>
 where
-    K: Hash + Eq,
+    K: Clone + Hash + Eq,
     V: Clone,
-    S: AsyncStoreWrite<K, V>,
+    S: AsyncStoreWrite<Key = K, Value = V>,
 {
-    async fn insert(&self, key: K, value: V) {
+    async fn insert(&self, key: Self::Key, value: Self::Value) {
         self.cache.borrow_mut().pop(&key);
         self.inner.insert(key, value).await
     }

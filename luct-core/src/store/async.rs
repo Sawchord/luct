@@ -1,4 +1,6 @@
-pub trait AsyncStoreRead<K, V> {
+pub trait AsyncStoreRead {
+    type Key;
+    type Value;
     /// Returns the value associated with `key` from the [`Store`](crate::store::Store)
     ///
     /// # Arguments:
@@ -7,7 +9,7 @@ pub trait AsyncStoreRead<K, V> {
     /// # Returns:
     /// - `Some(value)`, if the value exists
     /// - `None` otherwise
-    fn get(&self, key: K) -> impl Future<Output = Option<V>>;
+    fn get(&self, key: Self::Key) -> impl Future<Output = Option<Self::Value>>;
 
     /// Returns the number of elements in the [`Store`](crate::store::Store)
     fn len(&self) -> impl Future<Output = usize>;
@@ -18,19 +20,23 @@ pub trait AsyncStoreRead<K, V> {
     }
 }
 
-pub trait AsyncStoreWrite<K, V> {
+pub trait AsyncStoreWrite: AsyncStoreRead {
     /// Insert a value into the store
     ///
     /// # Arguments:
     /// - `key`: the key associated with the value
     /// - `value`: the value itself
-    fn insert(&self, key: K, value: V) -> impl Future<Output = ()>;
+    fn insert(
+        &self,
+        key: <Self as AsyncStoreRead>::Key,
+        value: <Self as AsyncStoreRead>::Value,
+    ) -> impl Future<Output = ()>;
 }
 
 /// The [`AsyncStore`] trait is a version of the [`Store`](crate::store::Store) that is asynchrounous
 ///
 /// This allows the underlying store engine to make asynchronous requests,
 /// such as a distributed storage or rebuilding the store dynamically using tiles
-pub trait AsyncStore<K, V>: AsyncStoreRead<K, V> + AsyncStoreWrite<K, V> {}
+pub trait AsyncStore: AsyncStoreRead + AsyncStoreWrite {}
 
-impl<K, V, T> AsyncStore<K, V> for T where T: AsyncStoreRead<K, V> + AsyncStoreWrite<K, V> {}
+impl<T> AsyncStore for T where T: AsyncStoreRead + AsyncStoreWrite {}
