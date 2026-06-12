@@ -13,8 +13,8 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-luct-client = { version = "0.1.0", path = "../luct-client" }
-otlsp-client = { version = "0.1.0", path = "../otlsp-client" }
+luct-client = { version = "0.2.0", path = "../luct-client" }
+otlsp-client = { version = "0.2.0", path = "../otlsp-client" }
 
 hyper = { workspace = true }
 url = { workspace = true }
@@ -27,8 +27,8 @@ tracing = { workspace = true }
 web-time = { workspace = true }
 
 [dev-dependencies]
-luct-core = { version = "0.1.0", path = "../luct-core" }
-luct-test = { version = "0.1.0", path = "../luct-test" }
+luct-core = { version = "0.2.0", path = "../luct-core" }
+luct-test = { version = "0.2.0", path = "../luct-test" }
 
 tokio = { workspace = true, features = ["rt", "macros"] }
 wasm-bindgen-test = { workspace = true }

@@ -13,7 +13,7 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-otlsp-core = { version = "0.1.0", path = "../otlsp-core" }
+otlsp-core = { version = "0.2.0", path = "../otlsp-core" }
 
 # HTTP
 hyper = { workspace = true }
@@ -54,7 +54,7 @@ tokio-tungstenite = { workspace = true }
 futures = { workspace = true }
 
 [dev-dependencies]
-luct-test = { version = "0.1.0", path = "../luct-test" }
+luct-test = { version = "0.2.0", path = "../luct-test" }
 
 wasm-bindgen-test = { workspace = true }
 tokio = { workspace = true, features = ["rt", "macros"] }
