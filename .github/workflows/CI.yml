@@ -12,8 +12,9 @@ jobs:
   tests:
     uses: ./.github/workflows/tests.yml
 
-  browser-tests:
-    uses: ./.github/workflows/browser-tests.yml
+  # FIXME: This test is currently broken due to an upstream issue: https://github.com/rwf2/cookie-rs/issues/251
+  # browser-tests:
+  #   uses: ./.github/workflows/browser-tests.yml
   
   build-cli:
     needs:
