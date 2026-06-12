@@ -29,14 +29,7 @@ class TabState {
     }
 
     deleteTab(tabId) {
-        let toDelete = [];
-        this.tabs.forEach((_value, key) => {
-            if (key[0] === tabId) {
-                toDelete.push(key);
-            }
-        });
-
-        toDelete.forEach((key) => this.tabs.delete(key));
+        this.tabs.delete(tabId)
     }
 }
 
@@ -153,7 +146,7 @@ function setup_tab_actions() {
 
     browser.tabs.onUpdated.addListener(async (tabId, _changeInfo, tab) => {
         log(`Tab ${tabId} has updated url`)
-        tabs.deleteTab(tabId);
+        tabState.deleteTab(tabId);
     },
         { properties: ["url"] }
     );
