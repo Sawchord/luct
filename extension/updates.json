@@ -5,6 +5,10 @@
                 {
                     "version": "0.1.0",
                     "update_link": "https://download.luct.dev/downloads/luct-0.1.0.xpi"
+                },
+                {
+                    "version": "0.2.0",
+                    "update_link": "https://download.luct.dev/downloads/luct-0.2.0.xpi"
                 }
             ]
         }
