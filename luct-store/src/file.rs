@@ -180,11 +180,11 @@ where
 mod tests {
     use super::*;
     use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
-    use tempdir::TempDir;
+    use tempfile::TempDir;
 
     #[test]
     fn filesystem_store() {
-        let dir = TempDir::new("filesystem_store").unwrap();
+        let dir = TempDir::new().unwrap();
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         store_test(store);
@@ -192,7 +192,7 @@ mod tests {
 
     #[test]
     fn filesystem_ordered_store() {
-        let dir = TempDir::new("filesystem_store").unwrap();
+        let dir = TempDir::new().unwrap();
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         ordered_store_test(store);
@@ -200,7 +200,7 @@ mod tests {
 
     #[test]
     fn filesystem_searchable_store() {
-        let dir = TempDir::new("filesystem_store").unwrap();
+        let dir = TempDir::new().unwrap();
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         searchable_store_test(store);

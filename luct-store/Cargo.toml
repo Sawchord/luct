@@ -26,7 +26,7 @@ lru = { workspace = true }
 [dev-dependencies]
 luct-test = { version = "0.2.0", path = "../luct-test" }
 
-tempdir = { workspace = true }
+tempfile = { workspace = true }
 
 [features]
 #default = ["filesystem"]
