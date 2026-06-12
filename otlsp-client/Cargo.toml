@@ -48,7 +48,7 @@ wasm-bindgen-futures = { workspace = true }
 getrandom = { version = "0.2", features = ["js"] }
 
 [target.'cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))'.dependencies]
-tokio = { workspace = true }
+tokio = { workspace = true, features = ["rt"] }
 tungstenite = { workspace = true }
 tokio-tungstenite = { workspace = true }
 futures = { workspace = true }
