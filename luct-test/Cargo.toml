@@ -13,7 +13,7 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-luct-core = { version = "0.1.0", path = "../luct-core" }
+luct-core = { version = "0.2.0", path = "../luct-core" }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 

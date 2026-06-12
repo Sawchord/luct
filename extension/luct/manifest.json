@@ -1,7 +1,7 @@
 {
     "manifest_version": 2,
     "name": "luCT certificate scanner",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "description": "Audit certificate transparency logs in the browser",
     "browser_specific_settings": {
         "gecko": {
