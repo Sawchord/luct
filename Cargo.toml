@@ -89,7 +89,7 @@ config = { version = "0.15", default-features = false, features = ["toml"] }
 derive_builder = { version = "0.20" }
 dotenv = { version = "0.15" }
 eyre = { version = "0.6" }
-tempdir = { version = "0.3" }
+tempfile = { version = "3" }
 thiserror = { version = "2" }
 chrono = { version = "0.4", features = ["serde"] }
 rand = { version = "0.10", features = ["chacha"] }
