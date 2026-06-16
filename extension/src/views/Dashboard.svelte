@@ -2,48 +2,59 @@
     import Donut from "../components/charts/Donut.svelte";
     import Page from "../components/Page.svelte";
 
-    let data = [
-        ["A", 200],
-        ["B", 100],
-        ["C", 50],
-    ];
+    async function basic_statistics() {
+        let stats = await browser.runtime.sendMessage("basic_statistics");
+        console.log(stats);
+        return stats;
+    }
 </script>
 
 <Page>
     <div slot="content">
-        <b>TODO: Implement the dashboard page</b>
+        {#await basic_statistics()}
+            <b>Loading statistics</b>
+        {:then stats}
+            <div class="columns">
+                <div class="column">
+                    <div class="card">
+                        <header class="card-header">
+                            <p class="card-header-title">Root CAs</p>
+                        </header>
+                        <div class="card-content">
+                            The number of scanned certificates, partitioned by
+                            their root certificate authority.
+                        </div>
+                        <div class="card-image">
+                            <Donut data={stats.roots_cas} />
+                        </div>
 
-        <div class="columns">
-            <div class="column">
-                <div class="card">
-                    <header class="card-header">
-                        <p class="card-header-title">Root CAs</p>
-                    </header>
-                    <div class="card-image">
-                        <Donut {data} />
+                        <footer class="card-footer">
+                            <div class="content">
+                                <b>Total: TODO: Implement</b>
+                            </div>
+                        </footer>
                     </div>
-                    <footer class="card-footer">
-                        <div class="content">
-                            <b>Total: 350</b>
+                </div>
+                <div class="column">
+                    <div class="card">
+                        <header class="card-header">
+                            <p class="card-header-title">Scanned SCTs</p>
+                        </header>
+                        <div class="card-content">
+                            The number of validated SCTs, partitioned by their
+                            logs.
                         </div>
-                    </footer>
+                        <div class="card-image">
+                            <Donut data={stats.scts} />
+                        </div>
+                        <footer class="card-footer">
+                            <div class="content">
+                                <b>Total: TODO: Implement</b>
+                            </div>
+                        </footer>
+                    </div>
                 </div>
             </div>
-            <div class="column">
-                <div class="card">
-                    <header class="card-header">
-                        <p class="card-header-title">Root CAs</p>
-                    </header>
-                    <div class="card-image">
-                        <Donut {data} />
-                    </div>
-                    <footer class="card-footer">
-                        <div class="content">
-                            <b>Total: 350</b>
-                        </div>
-                    </footer>
-                </div>
-            </div>
-        </div>
+        {/await}
     </div>
 </Page>

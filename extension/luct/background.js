@@ -125,14 +125,21 @@ function add_listener() {
     }, ALL_SITES, extraInfoSpec);
 
     browser.runtime.onMessage.addListener((message, _sender, respond) => {
-        if (message === "reload") {
-            load_scanner()
-            return;
+        switch (message) {
+            case "reload":
+                load_scanner();
+                return;
+            case "basic_statistics":
+                let stats = scanner.basic_statistics();
+                respond(stats);
+                return;
+            default:
+                let tabData = tabState.tabs.get(message.tabId);
+                activeTab = message.tabId;
+                respond(tabData);
+                return;
         }
 
-        let tabData = tabState.tabs.get(message.tabId);
-        activeTab = message.tabId;
-        respond(tabData);
     });
 
     log('Added listeners')

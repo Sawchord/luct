@@ -16,7 +16,8 @@
                 cutout: "75%",
                 plugins: {
                     legend: {
-                        position: "bottom",
+                        //position: "bottom",
+                        display: false,
                     },
                 },
             },
