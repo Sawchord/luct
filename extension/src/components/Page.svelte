@@ -1,13 +1,18 @@
 <div class="page-container">
-    <div class="content-slot">
-        <slot name="content"></slot>
-    </div>
-
-    <footer class="footer footer-slot">
-        <div class="content has-text-centered">
-            <slot name="footer"></slot>
+    {#if $$slots.footer}
+        <div class="content-slot">
+            <slot name="content"></slot>
         </div>
-    </footer>
+        <footer class="footer footer-slot">
+            <div class="content has-text-centered">
+                <slot name="footer"></slot>
+            </div>
+        </footer>
+    {:else}
+        <div class="">
+            <slot name="content"></slot>
+        </div>
+    {/if}
 </div>
 
 <style lang="sass">
