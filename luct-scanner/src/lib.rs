@@ -21,6 +21,7 @@ mod config;
 mod error;
 mod log;
 mod report;
+mod stats;
 mod sth;
 mod utils;
 

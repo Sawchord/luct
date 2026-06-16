@@ -189,6 +189,12 @@ impl Scanner {
 
         Ok(is_recusion)
     }
+
+    #[wasm_bindgen]
+    pub fn basic_statistics(&self) -> Result<JsValue, String> {
+        let stats = self.scanner.basic_statistics();
+        serde_wasm_bindgen::to_value(&stats).map_err(|err| format!("{err}"))
+    }
 }
 
 // TODO: Full scenario test
