@@ -13,7 +13,7 @@
         chart = new Chart(canvas, {
             type: "doughnut",
             options: {
-                cutout: "75%",
+                cutout: "60%",
                 plugins: {
                     legend: {
                         //position: "bottom",
