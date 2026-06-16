@@ -22,7 +22,7 @@ impl<S: ScannerImpl> Scanner<S> {
         )
         .unwrap();
 
-        let reports = self.report_store.filter(|_, value| value.not_after < now);
+        let reports = self.report_store.filter(|_, value| value.not_after > now);
 
         let mut roots_cas = BTreeMap::new();
         let mut scts = BTreeMap::new();
