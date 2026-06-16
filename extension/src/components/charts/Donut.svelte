@@ -4,12 +4,13 @@
 
     export let data;
     let canvas;
+    let chart;
 
     const labels = data.map((val) => val[0]);
     const values = data.map((val) => val[1]);
 
-    onMount(() => {
-        new Chart(canvas, {
+    function drawChart() {
+        chart = new Chart(canvas, {
             type: "doughnut",
             options: {
                 cutout: "75%",
@@ -28,7 +29,14 @@
                 ],
             },
         });
+    }
+
+    window.addEventListener("resize", () => {
+        chart.destroy();
+        drawChart();
     });
+
+    onMount(drawChart);
 </script>
 
 <canvas bind:this={canvas}></canvas>
