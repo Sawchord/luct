@@ -1,7 +1,7 @@
 import "./style.sass";
 
-import Sidebar from "./Sidebar.svelte";
-import Options from "./Options.svelte"
+import Sidebar from "./views/Sidebar.svelte";
+import Options from "./views/Options.svelte"
 
 export function sidebar() {
     new Sidebar({ target: document.body })

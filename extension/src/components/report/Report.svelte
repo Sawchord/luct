@@ -1,9 +1,8 @@
 <script>
     import CertLifetime from "./CertLifetime.svelte";
-    import Expandable from "./Expandable.svelte";
+    import Expandable from "../Expandable.svelte";
     import SctsDisplay from "./SctsDisplay.svelte";
-    import StatusIcon from "./StatusIcon.svelte";
-    import TimeDisplay from "./TimeDisplay.svelte";
+    import StatusIcon from "../StatusIcon.svelte";
 
     export let report;
 </script>

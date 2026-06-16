@@ -1,6 +1,6 @@
 <script>
-    import Expandable from "./Expandable.svelte";
-    import TimeDisplay from "./TimeDisplay.svelte";
+    import Expandable from "../Expandable.svelte";
+    import TimeDisplay from "../TimeDisplay.svelte";
 
     export let not_before;
     export let not_after;

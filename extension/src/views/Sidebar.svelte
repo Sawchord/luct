@@ -1,6 +1,6 @@
 <script>
-    import Report from "./components/Report.svelte";
-    import Page from "./components/Page.svelte";
+    import Report from "../components/report/Report.svelte";
+    import Page from "../components/Page.svelte";
 
     let windowId;
     let tabId;

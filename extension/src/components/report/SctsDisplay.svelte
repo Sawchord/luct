@@ -1,5 +1,5 @@
 <script>
-    import Expandable from "./Expandable.svelte";
+    import Expandable from "../Expandable.svelte";
     import SctDisplay from "./SctDisplay.svelte";
 
     export let scts;

@@ -1,7 +1,7 @@
 <script>
-    import Expandable from "./Expandable.svelte";
+    import Expandable from "../Expandable.svelte";
     import SthDisplay from "./SthDisplay.svelte";
-    import TimeDisplay from "./TimeDisplay.svelte";
+    import TimeDisplay from "../TimeDisplay.svelte";
 
     export let sct;
 </script>
