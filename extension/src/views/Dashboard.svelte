@@ -4,7 +4,6 @@
 
     async function basic_statistics() {
         let stats = await browser.runtime.sendMessage("basic_statistics");
-        console.log(stats);
         return stats;
     }
 </script>
@@ -14,13 +13,13 @@
         {#await basic_statistics()}
             <b>Loading statistics</b>
         {:then stats}
-            <div class="columns">
+            <div class="columns column-spacing">
                 <div class="column">
                     <div class="card">
                         <header class="card-header">
                             <p class="card-header-title">Root CAs</p>
                         </header>
-                        <div class="card-content">
+                        <div class="card-content align-card-content">
                             The number of scanned certificates, partitioned by
                             their root certificate authority.
                         </div>
@@ -40,7 +39,7 @@
                         <header class="card-header">
                             <p class="card-header-title">Scanned SCTs</p>
                         </header>
-                        <div class="card-content">
+                        <div class="card-content align-card-content">
                             The number of validated SCTs, partitioned by their
                             logs.
                         </div>
@@ -58,3 +57,12 @@
         {/await}
     </div>
 </Page>
+
+<style lang="sass">
+.column-spacing
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+
+.align-card-content
+    min-height: 6rem;
+</style>
