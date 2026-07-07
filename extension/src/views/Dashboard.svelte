@@ -4,6 +4,15 @@
 
     async function basic_statistics() {
         let stats = await browser.runtime.sendMessage("basic_statistics");
+
+        stats.roots_cas_total = stats.roots_cas.reduce(
+            (total, root_ca) => total + root_ca[1],
+            0,
+        );
+
+        stats.scts_total = stats.scts.reduce((total, sct) => total + sct[1], 0);
+
+        console.log(stats);
         return stats;
     }
 </script>
@@ -23,7 +32,7 @@
                             The number of scanned certificates, partitioned by
                             their root certificate authority.
                         </div>
-                        <div class="card-image">
+                        <div class="card-image card-spacing">
                             <Donut
                                 data={stats.roots_cas}
                                 onClick={(label) =>
@@ -32,9 +41,9 @@
                             />
                         </div>
 
-                        <footer class="card-footer">
+                        <footer class="card-footer total-spacing">
                             <div class="content">
-                                <b>Total: TODO: Implement</b>
+                                <b>Total: {stats.roots_cas_total}</b>
                             </div>
                         </footer>
                     </div>
@@ -48,7 +57,7 @@
                             The number of validated SCTs, partitioned by their
                             logs.
                         </div>
-                        <div class="card-image">
+                        <div class="card-image card-spacing">
                             <Donut
                                 data={stats.scts}
                                 onClick={(label) =>
@@ -58,9 +67,9 @@
                                     )}
                             />
                         </div>
-                        <footer class="card-footer">
+                        <footer class="card-footer total-spacing">
                             <div class="content">
-                                <b>Total: TODO: Implement</b>
+                                <b>Total: {stats.scts_total}</b>
                             </div>
                         </footer>
                     </div>
@@ -72,9 +81,17 @@
 
 <style lang="sass">
 .column-spacing
-    padding-left: 1.5rem;
-    padding-right: 1.5rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 
 .align-card-content
     min-height: 6rem;
+
+.card-spacing
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    padding-bottom: 0.5rem;
+
+.total-spacing
+    padding: 0.5rem;
 </style>
