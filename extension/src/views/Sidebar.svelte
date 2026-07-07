@@ -1,6 +1,7 @@
 <script>
     import Report from "../components/report/Report.svelte";
     import Page from "../components/Page.svelte";
+    import LuctLogo from "../components/LuctLogo.svelte";
 
     let windowId;
     let tabId;
@@ -51,11 +52,41 @@
     function openOptions() {
         browser.runtime.openOptionsPage();
     }
+
+    function openDashboard() {
+        window.open("/dashboard.html");
+    }
 </script>
 
 <Page>
     <div slot="header" class="card">
-        <!-- TODO: Implement a navbar -->
+        <nav class="navbar navbar-extra" aria-label="main navigation">
+            <div class="navbar-brand">
+                <p class="navbar-item">
+                    <LuctLogo></LuctLogo>
+                </p>
+            </div>
+            <div class="navbar-end navbar-end-extra">
+                <div class="navbar-item">
+                    <div class="buttons">
+                        <button title="Open Dashboard" on:click={openDashboard}>
+                            <span class="icon is-large">
+                                <i
+                                    class="fa fa-lg fa-bar-chart"
+                                    aria-label="options"
+                                ></i>
+                            </span>
+                        </button>
+                        <button title="Open Settings" on:click={openOptions}>
+                            <span class="icon is-large">
+                                <i class="fa fa-lg fa-cog" aria-label="options"
+                                ></i>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
     </div>
     <div slot="content">
         {#await update_content()}
@@ -87,3 +118,11 @@
         </p>
     </div>
 </Page>
+
+<style lang="sass">
+.navbar-extra
+    display: flex
+
+.navbar-end-extra
+    margin-inline-start: auto
+</style>
