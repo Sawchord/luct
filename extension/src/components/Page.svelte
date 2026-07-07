@@ -1,4 +1,10 @@
 <div class="page-container">
+    {#if $$slots.header}
+        <header class="header header-slot">
+            <slot name="header"></slot>
+        </header>
+    {/if}
+
     {#if $$slots.footer}
         <div class="content-slot">
             <slot name="content"></slot>
@@ -18,9 +24,16 @@
 <style lang="sass">
 $footer-height: 6rem
 
+.header-slot
+    position: sticky
+    top: 0
+    text-align: center
+    align-content: center
+    z-index: 1000
+
 .page-container
-    position: relative;
-    min-height: 100vh;
+    position: relative
+    min-height: 100vh
 
 .content-slot
     padding-bottom: $footer-height
@@ -33,5 +46,5 @@ $footer-height: 6rem
     text-align: center
     align-content: center
     padding: 1rem
-    height: $footer-height;
+    height: $footer-height
 </style>
