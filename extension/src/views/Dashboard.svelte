@@ -24,7 +24,12 @@
                             their root certificate authority.
                         </div>
                         <div class="card-image">
-                            <Donut data={stats.roots_cas} />
+                            <Donut
+                                data={stats.roots_cas}
+                                onClick={(label) =>
+                                    // TODO: Navigate to RootCA overview of clicked log
+                                    console.log("Clicked RootCA: " + label)}
+                            />
                         </div>
 
                         <footer class="card-footer">
@@ -44,7 +49,14 @@
                             logs.
                         </div>
                         <div class="card-image">
-                            <Donut data={stats.scts} />
+                            <Donut
+                                data={stats.scts}
+                                onClick={(label) =>
+                                    // TODO: Navigate to the log overview of clicked log
+                                    console.log(
+                                        "Clicked Scanned SCT: " + label,
+                                    )}
+                            />
                         </div>
                         <footer class="card-footer">
                             <div class="content">
