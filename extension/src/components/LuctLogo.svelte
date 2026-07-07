@@ -5,4 +5,5 @@
 <style lang="sass">
 .logo
     fill: var(--bulma-text)
+    max-height: 32px
 </style>
