@@ -3,6 +3,7 @@
     import { onMount } from "svelte/internal";
 
     export let data;
+    export let onClick;
     let canvas;
     let chart;
 
@@ -16,9 +17,19 @@
                 cutout: "60%",
                 plugins: {
                     legend: {
-                        //position: "bottom",
                         display: false,
                     },
+                },
+                onClick: (_event, elements) => {
+                    if (elements.length > 0) {
+                        const clickedElement = elements[0];
+                        const dataIndex = clickedElement.index;
+                        const sliceLabel = chart.data.labels[dataIndex];
+
+                        if (onClick && typeof onClick === "function") {
+                            onClick(sliceLabel);
+                        }
+                    }
                 },
             },
             data: {
