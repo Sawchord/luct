@@ -54,6 +54,9 @@
 </script>
 
 <Page>
+    <div slot="header" class="card">
+        <!-- TODO: Implement a navbar -->
+    </div>
     <div slot="content">
         {#await update_content()}
             <p>Loading</p>

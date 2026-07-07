@@ -69,7 +69,7 @@
 </script>
 
 <Page>
-    <div slot="content" class="card">
+    <div slot="header" class="card">
         <header class="card-header">
             <p class="card-header-title">luCT Settings</p>
             <button class="card-header-icon" aria-label="more options">
@@ -78,6 +78,8 @@
                 </span>
             </button>
         </header>
+    </div>
+    <div slot="content" class="card">
 
         <div class="card-content">
             <label class="checkbox">
