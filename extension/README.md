@@ -27,22 +27,24 @@ cargo install wasm-pack wasm-opt
 
 ### Build and run using wasm-pack
 
-From `extension/luct` run the following commands:
+From workspace directory run the following commands:
 
 ```
-wasm-pack build ../../luct-extension --dev --out-dir ../extension/luct/wasm/ --target web --no-opt --no-typescript
+wasm-pack build ./luct-extension  --out-dir ../extension/luct/wasm/ --target web --no-opt --no-typescript
 ```
 
 ### Javascript side
 
-Inside of luct, run:
+Inside of `extension/luct`, run:
 
 ```
 npm install
-npm run dev
+npm run build
 ```
 
 ### Execute debugging firefox
+
+Inside of `extension/luct`, run:
 
 ```
 npm install -g web-ext
