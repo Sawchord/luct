@@ -99,14 +99,6 @@
     </div>
     <div slot="footer">
         <p>
-            <b class="card-footer-item"
-                ><div class="control">
-                    <button on:click={openOptions} class="button"
-                        >Open settings</button
-                    >
-                </div>
-            </b>
-
             <b class="card-footer-item">
                 <span
                     >Built with 🤎 by <a
