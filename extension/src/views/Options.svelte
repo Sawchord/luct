@@ -31,7 +31,7 @@
                 output.push([key, value]);
             } catch (error) {
                 console.log("Failed to export key: " + key);
-                console.log("Failed value: " + value);
+                //console.log("Failed value: " + value);
                 console.log(error);
             }
         }
@@ -80,7 +80,6 @@
         </header>
     </div>
     <div slot="content" class="card">
-
         <div class="card-content">
             <label class="checkbox">
                 <input

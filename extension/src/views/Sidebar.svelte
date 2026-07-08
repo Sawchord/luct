@@ -62,7 +62,7 @@
     <div slot="header" class="card">
         <nav class="navbar navbar-extra" aria-label="main navigation">
             <div class="navbar-brand">
-                <p class="navbar-item">
+                <p class="navbar-item logo-extra">
                     <LuctLogo></LuctLogo>
                 </p>
             </div>
@@ -117,4 +117,7 @@
 
 .navbar-end-extra
     margin-inline-start: auto
+
+.logo-extra
+    padding-left: 1.25rem
 </style>
