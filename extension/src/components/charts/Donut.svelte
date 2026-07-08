@@ -2,13 +2,11 @@
     import Chart from "chart.js/auto";
     import { onMount } from "svelte/internal";
 
-    export let data;
+    export let labels;
+    export let values;
     export let onClick;
     let canvas;
     let chart;
-
-    const labels = data.map((val) => val[0]);
-    const values = data.map((val) => val[1]);
 
     function drawChart() {
         chart = new Chart(canvas, {

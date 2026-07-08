@@ -8,7 +8,7 @@ use web_time::{SystemTime, UNIX_EPOCH};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BasicStatistics {
-    roots_cas: Vec<(String, u64)>,
+    roots_cas: Vec<(String, String, u64)>,
     scts: Vec<(String, u64)>,
 }
 
@@ -29,7 +29,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         for (_, report) in reports.into_iter() {
             roots_cas
-                .entry(report.ca_issuer)
+                .entry((report.ca_issuer, report.ca_fingerprint))
                 .and_modify(|entry| *entry += 1)
                 .or_insert(1);
 
@@ -43,7 +43,10 @@ impl<S: ScannerImpl> Scanner<S> {
         }
 
         BasicStatistics {
-            roots_cas: roots_cas.into_iter().collect(),
+            roots_cas: roots_cas
+                .into_iter()
+                .map(|((name, fp), count)| (name, fp, count))
+                .collect(),
             scts: scts.into_iter().collect(),
         }
     }

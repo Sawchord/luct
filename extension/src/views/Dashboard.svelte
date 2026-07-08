@@ -6,7 +6,7 @@
         let stats = await browser.runtime.sendMessage("basic_statistics");
 
         stats.roots_cas_total = stats.roots_cas.reduce(
-            (total, root_ca) => total + root_ca[1],
+            (total, root_ca) => total + root_ca[2],
             0,
         );
 
@@ -34,10 +34,23 @@
                         </div>
                         <div class="card-image card-spacing">
                             <Donut
-                                data={stats.roots_cas}
-                                onClick={(label) =>
-                                    // TODO: Navigate to RootCA overview of clicked log
-                                    console.log("Clicked RootCA: " + label)}
+                                labels={stats.roots_cas.map((val) => val[0])}
+                                values={stats.roots_cas.map((val) => val[2])}
+                                onClick={(label) => {
+                                    const fp = stats.roots_cas.find(
+                                        (el) => el[0] === label,
+                                    );
+
+                                    if (fp) {
+                                        // TODO: Navigate to RootCA overview of clicked log
+                                        console.log(
+                                            "Clicked RootCA: " +
+                                                label +
+                                                " Fingerprint: " +
+                                                fp[1],
+                                        );
+                                    }
+                                }}
                             />
                         </div>
 
@@ -59,7 +72,8 @@
                         </div>
                         <div class="card-image card-spacing">
                             <Donut
-                                data={stats.scts}
+                                labels={stats.scts.map((val) => val[0])}
+                                values={stats.scts.map((val) => val[1])}
                                 onClick={(label) =>
                                     // TODO: Navigate to the log overview of clicked log
                                     console.log(
