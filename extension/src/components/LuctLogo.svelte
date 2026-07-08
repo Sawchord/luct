@@ -6,4 +6,5 @@
 .logo
     fill: var(--bulma-text)
     max-height: 32px
+    max-width: 32px
 </style>

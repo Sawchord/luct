@@ -22,7 +22,7 @@
 </div>
 
 <style lang="sass">
-$footer-height: 6rem
+$footer-height: 3rem
 
 .header-slot
     position: sticky
@@ -43,8 +43,9 @@ $footer-height: 6rem
     left: 0
     bottom: 0
     width: 100%
-    text-align: center
-    align-content: center
+    display: flex
+    align-items: center
+    justify-content: center
     padding: 1rem
     height: $footer-height
 </style>
