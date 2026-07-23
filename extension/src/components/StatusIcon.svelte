@@ -4,7 +4,7 @@
     function getIcon(status) {
         switch (status) {
             case "processing":
-                return "fa fa-refresh";
+                return "fa fa-spinner spinning";
             case "safe":
                 return "fa fa-check";
             case "warn":
@@ -39,3 +39,18 @@
         </span>
     {/key}
 </button>
+
+<style lang="sass">
+.spinning
+  animation: spin-animation 1s infinite
+  display: inline-block
+
+
+@keyframes spin-animation 
+  0% 
+    transform: rotate(0deg)
+  
+  100% 
+    transform: rotate(359deg)
+
+</style>
