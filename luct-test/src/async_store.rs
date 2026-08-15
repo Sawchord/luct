@@ -87,41 +87,41 @@ pub async fn async_searchable_store_test<S: AsyncSearchableStore<Key = u64, Valu
     let mut idx = 2;
     store
         .filter(|key, _| {
-            assert_eq!(key, idx);
+            assert_eq!(key, &idx);
             idx += 1;
             true
         })
         .await;
 
     // Find a specific element
-    let find = store.find(|key, _| key == 3).await;
+    let find = store.find(|key, _| key == &3).await;
     assert_eq!(find, Some((3, "three".to_string())));
 
     assert!(store.delete(3).await);
-    let find = store.find(|key, _| key == 3).await;
+    let find = store.find(|key, _| key == &3).await;
     assert_eq!(find, None);
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_core::store::MemoryStore;
+    use luct_core::store::{MemoryStore, async_adapter::AsyncAdapter};
 
     #[tokio::test]
     async fn async_memory_store() {
-        let store = MemoryStore::<u64, String>::default();
+        let store = AsyncAdapter::new(MemoryStore::<u64, String>::default());
         async_store_test(store).await;
     }
 
-    // #[tokio::test]
-    // async fn async_memory_ordered_store() {
-    //     let store = MemoryStore::<u64, String>::default();
-    //     async_ordered_store_test(store).await;
-    // }
+    #[tokio::test]
+    async fn async_memory_ordered_store() {
+        let store = AsyncAdapter::new(MemoryStore::<u64, String>::default());
+        async_ordered_store_test(store).await;
+    }
 
-    // #[test]
-    // fn async_memory_searchable_store() {
-    //     let store = MemoryStore::<u64, String>::default();
-    //     searchable_store_test(store);
-    // }
+    #[tokio::test]
+    async fn async_memory_searchable_store() {
+        let store = AsyncAdapter::new(MemoryStore::<u64, String>::default());
+        async_searchable_store_test(store).await;
+    }
 }
