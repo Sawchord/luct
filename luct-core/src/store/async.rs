@@ -21,7 +21,7 @@ pub trait AsyncStoreRead: StoreBase {
     }
 }
 
-pub trait AsyncStoreWrite: AsyncStoreRead {
+pub trait AsyncStoreWrite: StoreBase {
     /// Insert a value into the store
     ///
     /// # Arguments:
@@ -88,12 +88,12 @@ pub trait AsyncSearchableStoreRead: AsyncOrderedStoreRead {
     /// - An array of key-value pairs, for which `pred` holds true
     fn filter(
         &self,
-        pred: impl FnMut(Self::Key, Self::Value) -> bool,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
     ) -> impl Future<Output = Vec<(Self::Key, Self::Value)>>;
 
     fn find<'a>(
         &'a self,
-        mut pred: impl FnMut(Self::Key, Self::Value) -> bool + 'a,
+        mut pred: impl FnMut(&Self::Key, &Self::Value) -> bool + 'a,
     ) -> impl Future<Output = Option<(Self::Key, Self::Value)>> {
         async move {
             let mut found = false;
