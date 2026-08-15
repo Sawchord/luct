@@ -174,6 +174,12 @@ where
         self.cache.borrow_mut().pop(&key);
         self.inner.insert(key, value).await
     }
+
+    async fn delete(&self, key: Self::Key) -> bool {
+        let contained = self.inner.delete(key.clone()).await;
+        self.cache.borrow_mut().pop(&key);
+        contained
+    }
 }
 
 #[cfg(test)]

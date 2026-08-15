@@ -9,7 +9,7 @@ use std::{
 
 /// A [`OrderedStore`](luct_core::store::OrderedStore) that caches the `last` value in memory
 ///
-/// If you need to call [`OrderedStoreRead::last`], this will speed up access
+/// If you need to call [`OrderedStoreRead::last`] as lot, this will speed up access
 pub struct LastValCacheStore<S>
 where
     S: StoreBase,
@@ -152,6 +152,11 @@ where
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         *self.last.borrow_mut() = None;
         self.inner.insert(key, value).await
+    }
+
+    async fn delete(&self, key: Self::Key) -> bool {
+        *self.last.borrow_mut() = None;
+        self.inner.delete(key).await
     }
 }
 
