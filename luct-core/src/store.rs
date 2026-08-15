@@ -3,7 +3,10 @@ use crate::tree::HashOutput;
 mod r#async;
 mod memory;
 
-pub use crate::store::r#async::{AsyncStore, AsyncStoreRead, AsyncStoreWrite};
+pub use crate::store::r#async::{
+    AsyncAppendableStore, AsyncOrderedStore, AsyncOrderedStoreRead, AsyncSearchableStore,
+    AsyncSearchableStoreRead, AsyncStore, AsyncStoreRead, AsyncStoreWrite,
+};
 pub use crate::store::memory::MemoryStore;
 
 /// Trait indicating that an object can be hased with respect to the CT protocol
