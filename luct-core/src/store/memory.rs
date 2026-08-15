@@ -86,6 +86,10 @@ impl<K: Ord, V: Clone> AsyncStoreWrite for MemoryStore<K, V> {
     async fn insert(&self, key: K, value: V) {
         self.0.write().unwrap().insert(key, value);
     }
+
+    async fn delete(&self, key: Self::Key) -> bool {
+        self.0.write().unwrap().remove(&key).is_some()
+    }
 }
 
 impl<K: Ord + Clone, V: Clone> SearchableStoreRead for MemoryStore<K, V> {

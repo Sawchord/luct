@@ -28,6 +28,16 @@ pub trait AsyncStoreWrite: AsyncStoreRead {
     /// - `key`: the key associated with the value
     /// - `value`: the value itself
     fn insert(&self, key: Self::Key, value: Self::Value) -> impl Future<Output = ()>;
+
+    /// Remove a value from the store
+    ///
+    /// # Arguments
+    /// - `key`: the key to be removed
+    ///
+    /// # Returns
+    /// - `true` if the key existed and has been removed
+    /// - `false` otherwise
+    fn delete(&self, key: Self::Key) -> impl Future<Output = bool>;
 }
 
 /// The [`AsyncStore`] trait is a version of the [`Store`](crate::store::Store) that is asynchrounous
