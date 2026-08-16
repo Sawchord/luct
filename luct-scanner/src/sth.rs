@@ -13,13 +13,13 @@ impl<S: ScannerImpl> Scanner<S> {
         log: &ScannerLog<S>,
         cert: &Certificate,
     ) -> Result<Validated<SignedTreeHead>, ScannerError> {
-        match self.get_fresh_sth(now, log, cert) {
+        match self.get_fresh_sth(now, log, cert).await {
             Some(sth) => Ok(sth),
             None => log.update_sth().await,
         }
     }
 
-    pub(crate) fn get_fresh_sth(
+    pub(crate) async fn get_fresh_sth(
         &self,
         now: SystemTime,
         log: &ScannerLog<S>,
@@ -28,7 +28,7 @@ impl<S: ScannerImpl> Scanner<S> {
         let log_name = log.client().log().description();
 
         // If we have no STH whatsoever, simply fetch it
-        let Some(last_sth) = log.get_latest_sth() else {
+        let Some(last_sth) = log.get_latest_sth().await else {
             tracing::debug!("No prior known STHs for {}", log_name);
             return None;
         };

@@ -126,7 +126,7 @@ impl<S: ScannerImpl> Scanner<S> {
         };
 
         // Check inclusion
-        let oldest_sth = log.oldest_viable_sth(&sct).unwrap_or(fresh_sth);
+        let oldest_sth = log.oldest_viable_sth(&sct).await.unwrap_or(fresh_sth);
         let report = match log.check_sct_inclusion(&sct, &oldest_sth, &leaf).await {
             Ok(index) => report.index(index),
             Err(err) => return report.error_description(err.to_string()),

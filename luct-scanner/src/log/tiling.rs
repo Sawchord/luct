@@ -1,6 +1,6 @@
 use crate::{HashOutput, ScannerImpl, log::ScannerLogInner};
 use luct_core::{
-    store::{AsyncStoreRead, Hashable, MemoryStore, OrderedStoreRead, StoreBase},
+    store::{AsyncOrderedStoreRead, AsyncStoreRead, Hashable, MemoryStore, StoreBase},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
@@ -181,6 +181,7 @@ impl<S: ScannerImpl> AsyncStoreRead for TileFetchStore<S> {
         self.log
             .sth_store
             .last()
+            .await
             .map(|last| last.1.tree_size() as usize)
             .unwrap_or(0)
     }

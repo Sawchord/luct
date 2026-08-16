@@ -39,7 +39,7 @@ impl ScannerImpl for CliScannerImpl {
     type ReportStore = AsyncAdapter<
         StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>,
     >;
-    type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
+    type SthStore = AsyncAdapter<FilesystemStore<u64, Validated<SignedTreeHead>>>;
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -90,7 +90,10 @@ async fn main() -> eyre::Result<()> {
 
     for log in logs {
         let name = log.description();
-        scanner.add_log(&log, FilesystemStore::new(workdir.join("sth").join(name)));
+        scanner.add_log(
+            &log,
+            AsyncAdapter::new(FilesystemStore::new(workdir.join("sth").join(name))),
+        );
     }
 
     if args.update_sths {
