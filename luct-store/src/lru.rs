@@ -1,7 +1,8 @@
 use lru::LruCache;
 use luct_core::store::{
-    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, Store,
-    StoreBase, StoreRead, StoreWrite,
+    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, Store, StoreBase,
+    StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -179,6 +180,43 @@ where
         let contained = self.inner.delete(key.clone()).await;
         self.cache.borrow_mut().pop(&key);
         contained
+    }
+}
+
+impl<S> AsyncOrderedStoreRead for LruCacheStore<S>
+where
+    S: AsyncOrderedStoreRead<Key: Clone + Hash, Value: Clone>,
+{
+    async fn last(&self) -> Option<(Self::Key, Self::Value)> {
+        self.inner.last().await
+    }
+}
+
+impl<S> AsyncAppendableStore for LruCacheStore<S>
+where
+    S: AsyncAppendableStore<Key: Clone + Hash, Value: Clone>,
+{
+    async fn append(&self, value: Self::Value) -> Self::Key {
+        self.inner.append(value).await
+    }
+}
+
+impl<S> AsyncSearchableStoreRead for LruCacheStore<S>
+where
+    S: AsyncSearchableStoreRead<Key: Clone + Hash, Value: Clone>,
+{
+    async fn filter(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Vec<(Self::Key, Self::Value)> {
+        self.inner.filter(pred).await
+    }
+
+    async fn find(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Option<(Self::Key, Self::Value)> {
+        self.inner.find(pred).await
     }
 }
 
