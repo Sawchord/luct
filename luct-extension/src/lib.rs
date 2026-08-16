@@ -2,13 +2,12 @@
 
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-use crate::{browser_storage::BrowserStorage, config::load_config, local_store::BrowserLocalStore};
+use crate::{browser_storage::BrowserStorage, config::load_config};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
-    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList,
-    store::async_adapter::AsyncAdapter, v1::SignedTreeHead,
+    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
@@ -36,8 +35,7 @@ struct ExtensionScannerImpl;
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = LruCacheStore<BrowserStorage<Fingerprint, Report>>;
-    type SthStore =
-        AsyncAdapter<LastValCacheStore<BrowserLocalStore<u64, Validated<SignedTreeHead>>>>;
+    type SthStore = LastValCacheStore<BrowserStorage<u64, Validated<SignedTreeHead>>>;
 }
 
 #[wasm_bindgen]
@@ -132,9 +130,7 @@ impl Scanner {
             let name = log.description();
             scanner.add_log(
                 &log,
-                AsyncAdapter::new(LastValCacheStore::new(BrowserLocalStore::new_local_store(
-                    format!("sth/{name}"),
-                )?)),
+                LastValCacheStore::new(BrowserStorage::new_local_store(format!("sth/{name}"))?),
             );
         }
 

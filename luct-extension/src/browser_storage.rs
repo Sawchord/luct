@@ -182,7 +182,6 @@ where
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
         // TODO: Use getKeys to avoid deserializing the whole store
-        // TODO: Remove unwraps
         // TODO: Move prefix outside of lock and drop lock before iterating through elements
 
         let storage = self.0.lock().await;
@@ -196,7 +195,9 @@ where
         let mut largest_key = None;
         Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
             let key_str = Array::from(&elem).get(0).as_string().unwrap();
-            let key = storage.key_from_str(&key_str).unwrap();
+            let Some(key) = storage.key_from_str(&key_str) else {
+                return;
+            };
 
             match &largest_key {
                 None => largest_key = Some(key),
@@ -242,7 +243,9 @@ where
             let elem = Array::from(&elem);
 
             let key_str = elem.get(0).as_string().unwrap();
-            let key = storage.key_from_str(&key_str).unwrap();
+            let Some(key) = storage.key_from_str(&key_str) else {
+                return;
+            };
 
             let value: Self::Value = serde_wasm_bindgen::from_value(elem.get(1)).unwrap();
 
