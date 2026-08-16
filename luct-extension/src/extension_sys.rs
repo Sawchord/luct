@@ -1,7 +1,7 @@
 use js_sys::Function;
 use wasm_bindgen::{JsThreadLocal, prelude::wasm_bindgen};
 
-pub use crate::extension_sys::storage::{Storage, StorageArea, StorageAreaRead, StorageChange};
+pub use crate::extension_sys::storage::{Storage, StorageArea};
 
 mod storage;
 
