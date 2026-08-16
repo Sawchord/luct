@@ -1,7 +1,7 @@
 use crate::{ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
 use luct_client::CtClient;
 use luct_core::{
-    store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
+    store::{AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreWrite},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{
@@ -64,8 +64,8 @@ impl<S: ScannerImpl> ScannerLog<S> {
         }
     }
 
-    pub(crate) fn get_latest_sth(&self) -> Option<Validated<SignedTreeHead>> {
-        self.log.sth_store.last().map(|sth| sth.1)
+    pub(crate) async fn get_latest_sth(&self) -> Option<Validated<SignedTreeHead>> {
+        self.log.sth_store.last().await.map(|sth| sth.1)
     }
 
     /// Updates the log to the newest STH
@@ -75,7 +75,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
     pub(crate) async fn update_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         let new_sth = self.fetch_sth().await?;
 
-        if let Some((_, old_sth)) = self.log.sth_store.last()
+        if let Some((_, old_sth)) = self.log.sth_store.last().await
             && old_sth.tree_size() < new_sth.tree_size()
         {
             tracing::debug!(
@@ -97,13 +97,14 @@ impl<S: ScannerImpl> ScannerLog<S> {
 
         self.log
             .sth_store
-            .insert(new_sth.tree_size(), new_sth.clone());
+            .insert(new_sth.tree_size(), new_sth.clone())
+            .await;
 
         Ok(new_sth)
     }
 
     #[tracing::instrument(level = "trace")]
-    pub(crate) fn oldest_viable_sth(
+    pub(crate) async fn oldest_viable_sth(
         &self,
         sct: &SignedCertificateTimestamp,
     ) -> Option<Validated<SignedTreeHead>> {
@@ -112,7 +113,8 @@ impl<S: ScannerImpl> ScannerLog<S> {
         let tree_head = self
             .log
             .sth_store
-            .find(|_, sth| sth.timestamp() > timestamp)?;
+            .find(|_, sth| sth.timestamp() > timestamp)
+            .await?;
         Some(tree_head.1)
     }
 
