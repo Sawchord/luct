@@ -1,5 +1,7 @@
 use luct_core::store::{
-    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite,
+    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead,
+    StoreWrite,
 };
 
 /// [`Store`](luct_core::store::Store) implementation that switches between two different
@@ -106,6 +108,95 @@ where
         match self {
             StoreSwitch::A(a) => a.find(pred),
             StoreSwitch::B(b) => b.find(pred),
+        }
+    }
+}
+
+impl<A, B, K, V> AsyncStoreRead for StoreSwitch<A, B>
+where
+    A: AsyncStoreRead<Key = K, Value = V>,
+    B: AsyncStoreRead<Key = K, Value = V>,
+{
+    async fn get(&self, key: K) -> Option<V> {
+        match self {
+            StoreSwitch::A(a) => a.get(key).await,
+            StoreSwitch::B(b) => b.get(key).await,
+        }
+    }
+
+    async fn len(&self) -> usize {
+        match self {
+            StoreSwitch::A(a) => a.len().await,
+            StoreSwitch::B(b) => b.len().await,
+        }
+    }
+}
+
+impl<A, B, K, V> AsyncStoreWrite for StoreSwitch<A, B>
+where
+    A: AsyncStoreWrite<Key = K, Value = V>,
+    B: AsyncStoreWrite<Key = K, Value = V>,
+{
+    async fn insert(&self, key: K, value: V) {
+        match self {
+            StoreSwitch::A(a) => a.insert(key, value).await,
+            StoreSwitch::B(b) => b.insert(key, value).await,
+        }
+    }
+
+    async fn delete(&self, key: K) -> bool {
+        match self {
+            StoreSwitch::A(a) => a.delete(key).await,
+            StoreSwitch::B(b) => b.delete(key).await,
+        }
+    }
+}
+
+impl<A, B, K, V> AsyncOrderedStoreRead for StoreSwitch<A, B>
+where
+    K: Ord,
+    A: AsyncOrderedStoreRead<Key = K, Value = V>,
+    B: AsyncOrderedStoreRead<Key = K, Value = V>,
+{
+    async fn last(&self) -> Option<(K, V)> {
+        match self {
+            StoreSwitch::A(a) => a.last().await,
+            StoreSwitch::B(b) => b.last().await,
+        }
+    }
+}
+
+impl<A, B, K, V> AsyncAppendableStore for StoreSwitch<A, B>
+where
+    K: Ord,
+    A: AsyncAppendableStore<Key = K, Value = V>,
+    B: AsyncAppendableStore<Key = K, Value = V>,
+{
+    async fn append(&self, value: V) -> K {
+        match self {
+            StoreSwitch::A(a) => a.append(value).await,
+            StoreSwitch::B(b) => b.append(value).await,
+        }
+    }
+}
+
+impl<A, B, K, V> AsyncSearchableStoreRead for StoreSwitch<A, B>
+where
+    K: Ord,
+    A: AsyncSearchableStoreRead<Key = K, Value = V>,
+    B: AsyncSearchableStoreRead<Key = K, Value = V>,
+{
+    async fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+        match self {
+            StoreSwitch::A(a) => a.filter(pred).await,
+            StoreSwitch::B(b) => b.filter(pred).await,
+        }
+    }
+
+    async fn find(&self, pred: impl FnMut(&K, &V) -> bool) -> Option<(K, V)> {
+        match self {
+            StoreSwitch::A(a) => a.find(pred).await,
+            StoreSwitch::B(b) => b.find(pred).await,
         }
     }
 }
