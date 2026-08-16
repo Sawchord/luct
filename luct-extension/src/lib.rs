@@ -19,7 +19,9 @@ use url::Url;
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 use web_time::{SystemTime, UNIX_EPOCH};
 
+mod browser_storage;
 mod config;
+mod extension_sys;
 mod local_store;
 
 const USER_AGENT: &str = concat!(
