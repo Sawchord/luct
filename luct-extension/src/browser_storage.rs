@@ -4,6 +4,7 @@ use luct_core::store::{
     AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
 };
 use luct_store::StringStoreKey;
+use serde::{Serialize, de::DeserializeOwned};
 use wasm_bindgen::JsValue;
 
 use crate::extension_sys::{StorageArea, browser};
@@ -82,6 +83,13 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
         }
     }
 
+    async fn remove_item(&self, key: &String) {
+        self.storage
+            .remove(&key.into())
+            .await
+            .expect("Failed to remove item");
+    }
+
     async fn get_count(&self) -> usize {
         let val = self
             .get_item(&self.count_key())
@@ -111,33 +119,76 @@ impl<K, V> StoreBase for BrowserStorage<K, V> {
     type Value = V;
 }
 
-impl<K, V> AsyncStoreRead for BrowserStorage<K, V> {
+impl<K, V> AsyncStoreRead for BrowserStorage<K, V>
+where
+    K: StringStoreKey,
+    V: DeserializeOwned,
+{
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
-        todo!()
+        let value = {
+            let storage = self.0.lock().await;
+            let key = storage.get_key_string(&key);
+
+            storage.get_item(&key).await?
+        };
+        let value: Self::Value = serde_wasm_bindgen::from_value(value).unwrap();
+
+        Some(value)
     }
 
     async fn len(&self) -> usize {
-        todo!()
+        self.0.lock().await.get_count().await
     }
 }
 
-impl<K, V> AsyncStoreWrite for BrowserStorage<K, V> {
+impl<K, V> AsyncStoreWrite for BrowserStorage<K, V>
+where
+    K: StringStoreKey,
+    V: Serialize,
+{
     async fn insert(&self, key: Self::Key, value: Self::Value) {
-        todo!()
+        let value = serde_wasm_bindgen::to_value(&value).expect("Failed to converto to JS value");
+
+        let storage = self.0.lock().await;
+        let key = storage.get_key_string(&key);
+
+        if storage.get_item(&key).await.is_none() {
+            storage.inc_count().await;
+        }
+
+        storage.set_item(&key, &value).await;
     }
 
     async fn delete(&self, key: Self::Key) -> bool {
-        todo!()
+        let storage = self.0.lock().await;
+        let key = storage.get_key_string(&key);
+
+        let had_item = storage.get_item(&key).await.is_some();
+
+        if had_item {
+            storage.dec_count().await;
+        }
+
+        storage.remove_item(&key).await;
+        had_item
     }
 }
 
-impl<K: Ord, V> AsyncOrderedStoreRead for BrowserStorage<K, V> {
+impl<K, V> AsyncOrderedStoreRead for BrowserStorage<K, V>
+where
+    K: StringStoreKey + Ord,
+    V: DeserializeOwned,
+{
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
         todo!()
     }
 }
 
-impl<K: Ord, V> AsyncSearchableStoreRead for BrowserStorage<K, V> {
+impl<K, V> AsyncSearchableStoreRead for BrowserStorage<K, V>
+where
+    K: StringStoreKey + Ord,
+    V: DeserializeOwned,
+{
     async fn filter(
         &self,
         pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
