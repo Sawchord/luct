@@ -2,13 +2,12 @@
 
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-use crate::{config::load_config, local_store::BrowserLocalStore};
+use crate::{browser_storage::BrowserStorage, config::load_config, local_store::BrowserLocalStore};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
-    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList,
-    store::async_adapter::AsyncAdapter, v1::SignedTreeHead,
+    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
@@ -35,7 +34,7 @@ struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
-    type ReportStore = AsyncAdapter<LruCacheStore<BrowserLocalStore<Fingerprint, Report>>>;
+    type ReportStore = LruCacheStore<BrowserStorage<Fingerprint, Report>>;
     type SthStore = LastValCacheStore<BrowserLocalStore<u64, Validated<SignedTreeHead>>>;
 }
 
@@ -112,11 +111,8 @@ impl Scanner {
         let client = RequestDeduplicationClient::new(OtlspClient::new(otlsp_config));
 
         let report_cache =
-            BrowserLocalStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
-        let report_cache = AsyncAdapter::new(LruCacheStore::new(
-            report_cache,
-            extension_config.report_lru_cache(),
-        ));
+            BrowserStorage::<Fingerprint, Report>::new_local_store("report".to_string())?;
+        let report_cache = LruCacheStore::new(report_cache, extension_config.report_lru_cache());
 
         let time_source = || {
             DateTime::from_timestamp_millis(

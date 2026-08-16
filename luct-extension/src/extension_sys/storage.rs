@@ -1,4 +1,3 @@
-use js_sys::Object;
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 
 use crate::extension_sys::EventTarget;
@@ -23,7 +22,7 @@ extern "C" {
     pub type StorageArea;
 
     #[wasm_bindgen(catch, method)]
-    pub async fn set(this: &StorageArea, keys: &Object) -> Result<JsValue, JsValue>;
+    pub async fn set(this: &StorageArea, keys: &JsValue) -> Result<JsValue, JsValue>;
 
     #[wasm_bindgen(catch, method)]
     pub async fn remove(this: &StorageArea, keys: &JsValue) -> Result<JsValue, JsValue>;

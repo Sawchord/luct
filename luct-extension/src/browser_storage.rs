@@ -1,5 +1,5 @@
 use futures::lock::Mutex;
-use js_sys::{Array, Map, Object};
+use js_sys::{Array, Object, Reflect};
 use luct_core::store::{
     AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
 };
@@ -30,6 +30,7 @@ impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for BrowserStorageInner<K, V> {
 impl<K, V> BrowserStorage<K, V> {
     pub fn new_local_store(prefix: String) -> Result<Self, String> {
         let storage = browser().with(|browser| browser.storage().local());
+
         Ok(Self(Mutex::new(BrowserStorageInner {
             _kv: PhantomData,
             prefix,
@@ -56,10 +57,8 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
     }
 
     async fn set_item(&self, key: &String, value: &JsValue) {
-        // TODO: Can we create the object directly without creating Map first?
-
-        let val = Map::new();
-        val.set(&JsValue::from(key), value);
+        let val = Object::new();
+        Reflect::set(&val, &JsValue::from(key), value).unwrap();
 
         self.storage.set(&val).await.expect("Failed to set item");
     }
@@ -83,7 +82,7 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
         if request.is_undefined() {
             None
         } else {
-            Some(request)
+            Some(Array::from(&request).get(1))
         }
     }
 
@@ -95,12 +94,10 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
     }
 
     async fn get_count(&self) -> usize {
-        let val = self
-            .get_item(&self.count_key())
+        self.get_item(&self.count_key())
             .await
-            .expect("Failed to retrieve count");
-
-        u64::try_from(val).expect("Count contains non integer value") as usize
+            .map(|val| val.as_f64().unwrap() as usize)
+            .unwrap_or(0)
     }
 
     async fn inc_count(&self) {
@@ -151,7 +148,7 @@ where
     V: Serialize,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
-        let value = serde_wasm_bindgen::to_value(&value).expect("Failed to converto to JS value");
+        let value = serde_wasm_bindgen::to_value(&value).expect("Failed to convert to JS value");
 
         let storage = self.0.lock().await;
         let key = storage.get_key_string(&key);
