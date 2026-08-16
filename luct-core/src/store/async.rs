@@ -91,9 +91,9 @@ pub trait AsyncSearchableStoreRead: AsyncOrderedStoreRead {
         pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
     ) -> impl Future<Output = Vec<(Self::Key, Self::Value)>>;
 
-    fn find<'a>(
-        &'a self,
-        mut pred: impl FnMut(&Self::Key, &Self::Value) -> bool + 'a,
+    fn find(
+        &self,
+        mut pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
     ) -> impl Future<Output = Option<(Self::Key, Self::Value)>> {
         async move {
             let mut found = false;
