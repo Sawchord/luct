@@ -74,10 +74,11 @@ The extension requires the following permissions:
     luCT needs to keep track of that, to display the correct safety status and sidebar information.
 
 
-- `unlimitedStorage`
+- `storage`, `unlimitedStorage`
 
-    Is needed to store more than 10MB of data.
-    Usually, luCT should keep well below that.
+    Is needed to enable storing data in the extension store.
+    luCT may store a couple megabytes of log data, in order to function correctly.
+    `unlimitedStorage` is needed such that it can exceed the 5 MB limit.
 
 
 
