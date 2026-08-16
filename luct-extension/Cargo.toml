@@ -27,8 +27,9 @@ serde_json = { workspace = true }
 serde-wasm-bindgen = { workspace = true }
 
 url = { workspace = true }
-
 chrono = { workspace = true }
+
+futures = { workspace = true }
 
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }

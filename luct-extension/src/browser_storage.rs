@@ -1,16 +1,26 @@
-use crate::extension_sys::{Storage, StorageArea, browser};
-use std::{fmt, marker::PhantomData};
+use futures::lock::Mutex;
+use js_sys::{Map, Object};
+use luct_core::store::{
+    AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
+};
+use luct_store::StringStoreKey;
+use wasm_bindgen::JsValue;
 
-pub struct BrowserStorage<K, V> {
+use crate::extension_sys::{StorageArea, browser};
+use std::{cmp::Ord, fmt, marker::PhantomData};
+
+#[derive(Debug)]
+pub struct BrowserStorage<K, V>(Mutex<BrowserStorageInner<K, V>>);
+
+struct BrowserStorageInner<K, V> {
     _kv: PhantomData<(K, V)>,
     prefix: String,
     storage: StorageArea,
 }
 
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for BrowserStorage<K, V> {
+impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for BrowserStorageInner<K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("BrowserStorage")
-            .field("_kv", &self._kv)
             .field("prefix", &self.prefix)
             .finish()
     }
@@ -19,13 +29,147 @@ impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for BrowserStorage<K, V> {
 impl<K, V> BrowserStorage<K, V> {
     pub fn new_local_store(prefix: String) -> Result<Self, String> {
         let storage = browser().with(|browser| browser.storage().local());
-        Ok(Self {
+        Ok(Self(Mutex::new(BrowserStorageInner {
             _kv: PhantomData,
             prefix,
             storage,
-        })
+        })))
     }
 }
 
-#[cfg(test)]
-mod test {}
+impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
+    fn get_key_string(&self, key: &K) -> String {
+        format!("{}/{}", self.prefix, key.serialize_key())
+    }
+
+    fn key_from_str(&self, key: &str) -> Option<K> {
+        if !key.starts_with(&self.prefix) || key.chars().nth(self.prefix.len()) != Some('/') {
+            return None;
+        }
+
+        K::deserialize_key(&key[self.prefix.len() + 1..])
+    }
+
+    fn count_key(&self) -> String {
+        format!("{}#count", self.prefix)
+    }
+
+    async fn set_item(&self, key: &String, value: &JsValue) {
+        // TODO: Can we create the object directly without creating Map first?
+
+        let val = Map::new();
+        val.set(&JsValue::from(key), value);
+
+        self.storage.set(&val).await.expect("Failed to set item");
+    }
+
+    async fn get_item(&self, key: &String) -> Option<JsValue> {
+        // TODO: Can we avoid iterating over entries?
+
+        let key2 = key;
+        let request = self
+            .storage
+            .get(&key.into())
+            .await
+            .expect("Failed to call get_item");
+
+        let request = Object::entries(&Object::from(request))
+            .find(&mut |elem, _, _| elem.as_string().is_some_and(|elem| &elem == key2));
+        if request.is_undefined() {
+            None
+        } else {
+            Some(request)
+        }
+    }
+
+    async fn get_count(&self) -> usize {
+        let val = self
+            .get_item(&self.count_key())
+            .await
+            .expect("Failed to retrieve count");
+
+        u64::try_from(val).expect("Count contains non integer value") as usize
+    }
+
+    async fn inc_count(&self) {
+        let count: usize = self.get_count().await;
+
+        self.set_item(&self.count_key(), &JsValue::from(count + 1))
+            .await;
+    }
+
+    async fn dec_count(&self) {
+        let count: usize = self.get_count().await;
+
+        self.set_item(&self.count_key(), &JsValue::from(count - 1))
+            .await;
+    }
+}
+
+impl<K, V> StoreBase for BrowserStorage<K, V> {
+    type Key = K;
+    type Value = V;
+}
+
+impl<K, V> AsyncStoreRead for BrowserStorage<K, V> {
+    async fn get(&self, key: Self::Key) -> Option<Self::Value> {
+        todo!()
+    }
+
+    async fn len(&self) -> usize {
+        todo!()
+    }
+}
+
+impl<K, V> AsyncStoreWrite for BrowserStorage<K, V> {
+    async fn insert(&self, key: Self::Key, value: Self::Value) {
+        todo!()
+    }
+
+    async fn delete(&self, key: Self::Key) -> bool {
+        todo!()
+    }
+}
+
+impl<K: Ord, V> AsyncOrderedStoreRead for BrowserStorage<K, V> {
+    async fn last(&self) -> Option<(Self::Key, Self::Value)> {
+        todo!()
+    }
+}
+
+impl<K: Ord, V> AsyncSearchableStoreRead for BrowserStorage<K, V> {
+    async fn filter(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+    ) -> Vec<(Self::Key, Self::Value)> {
+        todo!()
+    }
+}
+
+// #[cfg(test)]
+// mod test {
+//     use super::*;
+//     use luct_test::{async_store::async_store_test, utils::test_tracing};
+//     use wasm_bindgen::JsValue;
+//     use wasm_bindgen_test::wasm_bindgen_test;
+
+//     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
+
+//     #[wasm_bindgen_test]
+//     async fn browser_store() {
+//         clear_storage().await.unwrap();
+//         test_tracing();
+
+//         let store = BrowserStorage::new_local_store("test".to_string()).unwrap();
+//         async_store_test(store).await;
+//     }
+
+//     async fn clear_storage() -> Result<(), JsValue> {
+//         browser()
+//             .with(|browser| browser.storage().local())
+//             .clear()
+//             .await?;
+
+//         Ok(())
+//     }
+// }

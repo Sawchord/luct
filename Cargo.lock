@@ -1673,6 +1673,7 @@ version = "0.2.1"
 dependencies = [
  "chrono",
  "console_error_panic_hook",
+ "futures",
  "getrandom 0.2.17",
  "js-sys",
  "luct-client",
