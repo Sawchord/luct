@@ -12,7 +12,7 @@ use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
-    store::{MemoryStore, StoreRead},
+    store::{MemoryStore, StoreRead, async_adapter::AsyncAdapter},
     v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
@@ -36,8 +36,9 @@ struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
-    type ReportStore =
-        StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>;
+    type ReportStore = AsyncAdapter<
+        StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>,
+    >;
     type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
 }
 
@@ -75,6 +76,7 @@ async fn main() -> eyre::Result<()> {
         tracing::debug!("Loaded report store with {} cached reports", store.len());
         store
     };
+    let report_cache = AsyncAdapter::new(report_cache);
 
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
     let client_config = OtlspClientConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;

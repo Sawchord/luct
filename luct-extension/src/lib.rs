@@ -7,7 +7,8 @@ use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
-    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead,
+    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList,
+    store::async_adapter::AsyncAdapter, v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
@@ -34,7 +35,7 @@ struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
-    type ReportStore = LruCacheStore<BrowserLocalStore<Fingerprint, Report>>;
+    type ReportStore = AsyncAdapter<LruCacheStore<BrowserLocalStore<Fingerprint, Report>>>;
     type SthStore = LastValCacheStore<BrowserLocalStore<u64, Validated<SignedTreeHead>>>;
 }
 
@@ -112,7 +113,10 @@ impl Scanner {
 
         let report_cache =
             BrowserLocalStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
-        let report_cache = LruCacheStore::new(report_cache, extension_config.report_lru_cache());
+        let report_cache = AsyncAdapter::new(LruCacheStore::new(
+            report_cache,
+            extension_config.report_lru_cache(),
+        ));
 
         let time_source = || {
             DateTime::from_timestamp_millis(
@@ -193,8 +197,8 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
-    pub fn basic_statistics(&self) -> Result<JsValue, String> {
-        let stats = self.scanner.basic_statistics();
+    pub async fn basic_statistics(&self) -> Result<JsValue, String> {
+        let stats = self.scanner.basic_statistics().await;
         serde_wasm_bindgen::to_value(&stats).map_err(|err| format!("{err}"))
     }
 }

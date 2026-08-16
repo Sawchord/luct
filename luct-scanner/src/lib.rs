@@ -6,7 +6,11 @@ use crate::log::{ScannerLog, builder::LogImpls};
 use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use luct_client::Client;
-use luct_core::{CtLog, Fingerprint, LogId, store::SearchableStore, v1::SignedTreeHead};
+use luct_core::{
+    CtLog, Fingerprint, LogId,
+    store::{AsyncSearchableStore, SearchableStore},
+    v1::SignedTreeHead,
+};
 use std::collections::BTreeMap;
 pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
@@ -32,7 +36,7 @@ pub trait ScannerImpl {
     /// [`Client`] implementation to make connections to logs to
     type Client: Client + Clone;
     /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) of audit results
-    type ReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
+    type ReportStore: AsyncSearchableStore<Key = Fingerprint, Value = Report>;
     /// The [`Store`](luct_core::store::Store) use to store [`SignedTreeHeads`](SignedTreeHead)
     type SthStore: SearchableStore<Key = u64, Value = Validated<SignedTreeHead>>;
 }

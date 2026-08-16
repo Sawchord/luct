@@ -3,7 +3,7 @@ use chrono::DateTime;
 use futures::future::join_all;
 use luct_core::{
     CertificateChain, LogId,
-    store::{StoreRead, StoreWrite},
+    store::{AsyncStoreRead, AsyncStoreWrite},
     v1::{self, SignedCertificateTimestamp},
 };
 use std::sync::Arc;
@@ -28,7 +28,7 @@ impl<S: ScannerImpl> Scanner<S> {
         let cert = chain.cert();
         let cert_fp = cert.fingerprint_sha256();
 
-        let report = match self.report_store.get(&cert_fp) {
+        let report = match self.report_store.get(cert_fp.clone()).await {
             Some(report) => {
                 tracing::debug!("Found report for {} in cache", cert_fp.to_string());
 
@@ -52,7 +52,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         let report = self.evaluate_policy(report, (self.time_source)());
         if report.get_error().is_none() {
-            self.report_store.insert(cert_fp, report.clone());
+            self.report_store.insert(cert_fp, report.clone()).await;
         }
 
         Ok(report)
