@@ -26,6 +26,8 @@ lru = { workspace = true }
 [dev-dependencies]
 luct-test = { version = "0.2.1", path = "../luct-test" }
 
+tokio = { workspace = true }
+
 tempfile = { workspace = true }
 
 [features]
