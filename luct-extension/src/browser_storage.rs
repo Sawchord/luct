@@ -186,6 +186,7 @@ where
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
         // TODO: Use getKeys to avoid deserializing the whole store
         // TODO: Remove unwraps
+        // TODO: Move prefix outside of lock and drop lock before iterating through elements
 
         let storage = self.0.lock().await;
 
@@ -227,36 +228,32 @@ where
 {
     async fn filter(
         &self,
-        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
+        mut pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
     ) -> Vec<(Self::Key, Self::Value)> {
-        todo!()
+        // TODO: Move prefix outside of lock and drop lock before iterating through elements
+
+        let storage = self.0.lock().await;
+
+        let all_elems = storage
+            .storage
+            .get(&JsValue::null())
+            .await
+            .expect("Failed to retrieve all values");
+
+        let mut matches = vec![];
+        Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
+            let elem = Array::from(&elem);
+
+            let key_str = elem.get(0).as_string().unwrap();
+            let key = storage.key_from_str(&key_str).unwrap();
+
+            let value: Self::Value = serde_wasm_bindgen::from_value(elem.get(1)).unwrap();
+
+            if pred(&key, &value) {
+                matches.push((key, value));
+            }
+        });
+
+        matches
     }
 }
-
-// #[cfg(test)]
-// mod test {
-//     use super::*;
-//     use luct_test::{async_store::async_store_test, utils::test_tracing};
-//     use wasm_bindgen::JsValue;
-//     use wasm_bindgen_test::wasm_bindgen_test;
-
-//     wasm_bindgen_test::wasm_bindgen_test_configure!(run_in_browser);
-
-//     #[wasm_bindgen_test]
-//     async fn browser_store() {
-//         clear_storage().await.unwrap();
-//         test_tracing();
-
-//         let store = BrowserStorage::new_local_store("test".to_string()).unwrap();
-//         async_store_test(store).await;
-//     }
-
-//     async fn clear_storage() -> Result<(), JsValue> {
-//         browser()
-//             .with(|browser| browser.storage().local())
-//             .clear()
-//             .await?;
-
-//         Ok(())
-//     }
-// }
