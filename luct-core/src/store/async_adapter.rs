@@ -50,9 +50,9 @@ impl<S: SearchableStoreRead> AsyncSearchableStoreRead for AsyncAdapter<S> {
         self.0.filter(pred)
     }
 
-    async fn find<'a>(
-        &'a self,
-        pred: impl FnMut(&Self::Key, &Self::Value) -> bool + 'a,
+    async fn find(
+        &self,
+        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
     ) -> Option<(Self::Key, Self::Value)> {
         self.0.find(pred)
     }
