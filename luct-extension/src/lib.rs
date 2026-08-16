@@ -2,7 +2,7 @@
 
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-use crate::{config::load_config, store::BrowserStore};
+use crate::{config::load_config, local_store::BrowserLocalStore};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
@@ -20,7 +20,7 @@ use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 use web_time::{SystemTime, UNIX_EPOCH};
 
 mod config;
-mod store;
+mod local_store;
 
 const USER_AGENT: &str = concat!(
     "luct-firefox/",
@@ -32,8 +32,8 @@ struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
-    type ReportStore = LruCacheStore<BrowserStore<Fingerprint, Report>>;
-    type SthStore = LastValCacheStore<BrowserStore<u64, Validated<SignedTreeHead>>>;
+    type ReportStore = LruCacheStore<BrowserLocalStore<Fingerprint, Report>>;
+    type SthStore = LastValCacheStore<BrowserLocalStore<u64, Validated<SignedTreeHead>>>;
 }
 
 #[wasm_bindgen]
@@ -109,7 +109,7 @@ impl Scanner {
         let client = RequestDeduplicationClient::new(OtlspClient::new(otlsp_config));
 
         let report_cache =
-            BrowserStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
+            BrowserLocalStore::<Fingerprint, Report>::new_local_store("report".to_string())?;
         let report_cache = LruCacheStore::new(report_cache, extension_config.report_lru_cache());
 
         let time_source = || {
@@ -128,7 +128,7 @@ impl Scanner {
             let name = log.description();
             scanner.add_log(
                 &log,
-                LastValCacheStore::new(BrowserStore::new_local_store(format!("sth/{name}"))?),
+                LastValCacheStore::new(BrowserLocalStore::new_local_store(format!("sth/{name}"))?),
             );
         }
 

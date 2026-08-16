@@ -5,13 +5,13 @@ use std::marker::PhantomData;
 use web_sys::{Storage, window};
 
 #[derive(Debug)]
-pub struct BrowserStore<K, V> {
+pub struct BrowserLocalStore<K, V> {
     _kv: PhantomData<(K, V)>,
     prefix: String,
     storage: Storage,
 }
 
-impl<K, V> BrowserStore<K, V> {
+impl<K, V> BrowserLocalStore<K, V> {
     pub fn new_local_store(prefix: String) -> Result<Self, String> {
         let storage = browser_local_store()?;
         Ok(Self {
@@ -22,7 +22,7 @@ impl<K, V> BrowserStore<K, V> {
     }
 }
 
-impl<K: StringStoreKey, V> BrowserStore<K, V> {
+impl<K: StringStoreKey, V> BrowserLocalStore<K, V> {
     fn get_key_string(&self, key: &K) -> String {
         format!("{}/{}", self.prefix, key.serialize_key())
     }
@@ -65,12 +65,12 @@ impl<K: StringStoreKey, V> BrowserStore<K, V> {
     }
 }
 
-impl<K, V> StoreBase for BrowserStore<K, V> {
+impl<K, V> StoreBase for BrowserLocalStore<K, V> {
     type Key = K;
     type Value = V;
 }
 
-impl<K, V> StoreRead for BrowserStore<K, V>
+impl<K, V> StoreRead for BrowserLocalStore<K, V>
 where
     K: StringStoreKey,
     V: StringStoreValue,
@@ -89,7 +89,7 @@ where
     }
 }
 
-impl<K, V> StoreWrite for BrowserStore<K, V>
+impl<K, V> StoreWrite for BrowserLocalStore<K, V>
 where
     K: StringStoreKey,
     V: StringStoreValue,
@@ -132,7 +132,7 @@ where
     }
 }
 
-impl<K, V> OrderedStoreRead for BrowserStore<K, V>
+impl<K, V> OrderedStoreRead for BrowserLocalStore<K, V>
 where
     K: StringStoreKey + Ord,
     V: StringStoreValue,
@@ -155,7 +155,7 @@ where
     }
 }
 
-impl<K, V> SearchableStoreRead for BrowserStore<K, V>
+impl<K, V> SearchableStoreRead for BrowserLocalStore<K, V>
 where
     K: StringStoreKey + Ord,
     V: StringStoreValue,
@@ -204,7 +204,7 @@ mod test {
         clear_storage();
         test_tracing();
 
-        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        let store = BrowserLocalStore::new_local_store("test".to_string()).unwrap();
         store_test(store);
     }
 
@@ -213,7 +213,7 @@ mod test {
         clear_storage();
         test_tracing();
 
-        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        let store = BrowserLocalStore::new_local_store("test".to_string()).unwrap();
         ordered_store_test(store);
     }
 
@@ -222,7 +222,7 @@ mod test {
         clear_storage();
         test_tracing();
 
-        let store = BrowserStore::new_local_store("test".to_string()).unwrap();
+        let store = BrowserLocalStore::new_local_store("test".to_string()).unwrap();
         searchable_store_test(store);
     }
 
