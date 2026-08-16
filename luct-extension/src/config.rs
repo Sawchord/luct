@@ -1,4 +1,4 @@
-use crate::{USER_AGENT, store::browser_local_store};
+use crate::{USER_AGENT, local_store::browser_local_store};
 use luct_otlsp::OtlspClientConfig;
 use luct_scanner::ScannerConfig;
 use serde::{Deserialize, Serialize};
