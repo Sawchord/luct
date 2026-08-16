@@ -1,5 +1,5 @@
 use futures::lock::Mutex;
-use js_sys::{Map, Object};
+use js_sys::{Array, Map, Object};
 use luct_core::store::{
     AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
 };
@@ -74,8 +74,12 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
             .await
             .expect("Failed to call get_item");
 
-        let request = Object::entries(&Object::from(request))
-            .find(&mut |elem, _, _| elem.as_string().is_some_and(|elem| &elem == key2));
+        let request = Object::entries(&Object::from(request)).find(&mut |elem, _, _| {
+            Array::from(&elem)
+                .get(0)
+                .as_string()
+                .is_some_and(|elem| &elem == key2)
+        });
         if request.is_undefined() {
             None
         } else {
@@ -180,7 +184,39 @@ where
     V: DeserializeOwned,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        todo!()
+        // TODO: Use getKeys to avoid deserializing the whole store
+        // TODO: Remove unwraps
+
+        let storage = self.0.lock().await;
+
+        let all_elems = storage
+            .storage
+            .get(&JsValue::null())
+            .await
+            .expect("Failed to retrieve all values");
+
+        let mut largest_key = None;
+        Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
+            let key_str = Array::from(&elem).get(0).as_string().unwrap();
+            let key = storage.key_from_str(&key_str).unwrap();
+
+            match &largest_key {
+                None => largest_key = Some(key),
+                Some(old_key) => {
+                    if old_key < &key {
+                        largest_key = Some(key)
+                    }
+                }
+            }
+        });
+
+        let largest_key = largest_key?;
+        let largest_key_str = storage.get_key_string(&largest_key);
+        let val = storage.get_item(&largest_key_str).await.unwrap();
+        let val: Self::Value =
+            serde_wasm_bindgen::from_value(val).expect("Failed to deserialize a stored value");
+
+        Some((largest_key, val))
     }
 }
 
