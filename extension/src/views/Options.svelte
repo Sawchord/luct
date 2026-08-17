@@ -33,6 +33,7 @@
         const data = JSON.parse(input);
 
         await browser.storage.local.clear();
+        console.log(data);
         await browser.storage.local.set(Object.fromEntries(data));
     }
 
