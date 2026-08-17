@@ -2,7 +2,10 @@
 
 //! Wrapper around [`Scanner`](CtScanner) to be used in a javascript environment.
 
-use crate::{browser_storage::BrowserStorage, config::load_config};
+use crate::{
+    browser_storage::BrowserStorage,
+    config::{ExtensionConfig, load_config},
+};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
@@ -100,11 +103,11 @@ pub struct Scanner {
 #[wasm_bindgen]
 impl Scanner {
     #[wasm_bindgen(constructor)]
-    pub fn new(log_list: String) -> Result<Self, String> {
+    pub fn new(log_list: String, extension_config: ExtensionConfig) -> Result<Self, String> {
         let log_list: LogList = serde_json::from_str(&log_list).map_err(|err| format!("{err}"))?;
         let logs = log_list.currently_active_logs();
 
-        let extension_config = load_config()?;
+        //let extension_config = load_config()?;
         let scanner_config = ScannerConfig::try_from(&extension_config)?;
         let otlsp_config = OtlspClientConfig::try_from(&extension_config)?;
 

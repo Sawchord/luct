@@ -1,4 +1,4 @@
-import init, { Scanner, CertificateChain } from './wasm/luct_extension.js';
+import init, { Scanner, CertificateChain, ExtensionConfig } from './wasm/luct_extension.js';
 
 let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }
@@ -102,8 +102,12 @@ function load_scanner() {
     fetch(browser.runtime.getURL('logs/log_list.json'))
         .then(res => {
             res.text().then((logs) => {
-                log('parsed log');
-                scanner = new Scanner(logs);
+                console.log('parsed log');
+                ExtensionConfig.load_config().then(config => {
+                    console.log('parsed config')
+                    console.log(config)
+                    scanner = new Scanner(logs, config);
+                })
             })
         })
 }

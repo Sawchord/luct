@@ -1,8 +1,10 @@
-use crate::{USER_AGENT, local_store::browser_local_store};
+use crate::{USER_AGENT, extension_sys::browser, local_store::browser_local_store};
+use js_sys::{Object, Reflect};
 use luct_otlsp::OtlspClientConfig;
 use luct_scanner::ScannerConfig;
 use serde::{Deserialize, Serialize};
 use url::Url;
+use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 use web_time::Duration;
 
 /// Loads the config from the local store
@@ -31,6 +33,7 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
     Ok(settings)
 }
 
+#[wasm_bindgen]
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionConfig {
     #[serde(default = "default_false")]
@@ -56,6 +59,40 @@ pub struct ExtensionConfig {
 
     #[serde(default = "default_false")]
     debug_output: bool,
+}
+
+#[wasm_bindgen]
+impl ExtensionConfig {
+    /// Loads the config from the local store
+    ///
+    /// If no settings exist, it will create some
+    #[wasm_bindgen]
+    pub async fn load_config() -> Result<Self, String> {
+        let settings_str = JsValue::from_str("settings");
+
+        let store = browser().with(|browser| browser.storage().local());
+        let settings = store
+            .get(&settings_str)
+            .await
+            .map_err(|err| format!("{:?}", err))?;
+        let val = Reflect::get(&settings, &settings_str).map_err(|err| format!("{:?}", err))?;
+
+        if val.is_null_or_undefined() {
+            tracing::info!("Could not find a config. Initializing with default");
+            let settings = serde_json::from_str::<ExtensionConfig>("{}").unwrap();
+            let settings_js = serde_wasm_bindgen::to_value(&settings).unwrap();
+
+            let val = Object::new();
+            Reflect::set(&val, &settings_str, &settings_js).unwrap();
+            store.set(&val).await.map_err(|err| format!("{:?}", err))?;
+
+            Ok(settings)
+        } else {
+            let settings: ExtensionConfig =
+                serde_wasm_bindgen::from_value(val).map_err(|err| err.to_string())?;
+            Ok(settings)
+        }
+    }
 }
 
 impl ExtensionConfig {
@@ -139,7 +176,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn initalize_config() {
-        load_config().unwrap();
+    async fn initalize_config() {
+        ExtensionConfig::load_config().await.unwrap();
     }
 }

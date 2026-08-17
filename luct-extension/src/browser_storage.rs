@@ -64,7 +64,7 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
     }
 
     async fn get_item(&self, key: &String) -> Option<JsValue> {
-        // TODO: Can we avoid iterating over entries?
+        // TODO: Can we avoid iterating over entries using Reflect::get?
 
         let key2 = key;
         let request = self

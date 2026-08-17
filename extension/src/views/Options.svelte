@@ -1,11 +1,20 @@
 <script>
     import Page from "../components/Page.svelte";
 
-    let settings = JSON.parse(window.localStorage.getItem("settings"));
+    //let settings = JSON.parse(window.localStorage.getItem("settings"));
+
+    var settings;
+    async function load() {
+        settings = await browser.storage.local.get("settings");
+        console.log("loaded settings");
+        console.log(settings);
+        return settings;
+    }
 
     async function store_and_reload() {
-        const json_settings = JSON.stringify(settings);
-        window.localStorage.setItem("settings", json_settings);
+        //const json_settings = JSON.stringify(settings);
+        //window.localStorage.setItem("settings", json_settings);
+        await browser.storage.local.set({ settings: settings });
 
         const _report = await browser.runtime.sendMessage("reload");
     }
@@ -67,125 +76,137 @@
         </header>
     </div>
     <div slot="content" class="card">
-        <div class="card-content">
-            <label class="checkbox">
-                <input
-                    bind:checked={settings.validate_cert_chain}
-                    type="checkbox"
-                />
-                Validate certificate chain
-            </label>
-
-            <div class="field">
-                <!-- svelte-ignore a11y-label-has-associated-control -->
-                <label class="label">Oblivious TLS proxy</label>
+        {#await load then settings2}
+            <div class="card-content">
                 <label class="checkbox">
-                    <input bind:checked={settings.use_otlsp} type="checkbox" />
-                    Use oblivious TLS proxy
+                    <input
+                        bind:checked={settings.validate_cert_chain}
+                        type="checkbox"
+                    />
+                    Validate certificate chain
                 </label>
-                <div>
-                    <div class="control">
+
+                <div class="field">
+                    <!-- svelte-ignore a11y-label-has-associated-control -->
+                    <label class="label">Oblivious TLS proxy</label>
+                    <label class="checkbox">
                         <input
-                            bind:value={settings.otlsp_url}
-                            class="input"
-                            type="text"
-                            placeholder=""
+                            bind:checked={settings.use_otlsp}
+                            type="checkbox"
                         />
+                        Use oblivious TLS proxy
+                    </label>
+                    <div>
+                        <div class="control">
+                            <input
+                                bind:value={settings.otlsp_url}
+                                class="input"
+                                type="text"
+                                placeholder=""
+                            />
+                        </div>
+                        <p class="help">
+                            Full url to the OTLSP endpoint. E.g.
+                            "https://node.luct.dev/otlsp"
+                        </p>
                     </div>
-                    <p class="help">
-                        Full url to the OTLSP endpoint. E.g.
-                        "https://node.luct.dev/otlsp"
-                    </p>
+                    <div>
+                        <div class="control">
+                            <input
+                                bind:value={settings.otlsp_connection_timeout}
+                                class="input"
+                                type="number"
+                                placeholder=""
+                            />
+                        </div>
+                        <p class="help">
+                            Time (in seconds) after which a connectino to an
+                            oblivious TLS proxy is considered stale
+                        </p>
+                    </div>
                 </div>
-                <div>
+
+                <div class="field">
+                    <!-- svelte-ignore a11y-label-has-associated-control -->
+                    <label class="label"
+                        >STH freshness threshold (in seconds)</label
+                    >
                     <div class="control">
                         <input
-                            bind:value={settings.otlsp_connection_timeout}
+                            bind:value={settings.sth_freshness_threshold}
                             class="input"
                             type="number"
                             placeholder=""
                         />
                     </div>
                     <p class="help">
-                        Time (in seconds) after which a connectino to an
-                        oblivious TLS proxy is considered stale
+                        STHs younger than this are considered "fresh", older
+                        ones "mature". This in important in the luCT policy
+                        evaluation.
                     </p>
                 </div>
-            </div>
 
-            <div class="field">
-                <!-- svelte-ignore a11y-label-has-associated-control -->
-                <label class="label">STH freshness threshold (in seconds)</label
-                >
-                <div class="control">
-                    <input
-                        bind:value={settings.sth_freshness_threshold}
-                        class="input"
-                        type="number"
-                        placeholder=""
-                    />
-                </div>
-                <p class="help">
-                    STHs younger than this are considered "fresh", older ones
-                    "mature". This in important in the luCT policy evaluation.
-                </p>
-            </div>
-
-            <div class="field">
-                <!-- svelte-ignore a11y-label-has-associated-control -->
-                <label class="label">STH update threshold (in seconds)</label>
-                <div class="control">
-                    <input
-                        bind:value={settings.sth_update_threshold}
-                        class="input"
-                        type="number"
-                        placeholder=""
-                    />
-                </div>
-                <p class="help">
-                    luCT will fetch a fresh STH for a log, if the existing one
-                    is older than this value.
-                </p>
-            </div>
-
-            <div class="field">
-                <!-- svelte-ignore a11y-label-has-associated-control -->
-                <label class="label">Report LRU cache size</label>
-                <div class="control">
-                    <input
-                        bind:value={settings.report_lru_cache}
-                        class="input"
-                        type="number"
-                        placeholder=""
-                    />
-                </div>
-                <p class="help">
-                    Larger number accelerates luCT's update speed but may
-                    consume more RAM.
-                </p>
-            </div>
-
-            <label class="checkbox">
-                <input bind:checked={settings.debug_output} type="checkbox" />
-                Debug output
-            </label>
-
-            <div class="field">
-                <div class="control">
-                    <button
-                        on:click={store_and_reload}
-                        class="button is-primary"
-                        >Save settings and reload</button
+                <div class="field">
+                    <!-- svelte-ignore a11y-label-has-associated-control -->
+                    <label class="label"
+                        >STH update threshold (in seconds)</label
                     >
-                    <button on:click={export_store} class="button"
-                        >Export store</button
-                    >
-                    <button on:click={import_store} class="button"
-                        >Import store</button
-                    >
+                    <div class="control">
+                        <input
+                            bind:value={settings.sth_update_threshold}
+                            class="input"
+                            type="number"
+                            placeholder=""
+                        />
+                    </div>
+                    <p class="help">
+                        luCT will fetch a fresh STH for a log, if the existing
+                        one is older than this value.
+                    </p>
+                </div>
+
+                <div class="field">
+                    <!-- svelte-ignore a11y-label-has-associated-control -->
+                    <label class="label">Report LRU cache size</label>
+                    <div class="control">
+                        <input
+                            bind:value={settings.report_lru_cache}
+                            class="input"
+                            type="number"
+                            placeholder=""
+                        />
+                    </div>
+                    <p class="help">
+                        Larger number accelerates luCT's update speed but may
+                        consume more RAM.
+                    </p>
+                </div>
+
+                <label class="checkbox">
+                    <input
+                        bind:checked={settings.debug_output}
+                        type="checkbox"
+                    />
+                    Debug output
+                </label>
+
+                <div class="field">
+                    <div class="control">
+                        <button
+                            on:click={store_and_reload}
+                            class="button is-primary"
+                            >Save settings and reload</button
+                        >
+                        <button on:click={export_store} class="button"
+                            >Export store</button
+                        >
+                        <button on:click={import_store} class="button"
+                            >Import store</button
+                        >
+                    </div>
                 </div>
             </div>
-        </div>
+        {/await}
     </div>
 
     <div slot="footer">
