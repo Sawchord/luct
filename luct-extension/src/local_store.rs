@@ -1,3 +1,6 @@
+// TODO: Remove the implementation
+#![allow(unused)]
+
 use js_sys::Object;
 use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite};
 use luct_store::{StringStoreKey, StringStoreValue};

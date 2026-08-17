@@ -79,6 +79,26 @@ log(`Loading luCT extension`)
 init().then(load_scanner).then(setup_tab_actions).then(add_listener)
 
 function load_scanner() {
+
+    // Migrate from local storage to extension storage
+    var output = [];
+
+    for (let key of Object.keys(window.localStorage)) {
+        try {
+            let value = JSON.parse(window.localStorage.getItem(key));
+            output.push([key, value]);
+        } catch (error) {
+            console.log("Failed to export key: " + key);
+            console.log(error);
+        }
+    }
+    browser.storage.local.set(Object.fromEntries(output)).then(() => {
+        window.localStorage.clear();
+        console.log("Migrated " + output.length + " entries to extension store")
+    });
+
+
+
     fetch(browser.runtime.getURL('logs/log_list.json'))
         .then(res => {
             res.text().then((logs) => {

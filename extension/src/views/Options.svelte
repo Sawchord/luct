@@ -22,31 +22,18 @@
         element.click();
     }
 
-    function export_store() {
-        var output = [];
-
-        for (let key of Object.keys(window.localStorage)) {
-            try {
-                let value = JSON.parse(window.localStorage.getItem(key));
-                output.push([key, value]);
-            } catch (error) {
-                console.log("Failed to export key: " + key);
-                //console.log("Failed value: " + value);
-                console.log(error);
-            }
-        }
-        let output_string = JSON.stringify(output);
+    async function export_store() {
+        const output = Object.entries(await browser.storage.local.get());
+        const output_string = JSON.stringify(output);
 
         download("luct.json", output_string);
     }
 
-    function load_store(input) {
+    async function load_store(input) {
         const data = JSON.parse(input);
 
-        window.localStorage.clear();
-        for (let [key, value] of data) {
-            window.localStorage.setItem(key, JSON.stringify(value));
-        }
+        await browser.storage.local.clear();
+        await browser.storage.local.set(Object.fromEntries(data));
     }
 
     function import_store() {
