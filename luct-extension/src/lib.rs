@@ -238,7 +238,14 @@ mod test {
             b: String::from("Test"),
         });
         let data_js = serde_wasm_bindgen::to_value(&test_data.inner()).unwrap();
-        let now_js = serde_wasm_bindgen::to_value(&test_data.validated_at()).unwrap();
+        let now_js = serde_wasm_bindgen::to_value(
+            &test_data
+                .validated_at()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis(),
+        )
+        .unwrap();
 
         let legacy_validated = Array::new();
         legacy_validated.push(&now_js);
