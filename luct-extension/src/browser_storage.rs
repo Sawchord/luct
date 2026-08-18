@@ -56,37 +56,31 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
         format!("{}#count", self.prefix)
     }
 
-    async fn set_item(&self, key: &String, value: &JsValue) {
+    async fn set_item(&self, key: &str, value: &JsValue) {
         let val = Object::new();
         Reflect::set(&val, &JsValue::from(key), value).unwrap();
 
         self.storage.set(&val).await.expect("Failed to set item");
     }
 
-    async fn get_item(&self, key: &String) -> Option<JsValue> {
-        // TODO: Can we avoid iterating over entries?
-
-        let key2 = key;
+    async fn get_item(&self, key: &str) -> Option<JsValue> {
+        let key = JsValue::from_str(key);
         let request = self
             .storage
-            .get(&key.into())
+            .get(&key)
             .await
             .expect("Failed to call get_item");
 
-        let request = Object::entries(&Object::from(request)).find(&mut |elem, _, _| {
-            Array::from(&elem)
-                .get(0)
-                .as_string()
-                .is_some_and(|elem| &elem == key2)
-        });
-        if request.is_undefined() {
+        let request = Reflect::get(&request, &key).expect("Failed to get item");
+
+        if request.is_null_or_undefined() {
             None
         } else {
-            Some(Array::from(&request).get(1))
+            Some(request)
         }
     }
 
-    async fn remove_item(&self, key: &String) {
+    async fn remove_item(&self, key: &str) {
         self.storage
             .remove(&key.into())
             .await
