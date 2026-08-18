@@ -13,6 +13,10 @@
                 {
                     "version": "0.2.1",
                     "update_link": "https://download.luct.dev/downloads/luct-0.2.1.xpi"
+                },
+                {
+                    "version": "0.2.2",
+                    "update_link": "https://download.luct.dev/downloads/luct-0.2.2.xpi"
                 }
             ]
         }
