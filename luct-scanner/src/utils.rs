@@ -37,8 +37,8 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Validated<T> {
             {
                 let mut inner = None;
                 let mut validated_at = None;
-                while let Some(key) = map.next_key::<&str>()? {
-                    match key {
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
                         "inner" => {
                             if inner.is_some() {
                                 return Err(serde::de::Error::duplicate_field("inner"));
@@ -64,9 +64,25 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Validated<T> {
                     validated_at,
                 })
             }
+
+            fn visit_seq<V>(self, mut seq: V) -> Result<Self::Value, V::Error>
+            where
+                V: serde::de::SeqAccess<'de>,
+            {
+                let validated_at = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+                let inner = seq
+                    .next_element()?
+                    .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+                Ok(Validated {
+                    inner,
+                    validated_at,
+                })
+            }
         }
 
-        deserializer.deserialize_struct("Validated", &FIELDS, ValidatedVisitor(PhantomData))
+        deserializer.deserialize_any(ValidatedVisitor(PhantomData))
     }
 }
 
@@ -78,15 +94,19 @@ impl<T: PartialEq> PartialEq for Validated<T> {
 }
 
 impl<T> Validated<T> {
-    pub(crate) fn new(inner: T) -> Self {
+    pub fn new(inner: T) -> Self {
         Self {
             inner,
             validated_at: SystemTime::now(),
         }
     }
 
-    pub(crate) fn validated_at(&self) -> SystemTime {
+    pub fn validated_at(&self) -> SystemTime {
         self.validated_at
+    }
+
+    pub fn inner(&self) -> &T {
+        &self.inner
     }
 }
 
@@ -126,27 +146,37 @@ impl<T: StringStoreValue> Validated<T> {
     }
 }
 
-// TODO: Round trip test
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
+    struct TestStruct {
+        a: u64,
+        b: String,
+    }
+
     #[test]
     fn validated_json_roundtrip() {
-        let test_data = Validated::new(5);
+        let test_data = Validated::new(TestStruct {
+            a: 5,
+            b: String::from("Test"),
+        });
         let json = serde_json::to_string(&test_data).unwrap();
-        dbg!(&json);
         let new_test_data = serde_json::from_str(&json).unwrap();
         assert_eq!(test_data, new_test_data)
     }
 
     #[test]
     fn legacy_validated_json() {
-        let now = SystemTime::now();
-        let now_str = serde_json::to_string(&now).unwrap();
-        dbg!(&now_str);
+        let test_data = Validated::new(TestStruct {
+            a: 5,
+            b: String::from("Test"),
+        });
+        let now_str = serde_json::to_string(&test_data.validated_at()).unwrap();
 
-        let legacy_validated = format!("[{}, 5]", now_str);
-        let _new_test_data: Validated<usize> = serde_json::from_str(&legacy_validated).unwrap();
+        let legacy_validated = format!("[{}, {{\"a\": 5, \"b\": \"Test\"}}]", now_str);
+        let new_test_data: Validated<TestStruct> = serde_json::from_str(&legacy_validated).unwrap();
+        assert_eq!(test_data, new_test_data)
     }
 }
