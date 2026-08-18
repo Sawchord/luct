@@ -5,6 +5,7 @@ use luct_core::store::{
 };
 use luct_store::StringStoreKey;
 use serde::{Serialize, de::DeserializeOwned};
+use tracing::warn;
 use wasm_bindgen::JsValue;
 
 use crate::extension_sys::{StorageArea, browser};
@@ -175,11 +176,11 @@ where
     V: DeserializeOwned,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        // TODO: Use getKeys to avoid deserializing the whole store
         // TODO: Move prefix outside of lock and drop lock before iterating through elements
 
         let storage = self.0.lock().await;
 
+        // TODO: Use getKeys to avoid deserializing the whole store
         let all_elems = storage
             .storage
             .get(&JsValue::null())
@@ -187,6 +188,7 @@ where
             .expect("Failed to retrieve all values");
 
         let mut largest_key = None;
+
         Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
             let key_str = Array::from(&elem).get(0).as_string().unwrap();
             let Some(key) = storage.key_from_str(&key_str) else {
@@ -233,6 +235,7 @@ where
             .expect("Failed to retrieve all values");
 
         let mut matches = vec![];
+        let mut errors = 0;
         Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
             let elem = Array::from(&elem);
 
@@ -241,13 +244,25 @@ where
                 return;
             };
 
-            let value: Self::Value = serde_wasm_bindgen::from_value(elem.get(1)).unwrap();
+            let value: Self::Value = match serde_wasm_bindgen::from_value(elem.get(1)) {
+                Ok(value) => value,
+                Err(_) => {
+                    errors += 1;
+                    return;
+                }
+            };
 
             if pred(&key, &value) {
                 matches.push((key, value));
             }
         });
 
+        if errors != 0 {
+            warn!("{} elements could not be deserialized", errors)
+        }
+
         matches
     }
+
+    // TODO: Efficient find implementation
 }
