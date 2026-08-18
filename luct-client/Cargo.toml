@@ -13,7 +13,7 @@ keywords = { workspace = true }
 license = { workspace = true }
 
 [dependencies]
-luct-core = { version = "0.2.1", path = "../luct-core" }
+luct-core = { version = "0.2.2", path = "../luct-core" }
 
 reqwest = { workspace = true, optional = true }
 url = { workspace = true }
