@@ -69,9 +69,12 @@ impl<'de, T: Deserialize<'de>> Deserialize<'de> for Validated<T> {
             where
                 V: serde::de::SeqAccess<'de>,
             {
-                let validated_at = seq
+                let validated_at: u64 = seq
                     .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+                let validated_at = SystemTime::UNIX_EPOCH
+                    .checked_add(Duration::from_millis(validated_at))
+                    .unwrap();
                 let inner = seq
                     .next_element()?
                     .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
@@ -148,6 +151,8 @@ impl<T: StringStoreValue> Validated<T> {
 
 #[cfg(test)]
 mod tests {
+    use std::time::UNIX_EPOCH;
+
     use super::*;
 
     #[derive(Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -173,7 +178,14 @@ mod tests {
             a: 5,
             b: String::from("Test"),
         });
-        let now_str = serde_json::to_string(&test_data.validated_at()).unwrap();
+        let now_str = serde_json::to_string(
+            &test_data
+                .validated_at()
+                .duration_since(UNIX_EPOCH)
+                .unwrap()
+                .as_millis(),
+        )
+        .unwrap();
 
         let legacy_validated = format!("[{}, {{\"a\": 5, \"b\": \"Test\"}}]", now_str);
         let new_test_data: Validated<TestStruct> = serde_json::from_str(&legacy_validated).unwrap();
