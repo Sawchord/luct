@@ -12,7 +12,7 @@ use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::{LastValCacheStore, LruCacheStore};
 use std::sync::Arc;
-use tracing::Level;
+use tracing::{Level, info};
 use tracing_wasm::WASMLayerConfigBuilder;
 use url::Url;
 use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
@@ -133,7 +133,8 @@ impl Scanner {
             );
         }
 
-        log("Initialized scanner");
+        info!("Initialized scanner");
+
         Ok(Scanner { scanner })
     }
 

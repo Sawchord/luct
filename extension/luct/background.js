@@ -101,6 +101,9 @@ async function load_scanner() {
         }
     }
 
+    const usage = await browser.storage.local.getBytesInUse();
+    console.log("Storage: " + usage + " bytes in use");
+
     fetch(browser.runtime.getURL('logs/log_list.json'))
         .then(res => {
             res.text().then((logs) => {
