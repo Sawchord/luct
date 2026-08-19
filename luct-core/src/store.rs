@@ -1,7 +1,6 @@
 use crate::tree::HashOutput;
 
 mod r#async;
-pub mod async_adapter;
 mod memory;
 
 pub use crate::store::r#async::{

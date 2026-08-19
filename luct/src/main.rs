@@ -12,7 +12,7 @@ use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
-    store::{MemoryStore, StoreRead, async_adapter::AsyncAdapter},
+    store::{MemoryStore, StoreRead},
     v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
@@ -36,10 +36,9 @@ struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
-    type ReportStore = AsyncAdapter<
-        StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>,
-    >;
-    type SthStore = AsyncAdapter<FilesystemStore<u64, Validated<SignedTreeHead>>>;
+    type ReportStore =
+        StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>;
+    type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
 }
 
 #[tokio::main(flavor = "current_thread")]
@@ -76,7 +75,6 @@ async fn main() -> eyre::Result<()> {
         tracing::debug!("Loaded report store with {} cached reports", store.len());
         store
     };
-    let report_cache = AsyncAdapter::new(report_cache);
 
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
     let client_config = OtlspClientConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
@@ -90,10 +88,7 @@ async fn main() -> eyre::Result<()> {
 
     for log in logs {
         let name = log.description();
-        scanner.add_log(
-            &log,
-            AsyncAdapter::new(FilesystemStore::new(workdir.join("sth").join(name))),
-        );
+        scanner.add_log(&log, FilesystemStore::new(workdir.join("sth").join(name)));
     }
 
     if args.update_sths {
