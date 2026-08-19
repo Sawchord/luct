@@ -1,7 +1,8 @@
 use crate::{StringStoreKey, StringStoreValue};
+use futures::{FutureExt, future::join_all};
 use luct_core::store::{
-    AsyncOrderedStoreRead, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
-    StoreBase, StoreRead, StoreWrite,
+    AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite,
+    OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     fs::OpenOptions,
@@ -67,6 +68,7 @@ impl<K, V> FilesystemStore<K, V> {
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
+    // TODO: Async versio
     fn get_sorted_keys(&self) -> Option<Vec<K>> {
         let paths = std::fs::read_dir(&self.path).ok()?;
         let mut keys = paths
@@ -261,11 +263,38 @@ where
     }
 }
 
+impl<K, V> AsyncSearchableStoreRead for FilesystemStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
+    async fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+        let _lock = self.async_access.read().await;
+        let Some(keys) = self.get_sorted_keys() else {
+            return vec![];
+        };
+
+        let x = keys.into_iter().map(|key| {
+            tokio::fs::read_to_string(self.path.join(key.serialize_key())).map(|val| {
+                val.ok()
+                    .and_then(|val| V::deserialize_value(&val).map(|val| (key, val)))
+            })
+        });
+
+        join_all(x)
+            .await
+            .into_iter()
+            .flatten()
+            .filter(|(key, val)| pred(key, val))
+            .collect()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use luct_test::{
-        async_store::{async_ordered_store_test, async_store_test},
+        async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
         store::{ordered_store_test, searchable_store_test, store_test},
     };
     use tempfile::TempDir;
@@ -308,5 +337,13 @@ mod tests {
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         async_ordered_store_test(store).await;
+    }
+
+    #[tokio::test]
+    async fn async_filesystem_searchable_store() {
+        let dir = TempDir::new().unwrap();
+
+        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        async_searchable_store_test(store).await;
     }
 }
