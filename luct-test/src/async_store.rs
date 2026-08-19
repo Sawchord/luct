@@ -105,23 +105,23 @@ pub async fn async_searchable_store_test<S: AsyncSearchableStore<Key = u64, Valu
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_core::store::{MemoryStore, async_adapter::AsyncAdapter};
+    use luct_core::store::MemoryStore;
 
     #[tokio::test]
     async fn async_memory_store() {
-        let store = AsyncAdapter::new(MemoryStore::<u64, String>::default());
+        let store = MemoryStore::<u64, String>::default();
         async_store_test(store).await;
     }
 
     #[tokio::test]
     async fn async_memory_ordered_store() {
-        let store = AsyncAdapter::new(MemoryStore::<u64, String>::default());
+        let store = MemoryStore::<u64, String>::default();
         async_ordered_store_test(store).await;
     }
 
     #[tokio::test]
     async fn async_memory_searchable_store() {
-        let store = AsyncAdapter::new(MemoryStore::<u64, String>::default());
+        let store = MemoryStore::<u64, String>::default();
         async_searchable_store_test(store).await;
     }
 }
