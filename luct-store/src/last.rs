@@ -210,7 +210,7 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_core::store::{MemoryStore, async_adapter::AsyncAdapter};
+    use luct_core::store::MemoryStore;
     use luct_test::{
         async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
         store::{ordered_store_test, searchable_store_test, store_test},
@@ -236,22 +236,19 @@ mod tests {
 
     #[tokio::test]
     async fn async_last_val_store() {
-        let store =
-            AsyncAdapter::new(LastValCacheStore::new(MemoryStore::<u64, String>::default()));
+        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         async_store_test(store).await;
     }
 
     #[tokio::test]
     async fn async_last_val_ordered_store() {
-        let store =
-            AsyncAdapter::new(LastValCacheStore::new(MemoryStore::<u64, String>::default()));
+        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         async_ordered_store_test(store).await;
     }
 
     #[tokio::test]
     async fn async_last_val_searchable_store() {
-        let store =
-            AsyncAdapter::new(LastValCacheStore::new(MemoryStore::<u64, String>::default()));
+        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         async_searchable_store_test(store).await;
     }
 }
