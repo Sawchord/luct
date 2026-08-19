@@ -23,6 +23,15 @@ tracing = { workspace = true }
 
 lru = { workspace = true }
 
+[target.'cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))'.dependencies]
+tokio = { workspace = true, features = [
+    "rt",
+    "macros",
+    "fs",
+    "sync",
+    "io-util",
+] }
+
 [dev-dependencies]
 luct-test = { version = "0.2.2", path = "../luct-test" }
 

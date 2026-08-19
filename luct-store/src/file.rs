@@ -1,4 +1,8 @@
-use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite};
+use crate::{StringStoreKey, StringStoreValue};
+use luct_core::store::{
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead,
+    StoreWrite,
+};
 use std::{
     fs::OpenOptions,
     io::Write,
@@ -6,8 +10,7 @@ use std::{
     path::PathBuf,
     sync::{Arc, Mutex},
 };
-
-use crate::{StringStoreKey, StringStoreValue};
+use tokio::{io::AsyncWriteExt, sync::RwLock};
 
 // TODO: Log errors
 
@@ -29,14 +32,16 @@ use crate::{StringStoreKey, StringStoreValue};
 /// There is no locking or checking that each path is instanciated only once.
 /// You must be careful not to instanciate two stores at the same location.
 ///
-/// Also starting a program that uses the store twice may load to problems.
-/// This is used mainly for simple applications.
-/// You may need a database for more complex applications.
+/// Also starting a program that uses the store twice may lead to problems.
+/// This is supposed to be used for simple applications and CLI.
+/// You may need a database storage backend for more complex applications such as log servers.
+// FIXME: Using the same store sync and async is a bug
 #[derive(Clone, Debug)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
     path: PathBuf,
     access: Arc<Mutex<()>>,
+    async_access: Arc<RwLock<()>>,
 }
 
 impl<K, V> FilesystemStore<K, V> {
@@ -56,6 +61,7 @@ impl<K, V> FilesystemStore<K, V> {
             _kv: PhantomData,
             path,
             access: Arc::new(Mutex::new(())),
+            async_access: Arc::new(RwLock::new(())),
         }
     }
 }
@@ -176,10 +182,72 @@ where
     }
 }
 
+impl<K: StringStoreKey, V: StringStoreValue> AsyncStoreRead for FilesystemStore<K, V> {
+    async fn get(&self, key: K) -> Option<V> {
+        let _lock = self.async_access.read().await;
+        let data = tokio::fs::read_to_string(self.path.join(key.serialize_key()))
+            .await
+            .ok()?;
+        let value = V::deserialize_value(&data)?;
+        Some(value)
+    }
+
+    async fn len(&self) -> usize {
+        let _lock = self.async_access.read().await;
+        match tokio::fs::read_dir(&self.path).await {
+            Ok(mut paths) => {
+                let mut count = 0;
+                while let Some(_path) = paths.next_entry().await.unwrap() {
+                    count += 1;
+                }
+                count
+            }
+            Err(_) => 0,
+        }
+    }
+}
+
+impl<K, V> AsyncStoreWrite for FilesystemStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
+    async fn insert(&self, key: K, value: V) {
+        let _lock = self.async_access.write().await;
+        let store_path = self.path.join(key.serialize_key());
+
+        match tokio::fs::OpenOptions::new()
+            .create(true)
+            .truncate(true)
+            .write(true)
+            .open(&store_path)
+            .await
+        {
+            Ok(mut file) => {
+                file.write_all(value.serialize_value().as_bytes())
+                    .await
+                    .unwrap();
+                tracing::debug!("Wrote key to {:?}", store_path);
+            }
+            Err(err) => tracing::error!("Failed to write to path {:?}, err {:?}", store_path, err),
+        };
+    }
+
+    async fn delete(&self, key: K) -> bool {
+        let _lock = self.async_access.write().await;
+        tokio::fs::remove_file(self.path.join(key.serialize_key()))
+            .await
+            .is_ok()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
+    use luct_test::{
+        async_store::async_store_test,
+        store::{ordered_store_test, searchable_store_test, store_test},
+    };
     use tempfile::TempDir;
 
     #[test]
@@ -204,5 +272,13 @@ mod tests {
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         searchable_store_test(store);
+    }
+
+    #[tokio::test]
+    async fn async_filesystem_store() {
+        let dir = TempDir::new().unwrap();
+
+        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        async_store_test(store).await;
     }
 }
