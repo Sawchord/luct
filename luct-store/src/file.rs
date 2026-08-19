@@ -68,7 +68,6 @@ impl<K, V> FilesystemStore<K, V> {
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
-    // TODO: Async versio
     fn get_sorted_keys(&self) -> Option<Vec<K>> {
         let paths = std::fs::read_dir(&self.path).ok()?;
         let mut keys = paths
@@ -86,6 +85,22 @@ impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
                 }
             })
             .collect::<Vec<_>>();
+        keys.sort();
+
+        Some(keys)
+    }
+
+    async fn async_get_sorted_keys(&self) -> Option<Vec<K>> {
+        let mut paths = tokio::fs::read_dir(&self.path).await.ok()?;
+        let mut keys = Vec::<K>::new();
+
+        while let Some(dir_entry) = paths.next_entry().await.unwrap() {
+            match K::deserialize_key(&dir_entry.file_name().into_string().unwrap()) {
+                Some(key) => keys.push(key),
+                None => tracing::error!("Failed to deserialize a key (get_sorted_keys)",),
+            };
+        }
+
         keys.sort();
 
         Some(keys)
@@ -250,7 +265,7 @@ where
 {
     async fn last(&self) -> Option<(K, V)> {
         let _lock = self.async_access.read().await;
-        let keys = self.get_sorted_keys()?;
+        let keys = self.async_get_sorted_keys().await?;
 
         // If the last one exists, try to read the value
         let key = keys.last().cloned()?;
@@ -270,7 +285,7 @@ where
 {
     async fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         let _lock = self.async_access.read().await;
-        let Some(keys) = self.get_sorted_keys() else {
+        let Some(keys) = self.async_get_sorted_keys().await else {
             return vec![];
         };
 
