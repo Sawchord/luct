@@ -1,6 +1,6 @@
 use luct_core::store::{
-    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
+    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
+    AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -100,16 +100,6 @@ where
                 last
             }
         }
-    }
-}
-
-impl<S> AppendableStore for LastValCacheStore<S>
-where
-    S: AppendableStore<Key: Clone, Value: Clone>,
-{
-    fn append(&self, value: Self::Value) -> Self::Key {
-        *self.last.borrow_mut() = None;
-        self.inner.append(value)
     }
 }
 

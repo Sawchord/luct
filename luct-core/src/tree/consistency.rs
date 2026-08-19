@@ -44,7 +44,7 @@ where
         first: &TreeHead,
         second: &TreeHead,
     ) -> Result<ConsistencyProof, ProofGenerationError> {
-        if first.tree_size >= second.tree_size {
+        if first.tree_size > second.tree_size {
             return Err(ProofGenerationError::InvalidTreeSize {
                 expected: first.tree_size,
                 received: second.tree_size,
@@ -193,60 +193,64 @@ mod tests {
     use super::*;
     use crate::store::MemoryStore;
 
-    #[test]
-    fn compute_inclusion_proofs() {
+    #[tokio::test]
+    async fn compute_inclusion_proofs() {
         let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>>::new(
             MemoryStore::default(),
             MemoryStore::default(),
         );
 
-        tree.insert_entry("A".to_string());
-        tree.insert_entry("B".to_string());
-        tree.insert_entry("C".to_string());
+        tree.insert_entry("A".to_string()).await;
+        tree.insert_entry("B".to_string()).await;
+        tree.insert_entry("C".to_string()).await;
 
         // Generate tree head
-        let tree_head1 = tree.recompute_tree_head();
+        let tree_head1 = tree.recompute_tree_head().await;
 
-        tree.insert_entry("D".to_string());
-        let tree_head2 = tree.recompute_tree_head();
+        tree.insert_entry("D".to_string()).await;
+        let tree_head2 = tree.recompute_tree_head().await;
 
-        tree.insert_entry("E".to_string());
-        tree.insert_entry("F".to_string());
-        let tree_head3 = tree.recompute_tree_head();
+        tree.insert_entry("E".to_string()).await;
+        tree.insert_entry("F".to_string()).await;
+        let tree_head3 = tree.recompute_tree_head().await;
 
-        tree.insert_entry("G".to_string());
-        let tree_head4 = tree.recompute_tree_head();
+        tree.insert_entry("G".to_string()).await;
+        let tree_head4 = tree.recompute_tree_head().await;
 
-        tree.insert_entry("H".to_string());
+        tree.insert_entry("H".to_string()).await;
 
         let proof1 = tree
-            .get_consistency_proof(&tree_head1, &tree_head4)
+            .get_consistency_proof_async(&tree_head1, &tree_head4)
+            .await
             .unwrap();
         assert_eq!(proof1.path.len(), 4);
         proof1.validate(&tree_head1, &tree_head4).unwrap();
 
         let proof2 = tree
-            .get_consistency_proof(&tree_head2, &tree_head4)
+            .get_consistency_proof_async(&tree_head2, &tree_head4)
+            .await
             .unwrap();
         assert_eq!(proof2.path.len(), 1);
         assert_eq!(proof1.path[3], proof2.path[0]);
         proof2.validate(&tree_head2, &tree_head4).unwrap();
 
         let proof3 = tree
-            .get_consistency_proof(&tree_head3, &tree_head4)
+            .get_consistency_proof_async(&tree_head3, &tree_head4)
+            .await
             .unwrap();
         assert_eq!(proof3.path.len(), 3);
         proof3.validate(&tree_head3, &tree_head4).unwrap();
 
         let proof4 = tree
-            .get_consistency_proof(&tree_head4, &tree_head4)
+            .get_consistency_proof_async(&tree_head4, &tree_head4)
+            .await
             .unwrap();
         assert!(proof4.path.is_empty());
         proof4.validate(&tree_head4, &tree_head4).unwrap();
     }
 
-    #[test]
-    fn randomized_inclusion_proof() {
+    #[tokio::test]
+    async fn randomized_inclusion_proof() {
         let first_size = 4973;
         let second_size = 5009;
         let mut rng = ChaCha8Rng::seed_from_u64(1337);
@@ -259,20 +263,23 @@ mod tests {
         for _ in 0..first_size {
             let mut entry = [0; 32];
             rng.fill_bytes(&mut entry);
-            tree.insert_entry(entry);
+            tree.insert_entry(entry).await;
         }
 
-        let first_th = tree.recompute_tree_head();
+        let first_th = tree.recompute_tree_head().await;
 
         for _ in first_size..second_size {
             let mut entry = [0; 32];
             rng.fill_bytes(&mut entry);
-            tree.insert_entry(entry);
+            tree.insert_entry(entry).await;
         }
 
-        let second_th = tree.recompute_tree_head();
+        let second_th = tree.recompute_tree_head().await;
 
-        let proof = tree.get_consistency_proof(&first_th, &second_th).unwrap();
+        let proof = tree
+            .get_consistency_proof_async(&first_th, &second_th)
+            .await
+            .unwrap();
         proof.validate(&first_th, &second_th).unwrap();
     }
 }

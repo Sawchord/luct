@@ -63,7 +63,12 @@ pub trait AsyncOrderedStoreRead: AsyncStoreRead<Key: Ord> {
 pub trait AsyncOrderedStore: AsyncOrderedStoreRead + AsyncStoreWrite {}
 impl<T> AsyncOrderedStore for T where T: AsyncOrderedStoreRead + AsyncStoreWrite {}
 
-/// Async version of [`AppendableStore`](crate::store::AppendableStore)
+/// Extension to regular [`Stores`](Store), which use an index as a key
+///
+/// The main difference is, that the values can be inserted without providing a key.
+/// The key is then returned after insertion.
+///
+/// The key that was returned last must have be the largest value wrt [`Ord`].
 pub trait AsyncAppendableStore: AsyncOrderedStoreRead {
     /// Insert a value into the store and return the index
     ///

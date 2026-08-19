@@ -1,6 +1,6 @@
 use luct_core::store::{
-    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
+    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
+    AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 
 /// [`Store`](luct_core::store::Store) implementation that switches between two different
@@ -72,20 +72,6 @@ where
         match self {
             StoreSwitch::A(a) => a.last(),
             StoreSwitch::B(b) => b.last(),
-        }
-    }
-}
-
-impl<A, B, K, V> AppendableStore for StoreSwitch<A, B>
-where
-    K: Ord,
-    A: AppendableStore<Key = K, Value = V>,
-    B: AppendableStore<Key = K, Value = V>,
-{
-    fn append(&self, value: V) -> K {
-        match self {
-            StoreSwitch::A(a) => a.append(value),
-            StoreSwitch::B(b) => b.append(value),
         }
     }
 }
