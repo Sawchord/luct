@@ -23,6 +23,7 @@ tracing = { workspace = true }
 
 lru = { workspace = true }
 
+futures = { workspace = true }
 [target.'cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))'.dependencies]
 tokio = { workspace = true, features = [
     "rt",

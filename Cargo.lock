@@ -1822,6 +1822,7 @@ version = "0.2.2"
 name = "luct-store"
 version = "0.2.2"
 dependencies = [
+ "futures",
  "hex",
  "lru",
  "luct-core",
