@@ -1,7 +1,7 @@
 use crate::{StringStoreKey, StringStoreValue};
 use luct_core::store::{
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead,
-    StoreWrite,
+    AsyncOrderedStoreRead, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
+    StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     fs::OpenOptions,
@@ -241,11 +241,31 @@ where
     }
 }
 
+impl<K, V> AsyncOrderedStoreRead for FilesystemStore<K, V>
+where
+    K: StringStoreKey,
+    V: StringStoreValue,
+{
+    async fn last(&self) -> Option<(K, V)> {
+        let _lock = self.async_access.read().await;
+        let keys = self.get_sorted_keys()?;
+
+        // If the last one exists, try to read the value
+        let key = keys.last().cloned()?;
+        let data = tokio::fs::read_to_string(self.path.join(key.serialize_key()))
+            .await
+            .ok()?;
+        let val = V::deserialize_value(&data)?;
+
+        Some((key, val))
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use luct_test::{
-        async_store::async_store_test,
+        async_store::{async_ordered_store_test, async_store_test},
         store::{ordered_store_test, searchable_store_test, store_test},
     };
     use tempfile::TempDir;
@@ -280,5 +300,13 @@ mod tests {
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         async_store_test(store).await;
+    }
+
+    #[tokio::test]
+    async fn async_filesystem_ordered_store() {
+        let dir = TempDir::new().unwrap();
+
+        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
+        async_ordered_store_test(store).await;
     }
 }
