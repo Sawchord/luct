@@ -1,45 +1,15 @@
 use crate::{
-    store::{AsyncStoreRead, Hashable, StoreRead},
+    store::{AsyncStoreRead, Hashable},
     tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
 
 impl<N, L> Tree<N, L>
 where
-    N: StoreRead<Key = NodeKey, Value = HashOutput>,
-{
-    /// This follows RFC 9162 2.1.3.1
-    pub fn get_audit_proof(
-        &self,
-        head: &TreeHead,
-        index: u64,
-    ) -> Result<AuditProof, ProofGenerationError> {
-        if index >= head.tree_size {
-            return Err(ProofGenerationError::InvalidIndex {
-                tree_size: head.tree_size,
-                index,
-            });
-        }
-
-        let path = get_audit_proof(head, index, |key| {
-            self.nodes
-                .get(&key)
-                .ok_or(ProofGenerationError::KeyNotFound(key))
-        });
-        let mut path = path
-            .into_iter()
-            .collect::<Result<Vec<HashOutput>, ProofGenerationError>>()?;
-
-        path.reverse();
-        Ok(AuditProof { index, path })
-    }
-}
-
-impl<N, L> Tree<N, L>
-where
     N: AsyncStoreRead<Key = NodeKey, Value = HashOutput>,
 {
-    pub async fn get_audit_proof_async(
+    /// This follows RFC 9162 2.1.3.1
+    pub async fn get_audit_proof(
         &self,
         head: &TreeHead,
         index: u64,
@@ -173,19 +143,19 @@ mod tests {
 
         let head = tree.recompute_tree_head().await;
 
-        let proof1 = tree.get_audit_proof_async(&head, 0).await.unwrap();
+        let proof1 = tree.get_audit_proof(&head, 0).await.unwrap();
         assert_eq!(proof1.path.len(), 3);
         proof1.validate(&head, &"A".to_string()).unwrap();
 
-        let proof2 = tree.get_audit_proof_async(&head, 3).await.unwrap();
+        let proof2 = tree.get_audit_proof(&head, 3).await.unwrap();
         assert_eq!(proof2.path.len(), 3);
         proof2.validate(&head, &"D".to_string()).unwrap();
 
-        let proof3 = tree.get_audit_proof_async(&head, 4).await.unwrap();
+        let proof3 = tree.get_audit_proof(&head, 4).await.unwrap();
         assert_eq!(proof3.path.len(), 3);
         proof3.validate(&head, &"E".to_string()).unwrap();
 
-        let proof4 = tree.get_audit_proof_async(&head, 6).await.unwrap();
+        let proof4 = tree.get_audit_proof(&head, 6).await.unwrap();
         assert_eq!(proof4.path.len(), 2);
         proof4.validate(&head, &"G".to_string()).unwrap();
     }
