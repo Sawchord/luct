@@ -2,7 +2,7 @@ use crate::{StringStoreKey, StringStoreValue};
 use futures::{FutureExt, future::join_all};
 use luct_core::store::{
     AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite,
-    OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite,
+    OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     fs::OpenOptions,
@@ -176,29 +176,6 @@ where
     }
 }
 
-impl<K, V> SearchableStoreRead for FilesystemStore<K, V>
-where
-    K: StringStoreKey,
-    V: StringStoreValue,
-{
-    fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
-        let _lock = self.access.lock().unwrap();
-        let Some(keys) = self.get_sorted_keys() else {
-            return vec![];
-        };
-
-        keys.into_iter()
-            .filter_map(|key| {
-                std::fs::read_to_string(self.path.join(key.serialize_key()))
-                    .ok()
-                    .map(|data| (key, data))
-            })
-            .filter_map(|(key, data)| V::deserialize_value(&data).map(|val| (key, val)))
-            .filter(|(key, val)| pred(key, val))
-            .collect()
-    }
-}
-
 impl<K: StringStoreKey, V: StringStoreValue> AsyncStoreRead for FilesystemStore<K, V> {
     async fn get(&self, key: K) -> Option<V> {
         let _lock = self.async_access.read().await;
@@ -310,7 +287,7 @@ mod tests {
     use super::*;
     use luct_test::{
         async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
-        store::{ordered_store_test, searchable_store_test, store_test},
+        store::{ordered_store_test, store_test},
     };
     use tempfile::TempDir;
 
@@ -328,14 +305,6 @@ mod tests {
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         ordered_store_test(store);
-    }
-
-    #[test]
-    fn filesystem_searchable_store() {
-        let dir = TempDir::new().unwrap();
-
-        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
-        searchable_store_test(store);
     }
 
     #[tokio::test]
