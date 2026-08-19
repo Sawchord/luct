@@ -1,6 +1,7 @@
 use crate::store::{
-    AppendableStore, AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead,
-    StoreBase, StoreRead, StoreWrite,
+    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead,
+    StoreWrite,
 };
 use std::{
     collections::BTreeMap,
@@ -72,6 +73,18 @@ impl<V: Clone> AppendableStore for MemoryStore<u64, V> {
     }
 }
 
+impl<K: Ord + Clone, V: Clone> SearchableStoreRead for MemoryStore<K, V> {
+    fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+        self.0
+            .read()
+            .unwrap()
+            .iter()
+            .filter(|(key, val)| pred(key, val))
+            .map(|(key, val)| (key.clone(), val.clone()))
+            .collect()
+    }
+}
+
 impl<K: Ord, V: Clone> AsyncStoreRead for MemoryStore<K, V> {
     async fn get(&self, key: K) -> Option<V> {
         self.0.read().unwrap().get(&key).cloned()
@@ -92,8 +105,35 @@ impl<K: Ord, V: Clone> AsyncStoreWrite for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord + Clone, V: Clone> SearchableStoreRead for MemoryStore<K, V> {
-    fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
+impl<K: Ord + Clone, V: Clone> AsyncOrderedStoreRead for MemoryStore<K, V> {
+    async fn last(&self) -> Option<(K, V)> {
+        self.0
+            .read()
+            .unwrap()
+            .iter()
+            .next_back()
+            .map(|(k, v)| (k.clone(), v.clone()))
+    }
+}
+
+impl<V: Clone> AsyncAppendableStore for MemoryStore<u64, V> {
+    async fn append(&self, value: V) -> u64 {
+        let mut store = self.0.write().unwrap();
+
+        let len = store.len() as u64;
+        let old = store.insert(len, value);
+
+        assert!(
+            old.is_none(),
+            "IndexedStore already contained a value at {len}"
+        );
+
+        len
+    }
+}
+
+impl<K: Ord + Clone, V: Clone> AsyncSearchableStoreRead for MemoryStore<K, V> {
+    async fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         self.0
             .read()
             .unwrap()
