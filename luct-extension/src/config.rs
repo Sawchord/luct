@@ -1,8 +1,9 @@
-use crate::{USER_AGENT, local_store::browser_local_store};
+use crate::USER_AGENT;
 use luct_otlsp::OtlspClientConfig;
 use luct_scanner::ScannerConfig;
 use serde::{Deserialize, Serialize};
 use url::Url;
+use web_sys::{Storage, window};
 use web_time::Duration;
 
 /// Loads the config from the local store
@@ -124,6 +125,17 @@ impl TryFrom<&ExtensionConfig> for OtlspClientConfig {
 
         Ok(config)
     }
+}
+
+pub fn browser_local_store() -> Result<Storage, String> {
+    let store = window()
+        .map(|window| window.local_storage())
+        .transpose()
+        .map_err(|err| err.as_string().unwrap())?
+        .flatten()
+        .ok_or("Failed to retreive local store")?;
+
+    Ok(store)
 }
 
 #[cfg(test)]
