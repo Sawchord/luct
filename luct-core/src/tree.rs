@@ -1,4 +1,4 @@
-use crate::store::{AppendableStore, Hashable, Store};
+use crate::store::{AsyncAppendableStore, Hashable, Store};
 pub use crate::tree::{
     consistency::ConsistencyProof,
     inclusion::AuditProof,
@@ -69,11 +69,11 @@ impl<N, L> Tree<N, L> {
 impl<N, L> Tree<N, L>
 where
     N: Store<Key = NodeKey, Value = HashOutput>,
-    L: AppendableStore<Key = u64, Value: Hashable>,
+    L: AsyncAppendableStore<Key = u64, Value: Hashable>,
 {
-    pub fn insert_entry(&self, entry: L::Value) {
+    pub async fn insert_entry(&self, entry: L::Value) {
         let entry_hash = entry.hash();
-        let idx = self.leafs.append(entry);
+        let idx = self.leafs.append(entry).await;
         let entry_key = NodeKey::leaf(idx);
         self.nodes.insert(entry_key, entry_hash);
 
@@ -98,8 +98,8 @@ where
         }
     }
 
-    pub fn recompute_tree_head(&self) -> TreeHead {
-        let tree_size = self.leafs.len() as u64;
+    pub async fn recompute_tree_head(&self) -> TreeHead {
+        let tree_size = self.leafs.len().await as u64;
         let mut current_key = NodeKey::full_range(tree_size);
         let mut balanced_nodes = vec![];
 
@@ -128,8 +128,8 @@ where
         }
     }
 
-    pub fn get_latest_tree_head(&self) -> Option<TreeHead> {
-        let idx = self.leafs.len() as u64;
+    pub async fn get_latest_tree_head(&self) -> Option<TreeHead> {
+        let idx = self.leafs.len().await as u64;
         self.nodes
             .get(&NodeKey::full_range(idx))
             .map(|head| TreeHead {

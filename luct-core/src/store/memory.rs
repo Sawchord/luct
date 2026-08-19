@@ -1,6 +1,6 @@
 use crate::store::{
-    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
+    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
+    AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     collections::BTreeMap,
@@ -53,22 +53,6 @@ impl<K: Ord + Clone, V: Clone> OrderedStoreRead for MemoryStore<K, V> {
             .iter()
             .next_back()
             .map(|(k, v)| (k.clone(), v.clone()))
-    }
-}
-
-impl<V: Clone> AppendableStore for MemoryStore<u64, V> {
-    fn append(&self, value: V) -> u64 {
-        let mut store = self.0.write().unwrap();
-
-        let len = store.len() as u64;
-        let old = store.insert(len, value);
-
-        assert!(
-            old.is_none(),
-            "IndexedStore already contained a value at {len}"
-        );
-
-        len
     }
 }
 

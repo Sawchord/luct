@@ -156,36 +156,36 @@ mod tests {
     use super::*;
     use crate::store::MemoryStore;
 
-    #[test]
-    fn compute_audit_proofs() {
+    #[tokio::test]
+    async fn compute_audit_proofs() {
         let tree = Tree::<MemoryStore<NodeKey, HashOutput>, MemoryStore<u64, String>>::new(
             MemoryStore::default(),
             MemoryStore::default(),
         );
 
-        tree.insert_entry("A".to_string());
-        tree.insert_entry("B".to_string());
-        tree.insert_entry("C".to_string());
-        tree.insert_entry("D".to_string());
-        tree.insert_entry("E".to_string());
-        tree.insert_entry("F".to_string());
-        tree.insert_entry("G".to_string());
+        tree.insert_entry("A".to_string()).await;
+        tree.insert_entry("B".to_string()).await;
+        tree.insert_entry("C".to_string()).await;
+        tree.insert_entry("D".to_string()).await;
+        tree.insert_entry("E".to_string()).await;
+        tree.insert_entry("F".to_string()).await;
+        tree.insert_entry("G".to_string()).await;
 
-        let head = tree.recompute_tree_head();
+        let head = tree.recompute_tree_head().await;
 
-        let proof1 = tree.get_audit_proof(&head, 0).unwrap();
+        let proof1 = tree.get_audit_proof_async(&head, 0).await.unwrap();
         assert_eq!(proof1.path.len(), 3);
         proof1.validate(&head, &"A".to_string()).unwrap();
 
-        let proof2 = tree.get_audit_proof(&head, 3).unwrap();
+        let proof2 = tree.get_audit_proof_async(&head, 3).await.unwrap();
         assert_eq!(proof2.path.len(), 3);
         proof2.validate(&head, &"D".to_string()).unwrap();
 
-        let proof3 = tree.get_audit_proof(&head, 4).unwrap();
+        let proof3 = tree.get_audit_proof_async(&head, 4).await.unwrap();
         assert_eq!(proof3.path.len(), 3);
         proof3.validate(&head, &"E".to_string()).unwrap();
 
-        let proof4 = tree.get_audit_proof(&head, 6).unwrap();
+        let proof4 = tree.get_audit_proof_async(&head, 6).await.unwrap();
         assert_eq!(proof4.path.len(), 2);
         proof4.validate(&head, &"G".to_string()).unwrap();
     }

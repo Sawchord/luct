@@ -1,7 +1,7 @@
 use lru::LruCache;
 use luct_core::store::{
-    AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, Store, StoreBase, StoreRead, StoreWrite,
+    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
+    AsyncStoreWrite, OrderedStoreRead, Store, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -116,15 +116,6 @@ where
 {
     fn last(&self) -> Option<(Self::Key, Self::Value)> {
         self.inner.last()
-    }
-}
-
-impl<S> AppendableStore for LruCacheStore<S>
-where
-    S: AppendableStore<Key: Clone + Hash, Value: Clone>,
-{
-    fn append(&self, value: Self::Value) -> Self::Key {
-        self.inner.append(value)
     }
 }
 

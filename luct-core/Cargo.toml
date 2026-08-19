@@ -36,3 +36,4 @@ futures = { workspace = true }
 [dev-dependencies]
 serde_json = { workspace = true }
 rand = { workspace = true }
+tokio = { workspace = true, features = ["rt", "macros"] }

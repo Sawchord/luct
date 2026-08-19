@@ -81,20 +81,3 @@ pub trait OrderedStoreRead: StoreRead<Key: Ord> {
 
 pub trait OrderedStore: OrderedStoreRead + StoreWrite {}
 impl<T> OrderedStore for T where T: OrderedStoreRead + StoreWrite {}
-
-/// Extension to regular [`Stores`](Store), which use an index as a key
-///
-/// The main difference is, that the values can be inserted without providing a key.
-/// The key is then returned after insertion.
-///
-/// The key that was returned last must have be the largest value wrt [`Ord`].
-pub trait AppendableStore: OrderedStoreRead {
-    /// Insert a value into the store and return the index
-    ///
-    /// # Arguments:
-    /// - `value`: the value itself
-    ///
-    /// # Returns:
-    /// - the index of the new value. This is the key under which the value can later be retreived
-    fn append(&self, value: Self::Value) -> Self::Key;
-}
