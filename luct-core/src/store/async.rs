@@ -75,7 +75,8 @@ pub trait AsyncAppendableStore: AsyncOrderedStoreRead {
     fn append(&self, value: Self::Value) -> impl Future<Output = Self::Key>;
 }
 
-/// Async version of [`SearchableStore`](crate::store::SearchableStore)
+/// Extension to a [`OrderedStoreRead`], that allows looking through the store to look for specific
+/// entries.
 pub trait AsyncSearchableStoreRead: AsyncOrderedStoreRead {
     /// Search for all entries in the store, that fulfill a certain predicate
     ///

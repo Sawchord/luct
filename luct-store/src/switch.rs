@@ -1,7 +1,6 @@
 use luct_core::store::{
     AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead,
-    StoreWrite,
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 
 /// [`Store`](luct_core::store::Store) implementation that switches between two different
@@ -87,27 +86,6 @@ where
         match self {
             StoreSwitch::A(a) => a.append(value),
             StoreSwitch::B(b) => b.append(value),
-        }
-    }
-}
-
-impl<A, B, K, V> SearchableStoreRead for StoreSwitch<A, B>
-where
-    K: Ord,
-    A: SearchableStoreRead<Key = K, Value = V>,
-    B: SearchableStoreRead<Key = K, Value = V>,
-{
-    fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
-        match self {
-            StoreSwitch::A(a) => a.filter(pred),
-            StoreSwitch::B(b) => b.filter(pred),
-        }
-    }
-
-    fn find(&self, pred: impl FnMut(&K, &V) -> bool) -> Option<(K, V)> {
-        match self {
-            StoreSwitch::A(a) => a.find(pred),
-            StoreSwitch::B(b) => b.find(pred),
         }
     }
 }

@@ -1,7 +1,6 @@
 use luct_core::store::{
     AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead,
-    StoreWrite,
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -114,25 +113,6 @@ where
     }
 }
 
-impl<S> SearchableStoreRead for LastValCacheStore<S>
-where
-    S: SearchableStoreRead<Key: Clone, Value: Clone>,
-{
-    fn filter(
-        &self,
-        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
-    ) -> Vec<(Self::Key, Self::Value)> {
-        self.inner.filter(pred)
-    }
-
-    fn find(
-        &self,
-        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
-    ) -> Option<(Self::Key, Self::Value)> {
-        self.inner.find(pred)
-    }
-}
-
 impl<S> AsyncStoreRead for LastValCacheStore<S>
 where
     S: AsyncStoreRead<Key: Clone>,
@@ -213,7 +193,7 @@ mod tests {
     use luct_core::store::MemoryStore;
     use luct_test::{
         async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
-        store::{ordered_store_test, searchable_store_test, store_test},
+        store::{ordered_store_test, store_test},
     };
 
     #[test]
@@ -226,12 +206,6 @@ mod tests {
     fn last_val_ordered_store() {
         let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         ordered_store_test(store);
-    }
-
-    #[test]
-    fn last_val_searchable_store() {
-        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
-        searchable_store_test(store);
     }
 
     #[tokio::test]

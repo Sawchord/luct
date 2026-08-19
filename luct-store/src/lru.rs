@@ -1,8 +1,7 @@
 use lru::LruCache;
 use luct_core::store::{
     AppendableStore, AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead,
-    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, SearchableStoreRead, Store, StoreBase,
-    StoreRead, StoreWrite,
+    AsyncStoreRead, AsyncStoreWrite, OrderedStoreRead, Store, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -129,25 +128,6 @@ where
     }
 }
 
-impl<S> SearchableStoreRead for LruCacheStore<S>
-where
-    S: SearchableStoreRead<Key: Clone + Hash, Value: Clone>,
-{
-    fn filter(
-        &self,
-        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
-    ) -> Vec<(Self::Key, Self::Value)> {
-        self.inner.filter(pred)
-    }
-
-    fn find(
-        &self,
-        pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
-    ) -> Option<(Self::Key, Self::Value)> {
-        self.inner.find(pred)
-    }
-}
-
 impl<S> AsyncStoreRead for LruCacheStore<S>
 where
     S: AsyncStoreRead<Key: Clone + Hash + Eq, Value: Clone>,
@@ -224,7 +204,7 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
+    use luct_test::store::{ordered_store_test, store_test};
 
     #[test]
     fn lru_cache_store() {
@@ -236,11 +216,5 @@ mod tests {
     fn lru_cache_ordered_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
         ordered_store_test(store);
-    }
-
-    #[test]
-    fn lru_cache_searchable_store() {
-        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
-        searchable_store_test(store);
     }
 }
