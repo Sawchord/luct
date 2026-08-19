@@ -1,45 +1,15 @@
 use crate::{
-    store::{AsyncStoreRead, Hashable, StoreRead},
+    store::{AsyncStoreRead, Hashable},
     tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
 
 impl<N, L> Tree<N, L>
 where
-    N: StoreRead<Key = NodeKey, Value = HashOutput>,
-{
-    /// This follows RFC 9162 2.1.4.1
-    pub fn get_consistency_proof(
-        &self,
-        first: &TreeHead,
-        second: &TreeHead,
-    ) -> Result<ConsistencyProof, ProofGenerationError> {
-        if first.tree_size > second.tree_size {
-            return Err(ProofGenerationError::InvalidTreeSize {
-                expected: first.tree_size,
-                received: second.tree_size,
-            });
-        }
-
-        let path = get_consistency_proof(first, second, |key| {
-            self.nodes
-                .get(&key)
-                .ok_or(ProofGenerationError::KeyNotFound(key))
-        });
-        let mut path = path
-            .into_iter()
-            .collect::<Result<Vec<HashOutput>, ProofGenerationError>>()?;
-
-        path.reverse();
-        Ok(ConsistencyProof { path })
-    }
-}
-
-impl<N, L> Tree<N, L>
-where
     N: AsyncStoreRead<Key = NodeKey, Value = HashOutput>,
 {
-    pub async fn get_consistency_proof_async(
+    /// This follows RFC 9162 2.1.4.1
+    pub async fn get_consistency_proof(
         &self,
         first: &TreeHead,
         second: &TreeHead,
@@ -220,14 +190,14 @@ mod tests {
         tree.insert_entry("H".to_string()).await;
 
         let proof1 = tree
-            .get_consistency_proof_async(&tree_head1, &tree_head4)
+            .get_consistency_proof(&tree_head1, &tree_head4)
             .await
             .unwrap();
         assert_eq!(proof1.path.len(), 4);
         proof1.validate(&tree_head1, &tree_head4).unwrap();
 
         let proof2 = tree
-            .get_consistency_proof_async(&tree_head2, &tree_head4)
+            .get_consistency_proof(&tree_head2, &tree_head4)
             .await
             .unwrap();
         assert_eq!(proof2.path.len(), 1);
@@ -235,14 +205,14 @@ mod tests {
         proof2.validate(&tree_head2, &tree_head4).unwrap();
 
         let proof3 = tree
-            .get_consistency_proof_async(&tree_head3, &tree_head4)
+            .get_consistency_proof(&tree_head3, &tree_head4)
             .await
             .unwrap();
         assert_eq!(proof3.path.len(), 3);
         proof3.validate(&tree_head3, &tree_head4).unwrap();
 
         let proof4 = tree
-            .get_consistency_proof_async(&tree_head4, &tree_head4)
+            .get_consistency_proof(&tree_head4, &tree_head4)
             .await
             .unwrap();
         assert!(proof4.path.is_empty());
@@ -277,7 +247,7 @@ mod tests {
         let second_th = tree.recompute_tree_head().await;
 
         let proof = tree
-            .get_consistency_proof_async(&first_th, &second_th)
+            .get_consistency_proof(&first_th, &second_th)
             .await
             .unwrap();
         proof.validate(&first_th, &second_th).unwrap();

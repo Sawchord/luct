@@ -60,7 +60,7 @@ impl<S: ScannerImpl> TileFetcher<S> {
 
         let audit_proof = self
             .0
-            .get_audit_proof_async(&tree_head, *leaf_index)
+            .get_audit_proof(&tree_head, *leaf_index)
             .await
             .map_err(TilingError::AuditProofGenerationError)?;
 
@@ -110,7 +110,7 @@ impl<S: ScannerImpl> TileFetcher<S> {
 
         let consistency_proof = self
             .0
-            .get_consistency_proof_async(&old_tree_head, &new_tree_head)
+            .get_consistency_proof(&old_tree_head, &new_tree_head)
             .await
             .map_err(TilingError::ConsistencyProofGenerationError)?;
 
