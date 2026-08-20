@@ -1,7 +1,7 @@
 use lru::LruCache;
 use luct_core::store::{
     AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, OrderedStoreRead, Store, StoreBase, StoreRead, StoreWrite,
+    AsyncStoreWrite, Store, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -110,15 +110,6 @@ where
     }
 }
 
-impl<S> OrderedStoreRead for LruCacheStore<S>
-where
-    S: OrderedStoreRead<Key: Clone + Hash, Value: Clone>,
-{
-    fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        self.inner.last()
-    }
-}
-
 impl<S> AsyncStoreRead for LruCacheStore<S>
 where
     S: AsyncStoreRead<Key: Clone + Hash + Eq, Value: Clone>,
@@ -195,17 +186,11 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::store::{ordered_store_test, store_test};
+    use luct_test::store::store_test;
 
     #[test]
     fn lru_cache_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
         store_test(store);
-    }
-
-    #[test]
-    fn lru_cache_ordered_store() {
-        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
-        ordered_store_test(store);
     }
 }

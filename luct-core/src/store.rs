@@ -66,18 +66,3 @@ pub trait StoreWrite: StoreBase {
 /// Note that there is no ACID requirement in the trait.
 pub trait Store: StoreRead + StoreWrite {}
 impl<T> Store for T where T: StoreRead + StoreWrite {}
-
-/// Extension to regular [`Stores`](Store), which have ordered keys
-pub trait OrderedStoreRead: StoreRead<Key: Ord> {
-    /// Returns the last element in the store
-    ///
-    /// The last element is the largest element with respect to the keys [`Ord`] implementation.
-    ///
-    /// # Returns
-    /// - `Some(key, value)` if the store is non-empty
-    /// - `None` otherwise
-    fn last(&self) -> Option<(Self::Key, Self::Value)>;
-}
-
-pub trait OrderedStore: OrderedStoreRead + StoreWrite {}
-impl<T> OrderedStore for T where T: OrderedStoreRead + StoreWrite {}

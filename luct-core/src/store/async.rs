@@ -40,15 +40,14 @@ pub trait AsyncStoreWrite: StoreBase {
     fn delete(&self, key: Self::Key) -> impl Future<Output = bool>;
 }
 
-/// The [`AsyncStore`] trait is a version of the [`Store`](crate::store::Store) that is asynchrounous
+/// The [`Store`] trait is a basic key-value store trait
 ///
-/// This allows the underlying store engine to make asynchronous requests,
-/// such as a distributed storage or rebuilding the store dynamically using tiles
+/// Note that there is no ACID requirement in the trait.
 pub trait AsyncStore: AsyncStoreRead + AsyncStoreWrite {}
 
 impl<T> AsyncStore for T where T: AsyncStoreRead + AsyncStoreWrite {}
 
-/// Async version of [`OrderedStore`](crate::store::OrderedStore)
+/// Extension to regular [`Stores`](Store), which have ordered keys
 pub trait AsyncOrderedStoreRead: AsyncStoreRead<Key: Ord> {
     /// Returns the last element in the store
     ///

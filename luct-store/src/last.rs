@@ -1,6 +1,6 @@
 use luct_core::store::{
     AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
+    AsyncStoreWrite, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -86,23 +86,6 @@ where
     }
 }
 
-impl<S> OrderedStoreRead for LastValCacheStore<S>
-where
-    S: OrderedStoreRead<Key: Clone, Value: Clone>,
-{
-    fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        let mut last_borrow = self.last.borrow_mut();
-        match last_borrow.as_ref() {
-            Some(last) => Some(last.clone()),
-            None => {
-                let last = self.inner.last();
-                *last_borrow = last.clone();
-                last
-            }
-        }
-    }
-}
-
 impl<S> AsyncStoreRead for LastValCacheStore<S>
 where
     S: AsyncStoreRead<Key: Clone>,
@@ -183,19 +166,13 @@ mod tests {
     use luct_core::store::MemoryStore;
     use luct_test::{
         async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
-        store::{ordered_store_test, store_test},
+        store::store_test,
     };
 
     #[test]
     fn last_val_store() {
         let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
         store_test(store);
-    }
-
-    #[test]
-    fn last_val_ordered_store() {
-        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
-        ordered_store_test(store);
     }
 
     #[tokio::test]

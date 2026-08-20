@@ -1,8 +1,8 @@
 use crate::{StringStoreKey, StringStoreValue};
 use futures::{FutureExt, future::join_all};
 use luct_core::store::{
-    AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite,
-    OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
+    AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
+    StoreRead, StoreWrite,
 };
 use std::{
     fs::OpenOptions,
@@ -37,6 +37,7 @@ use tokio::{io::AsyncWriteExt, sync::RwLock};
 /// This is supposed to be used for simple applications and CLI.
 /// You may need a database storage backend for more complex applications such as log servers.
 // FIXME: Using the same store sync and async is a bug
+// TODO: Clean up sync code and rename async
 #[derive(Clone, Debug)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
@@ -68,28 +69,6 @@ impl<K, V> FilesystemStore<K, V> {
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
-    fn get_sorted_keys(&self) -> Option<Vec<K>> {
-        let paths = std::fs::read_dir(&self.path).ok()?;
-        let mut keys = paths
-            .filter_map(|path| match path {
-                Ok(dir_entry) => Some(K::deserialize_key(
-                    &dir_entry.file_name().into_string().unwrap(),
-                ))
-                .flatten(),
-                Err(err) => {
-                    tracing::error!(
-                        "Failed to deserialize a key (get_sorted_keys) err: {:?}",
-                        err
-                    );
-                    None
-                }
-            })
-            .collect::<Vec<_>>();
-        keys.sort();
-
-        Some(keys)
-    }
-
     async fn async_get_sorted_keys(&self) -> Option<Vec<K>> {
         let mut paths = tokio::fs::read_dir(&self.path).await.ok()?;
         let mut keys = Vec::<K>::new();
@@ -155,24 +134,6 @@ where
     fn delete(&self, key: &K) -> bool {
         let _lock = self.access.lock().unwrap();
         std::fs::remove_file(self.path.join(key.serialize_key())).is_ok()
-    }
-}
-
-impl<K, V> OrderedStoreRead for FilesystemStore<K, V>
-where
-    K: StringStoreKey,
-    V: StringStoreValue,
-{
-    fn last(&self) -> Option<(K, V)> {
-        let _lock = self.access.lock().unwrap();
-        let keys = self.get_sorted_keys()?;
-
-        // If the last one exists, try to read the value
-        let key = keys.last().cloned()?;
-        let data = std::fs::read_to_string(self.path.join(key.serialize_key())).ok()?;
-        let val = V::deserialize_value(&data)?;
-
-        Some((key, val))
     }
 }
 
@@ -287,7 +248,7 @@ mod tests {
     use super::*;
     use luct_test::{
         async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
-        store::{ordered_store_test, store_test},
+        store::store_test,
     };
     use tempfile::TempDir;
 
@@ -297,14 +258,6 @@ mod tests {
 
         let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
         store_test(store);
-    }
-
-    #[test]
-    fn filesystem_ordered_store() {
-        let dir = TempDir::new().unwrap();
-
-        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
-        ordered_store_test(store);
     }
 
     #[tokio::test]
