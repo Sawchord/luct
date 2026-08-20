@@ -1,4 +1,4 @@
-use crate::store::{AsyncAppendableStore, Hashable, Store};
+use crate::store::{AsyncAppendableStore, AsyncStore, Hashable};
 pub use crate::tree::{
     consistency::ConsistencyProof,
     inclusion::AuditProof,
@@ -68,14 +68,14 @@ impl<N, L> Tree<N, L> {
 
 impl<N, L> Tree<N, L>
 where
-    N: Store<Key = NodeKey, Value = HashOutput>,
+    N: AsyncStore<Key = NodeKey, Value = HashOutput>,
     L: AsyncAppendableStore<Key = u64, Value: Hashable>,
 {
     pub async fn insert_entry(&self, entry: L::Value) {
         let entry_hash = entry.hash();
         let idx = self.leafs.append(entry).await;
         let entry_key = NodeKey::leaf(idx);
-        self.nodes.insert(entry_key, entry_hash);
+        self.nodes.insert(entry_key, entry_hash).await;
 
         // Already update intermediate nodes, if they are power of twos
         let end = idx + 1;
@@ -88,11 +88,11 @@ where
             let (left, right) = key.split();
 
             let node = Node {
-                left: self.nodes.get(&left).unwrap(),
-                right: self.nodes.get(&right).unwrap(),
+                left: self.nodes.get(left).await.unwrap(),
+                right: self.nodes.get(right).await.unwrap(),
             };
 
-            self.nodes.insert(key, node.hash());
+            self.nodes.insert(key, node.hash()).await;
 
             diff <<= 1;
         }
@@ -110,16 +110,18 @@ where
             current_key = right;
         }
 
-        let mut current_node_hash = self.nodes.get(&current_key).unwrap();
+        let mut current_node_hash = self.nodes.get(current_key.clone()).await.unwrap();
         while let Some(left_key) = balanced_nodes.pop() {
             let current_node = Node {
-                left: self.nodes.get(&left_key).unwrap(),
-                right: self.nodes.get(&current_key).unwrap(),
+                left: self.nodes.get(left_key.clone()).await.unwrap(),
+                right: self.nodes.get(current_key.clone()).await.unwrap(),
             };
 
             current_key = left_key.merge(&current_key).unwrap();
             current_node_hash = current_node.hash();
-            self.nodes.insert(current_key.clone(), current_node_hash);
+            self.nodes
+                .insert(current_key.clone(), current_node_hash)
+                .await;
         }
 
         TreeHead {
@@ -131,7 +133,8 @@ where
     pub async fn get_latest_tree_head(&self) -> Option<TreeHead> {
         let idx = self.leafs.len().await as u64;
         self.nodes
-            .get(&NodeKey::full_range(idx))
+            .get(NodeKey::full_range(idx))
+            .await
             .map(|head| TreeHead {
                 tree_size: idx,
                 head,
