@@ -2,15 +2,8 @@ use crate::{StringStoreKey, StringStoreValue};
 use futures::{FutureExt, future::join_all};
 use luct_core::store::{
     AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
-    StoreRead, StoreWrite,
 };
-use std::{
-    fs::OpenOptions,
-    io::Write,
-    marker::PhantomData,
-    path::PathBuf,
-    sync::{Arc, Mutex},
-};
+use std::{marker::PhantomData, path::PathBuf, sync::Arc};
 use tokio::{io::AsyncWriteExt, sync::RwLock};
 
 // TODO: Log errors
@@ -36,14 +29,12 @@ use tokio::{io::AsyncWriteExt, sync::RwLock};
 /// Also starting a program that uses the store twice may lead to problems.
 /// This is supposed to be used for simple applications and CLI.
 /// You may need a database storage backend for more complex applications such as log servers.
-// FIXME: Using the same store sync and async is a bug
-// TODO: Clean up sync code and rename async
 #[derive(Clone, Debug)]
 pub struct FilesystemStore<K, V> {
     _kv: PhantomData<(K, V)>,
     path: PathBuf,
-    access: Arc<Mutex<()>>,
-    async_access: Arc<RwLock<()>>,
+
+    access: Arc<RwLock<()>>,
 }
 
 impl<K, V> FilesystemStore<K, V> {
@@ -62,14 +53,13 @@ impl<K, V> FilesystemStore<K, V> {
         Self {
             _kv: PhantomData,
             path,
-            access: Arc::new(Mutex::new(())),
-            async_access: Arc::new(RwLock::new(())),
+            access: Arc::new(RwLock::new(())),
         }
     }
 }
 
 impl<K: StringStoreKey, V: StringStoreValue> FilesystemStore<K, V> {
-    async fn async_get_sorted_keys(&self) -> Option<Vec<K>> {
+    async fn get_sorted_keys(&self) -> Option<Vec<K>> {
         let mut paths = tokio::fs::read_dir(&self.path).await.ok()?;
         let mut keys = Vec::<K>::new();
 
@@ -91,55 +81,9 @@ impl<K, V> StoreBase for FilesystemStore<K, V> {
     type Value = V;
 }
 
-impl<K: StringStoreKey, V: StringStoreValue> StoreRead for FilesystemStore<K, V> {
-    fn get(&self, key: &K) -> Option<V> {
-        let _lock = self.access.lock().unwrap();
-        let data = std::fs::read_to_string(self.path.join(key.serialize_key())).ok()?;
-        let value = V::deserialize_value(&data)?;
-        Some(value)
-    }
-
-    fn len(&self) -> usize {
-        let _lock = self.access.lock().unwrap();
-        match std::fs::read_dir(&self.path) {
-            Ok(paths) => paths.count(),
-            Err(_) => 0,
-        }
-    }
-}
-
-impl<K, V> StoreWrite for FilesystemStore<K, V>
-where
-    K: StringStoreKey,
-    V: StringStoreValue,
-{
-    fn insert(&self, key: K, value: V) {
-        let _lock = self.access.lock().unwrap();
-        let store_path = self.path.join(key.serialize_key());
-
-        match OpenOptions::new()
-            .create(true)
-            .truncate(true)
-            .write(true)
-            .open(&store_path)
-        {
-            Ok(mut file) => {
-                file.write_all(value.serialize_value().as_bytes()).unwrap();
-                tracing::debug!("Wrote key to {:?}", store_path);
-            }
-            Err(err) => tracing::error!("Failed to write to path {:?}, err {:?}", store_path, err),
-        };
-    }
-
-    fn delete(&self, key: &K) -> bool {
-        let _lock = self.access.lock().unwrap();
-        std::fs::remove_file(self.path.join(key.serialize_key())).is_ok()
-    }
-}
-
 impl<K: StringStoreKey, V: StringStoreValue> AsyncStoreRead for FilesystemStore<K, V> {
     async fn get(&self, key: K) -> Option<V> {
-        let _lock = self.async_access.read().await;
+        let _lock = self.access.read().await;
         let data = tokio::fs::read_to_string(self.path.join(key.serialize_key()))
             .await
             .ok()?;
@@ -148,7 +92,7 @@ impl<K: StringStoreKey, V: StringStoreValue> AsyncStoreRead for FilesystemStore<
     }
 
     async fn len(&self) -> usize {
-        let _lock = self.async_access.read().await;
+        let _lock = self.access.read().await;
         match tokio::fs::read_dir(&self.path).await {
             Ok(mut paths) => {
                 let mut count = 0;
@@ -168,7 +112,7 @@ where
     V: StringStoreValue,
 {
     async fn insert(&self, key: K, value: V) {
-        let _lock = self.async_access.write().await;
+        let _lock = self.access.write().await;
         let store_path = self.path.join(key.serialize_key());
 
         match tokio::fs::OpenOptions::new()
@@ -189,7 +133,7 @@ where
     }
 
     async fn delete(&self, key: K) -> bool {
-        let _lock = self.async_access.write().await;
+        let _lock = self.access.write().await;
         tokio::fs::remove_file(self.path.join(key.serialize_key()))
             .await
             .is_ok()
@@ -202,8 +146,8 @@ where
     V: StringStoreValue,
 {
     async fn last(&self) -> Option<(K, V)> {
-        let _lock = self.async_access.read().await;
-        let keys = self.async_get_sorted_keys().await?;
+        let _lock = self.access.read().await;
+        let keys = self.get_sorted_keys().await?;
 
         // If the last one exists, try to read the value
         let key = keys.last().cloned()?;
@@ -222,8 +166,8 @@ where
     V: StringStoreValue,
 {
     async fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
-        let _lock = self.async_access.read().await;
-        let Some(keys) = self.async_get_sorted_keys().await else {
+        let _lock = self.access.read().await;
+        let Some(keys) = self.get_sorted_keys().await else {
             return vec![];
         };
 
@@ -246,19 +190,10 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
-    use luct_test::{
-        async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
-        store::store_test,
+    use luct_test::async_store::{
+        async_ordered_store_test, async_searchable_store_test, async_store_test,
     };
     use tempfile::TempDir;
-
-    #[test]
-    fn filesystem_store() {
-        let dir = TempDir::new().unwrap();
-
-        let store = FilesystemStore::<u64, String>::new(dir.path().to_owned());
-        store_test(store);
-    }
 
     #[tokio::test]
     async fn async_filesystem_store() {

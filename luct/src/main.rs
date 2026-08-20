@@ -12,7 +12,7 @@ use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
-    store::{MemoryStore, StoreRead},
+    store::{AsyncStoreRead, MemoryStore},
     v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
@@ -72,7 +72,10 @@ async fn main() -> eyre::Result<()> {
         StoreSwitch::A(MemoryStore::default())
     } else {
         let store = StoreSwitch::B(FilesystemStore::new(workdir.join("report")));
-        tracing::debug!("Loaded report store with {} cached reports", store.len());
+        tracing::debug!(
+            "Loaded report store with {} cached reports",
+            store.len().await
+        );
         store
     };
 
