@@ -1,5 +1,21 @@
-use crate::store::StoreBase;
+pub use crate::store::memory::MemoryStore;
+use crate::tree::HashOutput;
 use std::future::Future;
+
+mod memory;
+
+/// Trait indicating that an object can be hased with respect to the CT protocol
+///
+/// This for now always refers to the Sha256 algorithm, but this might change in the future
+pub trait Hashable {
+    /// Hash the object
+    fn hash(&self) -> HashOutput;
+}
+
+pub trait StoreBase {
+    type Key;
+    type Value;
+}
 
 pub trait AsyncStoreRead: StoreBase {
     /// Returns the value associated with `key` from the [`Store`](crate::store::Store)

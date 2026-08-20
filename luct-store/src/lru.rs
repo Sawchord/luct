@@ -151,7 +151,7 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::async_store::{
+    use luct_test::store::{
         async_ordered_store_test, async_searchable_store_test, async_store_test,
     };
 
