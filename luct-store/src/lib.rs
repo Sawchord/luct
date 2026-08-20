@@ -1,13 +1,13 @@
 //! Collection of implementations of different [`Stores`](luct_core::store::Store)
 #![forbid(unsafe_code)]
 
-// TODO: Move browser store into this crate
-
+#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 mod file;
 mod last;
 mod lru;
 mod switch;
 
+#[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 pub use file::FilesystemStore;
 pub use last::LastValCacheStore;
 pub use lru::LruCacheStore;
