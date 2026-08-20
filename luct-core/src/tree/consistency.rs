@@ -1,12 +1,12 @@
 use crate::{
-    store::{AsyncStoreRead, Hashable},
+    store::{StoreRead, Hashable},
     tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
 
 impl<N, L> Tree<N, L>
 where
-    N: AsyncStoreRead<Key = NodeKey, Value = HashOutput>,
+    N: StoreRead<Key = NodeKey, Value = HashOutput>,
 {
     /// This follows RFC 9162 2.1.4.1
     pub async fn get_consistency_proof(

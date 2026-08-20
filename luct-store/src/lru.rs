@@ -1,7 +1,6 @@
 use lru::LruCache;
 use luct_core::store::{
-    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStore,
-    AsyncStoreRead, AsyncStoreWrite, StoreBase,
+    AppendableStore, OrderedStoreRead, SearchableStoreRead, Store, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -48,7 +47,7 @@ where
 
 impl<S> DerefMut for LruCacheStore<S>
 where
-    S: AsyncStore,
+    S: Store,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
@@ -75,9 +74,9 @@ where
     type Value = S::Value;
 }
 
-impl<S> AsyncStoreRead for LruCacheStore<S>
+impl<S> StoreRead for LruCacheStore<S>
 where
-    S: AsyncStoreRead<Key: Clone + Hash + Eq, Value: Clone>,
+    S: StoreRead<Key: Clone + Hash + Eq, Value: Clone>,
 {
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
         if let Some(val) = self.cache.borrow_mut().get(&key) {
@@ -94,9 +93,9 @@ where
     }
 }
 
-impl<S> AsyncStoreWrite for LruCacheStore<S>
+impl<S> StoreWrite for LruCacheStore<S>
 where
-    S: AsyncStoreWrite<Key: Clone + Hash + Eq, Value: Clone>,
+    S: StoreWrite<Key: Clone + Hash + Eq, Value: Clone>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         self.cache.borrow_mut().pop(&key);
@@ -110,27 +109,27 @@ where
     }
 }
 
-impl<S> AsyncOrderedStoreRead for LruCacheStore<S>
+impl<S> OrderedStoreRead for LruCacheStore<S>
 where
-    S: AsyncOrderedStoreRead<Key: Clone + Hash, Value: Clone>,
+    S: OrderedStoreRead<Key: Clone + Hash, Value: Clone>,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
         self.inner.last().await
     }
 }
 
-impl<S> AsyncAppendableStore for LruCacheStore<S>
+impl<S> AppendableStore for LruCacheStore<S>
 where
-    S: AsyncAppendableStore<Key: Clone + Hash, Value: Clone>,
+    S: AppendableStore<Key: Clone + Hash, Value: Clone>,
 {
     async fn append(&self, value: Self::Value) -> Self::Key {
         self.inner.append(value).await
     }
 }
 
-impl<S> AsyncSearchableStoreRead for LruCacheStore<S>
+impl<S> SearchableStoreRead for LruCacheStore<S>
 where
-    S: AsyncSearchableStoreRead<Key: Clone + Hash, Value: Clone>,
+    S: SearchableStoreRead<Key: Clone + Hash, Value: Clone>,
 {
     async fn filter(
         &self,
@@ -151,25 +150,23 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::store::{
-        async_ordered_store_test, async_searchable_store_test, async_store_test,
-    };
+    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
 
     #[tokio::test]
     async fn lru_cache_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
-        async_store_test(store).await;
+        store_test(store).await;
     }
 
     #[tokio::test]
-    async fn async_last_val_ordered_store() {
+    async fn last_val_ordered_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
-        async_ordered_store_test(store).await;
+        ordered_store_test(store).await;
     }
 
     #[tokio::test]
-    async fn async_last_val_searchable_store() {
+    async fn last_val_searchable_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
-        async_searchable_store_test(store).await;
+        searchable_store_test(store).await;
     }
 }

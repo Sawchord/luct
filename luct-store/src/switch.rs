@@ -1,6 +1,5 @@
 use luct_core::store::{
-    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, StoreBase,
+    AppendableStore, SearchableStoreRead, OrderedStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 
 /// [`Store`](luct_core::store::Store) implementation that switches between two different
@@ -22,10 +21,10 @@ where
     type Value = V;
 }
 
-impl<A, B, K, V> AsyncStoreRead for StoreSwitch<A, B>
+impl<A, B, K, V> StoreRead for StoreSwitch<A, B>
 where
-    A: AsyncStoreRead<Key = K, Value = V>,
-    B: AsyncStoreRead<Key = K, Value = V>,
+    A: StoreRead<Key = K, Value = V>,
+    B: StoreRead<Key = K, Value = V>,
 {
     async fn get(&self, key: K) -> Option<V> {
         match self {
@@ -42,10 +41,10 @@ where
     }
 }
 
-impl<A, B, K, V> AsyncStoreWrite for StoreSwitch<A, B>
+impl<A, B, K, V> StoreWrite for StoreSwitch<A, B>
 where
-    A: AsyncStoreWrite<Key = K, Value = V>,
-    B: AsyncStoreWrite<Key = K, Value = V>,
+    A: StoreWrite<Key = K, Value = V>,
+    B: StoreWrite<Key = K, Value = V>,
 {
     async fn insert(&self, key: K, value: V) {
         match self {
@@ -62,11 +61,11 @@ where
     }
 }
 
-impl<A, B, K, V> AsyncOrderedStoreRead for StoreSwitch<A, B>
+impl<A, B, K, V> OrderedStoreRead for StoreSwitch<A, B>
 where
     K: Ord,
-    A: AsyncOrderedStoreRead<Key = K, Value = V>,
-    B: AsyncOrderedStoreRead<Key = K, Value = V>,
+    A: OrderedStoreRead<Key = K, Value = V>,
+    B: OrderedStoreRead<Key = K, Value = V>,
 {
     async fn last(&self) -> Option<(K, V)> {
         match self {
@@ -76,11 +75,11 @@ where
     }
 }
 
-impl<A, B, K, V> AsyncAppendableStore for StoreSwitch<A, B>
+impl<A, B, K, V> AppendableStore for StoreSwitch<A, B>
 where
     K: Ord,
-    A: AsyncAppendableStore<Key = K, Value = V>,
-    B: AsyncAppendableStore<Key = K, Value = V>,
+    A: AppendableStore<Key = K, Value = V>,
+    B: AppendableStore<Key = K, Value = V>,
 {
     async fn append(&self, value: V) -> K {
         match self {
@@ -90,11 +89,11 @@ where
     }
 }
 
-impl<A, B, K, V> AsyncSearchableStoreRead for StoreSwitch<A, B>
+impl<A, B, K, V> SearchableStoreRead for StoreSwitch<A, B>
 where
     K: Ord,
-    A: AsyncSearchableStoreRead<Key = K, Value = V>,
-    B: AsyncSearchableStoreRead<Key = K, Value = V>,
+    A: SearchableStoreRead<Key = K, Value = V>,
+    B: SearchableStoreRead<Key = K, Value = V>,
 {
     async fn filter(&self, pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         match self {

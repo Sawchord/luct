@@ -1,6 +1,5 @@
 use luct_core::store::{
-    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, StoreBase,
+    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     cell::RefCell,
@@ -58,9 +57,9 @@ where
     type Value = S::Value;
 }
 
-impl<S> AsyncStoreRead for LastValCacheStore<S>
+impl<S> StoreRead for LastValCacheStore<S>
 where
-    S: AsyncStoreRead<Key: Clone>,
+    S: StoreRead<Key: Clone>,
 {
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
         self.inner.get(key.clone()).await
@@ -71,9 +70,9 @@ where
     }
 }
 
-impl<S> AsyncStoreWrite for LastValCacheStore<S>
+impl<S> StoreWrite for LastValCacheStore<S>
 where
-    S: AsyncStoreWrite<Key: Clone>,
+    S: StoreWrite<Key: Clone>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         *self.last.borrow_mut() = None;
@@ -86,9 +85,9 @@ where
     }
 }
 
-impl<S> AsyncOrderedStoreRead for LastValCacheStore<S>
+impl<S> OrderedStoreRead for LastValCacheStore<S>
 where
-    S: AsyncOrderedStoreRead<Key: Clone, Value: Clone>,
+    S: OrderedStoreRead<Key: Clone, Value: Clone>,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
         let last = self.last.borrow().clone();
@@ -103,9 +102,9 @@ where
     }
 }
 
-impl<S> AsyncAppendableStore for LastValCacheStore<S>
+impl<S> AppendableStore for LastValCacheStore<S>
 where
-    S: AsyncAppendableStore<Key: Clone, Value: Clone>,
+    S: AppendableStore<Key: Clone, Value: Clone>,
 {
     async fn append(&self, value: Self::Value) -> Self::Key {
         *self.last.borrow_mut() = None;
@@ -113,9 +112,9 @@ where
     }
 }
 
-impl<S> AsyncSearchableStoreRead for LastValCacheStore<S>
+impl<S> SearchableStoreRead for LastValCacheStore<S>
 where
-    S: AsyncSearchableStoreRead<Key: Clone, Value: Clone>,
+    S: SearchableStoreRead<Key: Clone, Value: Clone>,
 {
     async fn filter(
         &self,
@@ -136,25 +135,23 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::store::{
-        async_ordered_store_test, async_searchable_store_test, async_store_test,
-    };
+    use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
 
     #[tokio::test]
-    async fn async_last_val_store() {
+    async fn last_val_store() {
         let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
-        async_store_test(store).await;
+        store_test(store).await;
     }
 
     #[tokio::test]
-    async fn async_last_val_ordered_store() {
+    async fn last_val_ordered_store() {
         let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
-        async_ordered_store_test(store).await;
+        ordered_store_test(store).await;
     }
 
     #[tokio::test]
-    async fn async_last_val_searchable_store() {
+    async fn last_val_searchable_store() {
         let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
-        async_searchable_store_test(store).await;
+        searchable_store_test(store).await;
     }
 }

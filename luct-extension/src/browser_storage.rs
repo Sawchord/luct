@@ -1,7 +1,7 @@
 use futures::lock::Mutex;
 use js_sys::{Array, Object, Reflect};
 use luct_core::store::{
-    AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead, AsyncStoreWrite, StoreBase,
+    OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite, StoreBase,
 };
 use luct_store::StringStoreKey;
 use serde::{Serialize, de::DeserializeOwned};
@@ -115,7 +115,7 @@ impl<K, V> StoreBase for BrowserStorage<K, V> {
     type Value = V;
 }
 
-impl<K, V> AsyncStoreRead for BrowserStorage<K, V>
+impl<K, V> StoreRead for BrowserStorage<K, V>
 where
     K: StringStoreKey,
     V: DeserializeOwned,
@@ -137,7 +137,7 @@ where
     }
 }
 
-impl<K, V> AsyncStoreWrite for BrowserStorage<K, V>
+impl<K, V> StoreWrite for BrowserStorage<K, V>
 where
     K: StringStoreKey,
     V: Serialize,
@@ -170,7 +170,7 @@ where
     }
 }
 
-impl<K, V> AsyncOrderedStoreRead for BrowserStorage<K, V>
+impl<K, V> OrderedStoreRead for BrowserStorage<K, V>
 where
     K: StringStoreKey + Ord,
     V: DeserializeOwned,
@@ -215,7 +215,7 @@ where
     }
 }
 
-impl<K, V> AsyncSearchableStoreRead for BrowserStorage<K, V>
+impl<K, V> SearchableStoreRead for BrowserStorage<K, V>
 where
     K: StringStoreKey + Ord,
     V: DeserializeOwned,

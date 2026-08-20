@@ -1,7 +1,7 @@
-use luct_core::store::{AsyncOrderedStore, AsyncSearchableStore, AsyncStore};
+use luct_core::store::{OrderedStore, SearchableStore, Store};
 
 /// Basic store test that tests abillity to store and retreive items
-pub async fn async_store_test<S: AsyncStore<Key = u64, Value = String>>(store: S) {
+pub async fn store_test<S: Store<Key = u64, Value = String>>(store: S) {
     assert!(store.is_empty().await);
 
     // Check that store persists values
@@ -34,7 +34,7 @@ pub async fn async_store_test<S: AsyncStore<Key = u64, Value = String>>(store: S
 }
 
 /// Tests capabilities of an ordered store
-pub async fn async_ordered_store_test<S: AsyncOrderedStore<Key = u64, Value = String>>(store: S) {
+pub async fn ordered_store_test<S: OrderedStore<Key = u64, Value = String>>(store: S) {
     assert!(store.is_empty().await);
 
     // Insert an element
@@ -73,9 +73,7 @@ pub async fn async_ordered_store_test<S: AsyncOrderedStore<Key = u64, Value = St
     assert_eq!(store.last().await, Some((2, "two".to_string())));
 }
 
-pub async fn async_searchable_store_test<S: AsyncSearchableStore<Key = u64, Value = String>>(
-    store: S,
-) {
+pub async fn searchable_store_test<S: SearchableStore<Key = u64, Value = String>>(store: S) {
     assert!(store.is_empty().await);
 
     // Insert some element out of ourder
@@ -108,20 +106,20 @@ mod tests {
     use luct_core::store::MemoryStore;
 
     #[tokio::test]
-    async fn async_memory_store() {
+    async fn memory_store() {
         let store = MemoryStore::<u64, String>::default();
-        async_store_test(store).await;
+        store_test(store).await;
     }
 
     #[tokio::test]
-    async fn async_memory_ordered_store() {
+    async fn memory_ordered_store() {
         let store = MemoryStore::<u64, String>::default();
-        async_ordered_store_test(store).await;
+        ordered_store_test(store).await;
     }
 
     #[tokio::test]
-    async fn async_memory_searchable_store() {
+    async fn memory_searchable_store() {
         let store = MemoryStore::<u64, String>::default();
-        async_searchable_store_test(store).await;
+        searchable_store_test(store).await;
     }
 }

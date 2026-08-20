@@ -3,7 +3,7 @@ use chrono::DateTime;
 use futures::future::join_all;
 use luct_core::{
     CertificateChain, LogId,
-    store::{AsyncStoreRead, AsyncStoreWrite},
+    store::{StoreRead, StoreWrite},
     v1::{self, SignedCertificateTimestamp},
 };
 use std::sync::Arc;

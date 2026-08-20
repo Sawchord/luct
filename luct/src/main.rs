@@ -12,7 +12,7 @@ use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
-    store::{AsyncStoreRead, MemoryStore},
+    store::{StoreRead, MemoryStore},
     v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
