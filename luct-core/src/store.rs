@@ -17,7 +17,7 @@ pub trait StoreBase {
     type Value;
 }
 
-pub trait AsyncStoreRead: StoreBase {
+pub trait StoreRead: StoreBase {
     /// Returns the value associated with `key` from the [`Store`](crate::store::Store)
     ///
     /// # Arguments:
@@ -37,7 +37,7 @@ pub trait AsyncStoreRead: StoreBase {
     }
 }
 
-pub trait AsyncStoreWrite: StoreBase {
+pub trait StoreWrite: StoreBase {
     /// Insert a value into the store
     ///
     /// # Arguments:
@@ -59,12 +59,12 @@ pub trait AsyncStoreWrite: StoreBase {
 /// The [`Store`] trait is a basic key-value store trait
 ///
 /// Note that there is no ACID requirement in the trait.
-pub trait AsyncStore: AsyncStoreRead + AsyncStoreWrite {}
+pub trait Store: StoreRead + StoreWrite {}
 
-impl<T> AsyncStore for T where T: AsyncStoreRead + AsyncStoreWrite {}
+impl<T> Store for T where T: StoreRead + StoreWrite {}
 
 /// Extension to regular [`Stores`](Store), which have ordered keys
-pub trait AsyncOrderedStoreRead: AsyncStoreRead<Key: Ord> {
+pub trait OrderedStoreRead: StoreRead<Key: Ord> {
     /// Returns the last element in the store
     ///
     /// The last element is the largest element with respect to the keys [`Ord`] implementation.
@@ -75,8 +75,8 @@ pub trait AsyncOrderedStoreRead: AsyncStoreRead<Key: Ord> {
     fn last(&self) -> impl Future<Output = Option<(Self::Key, Self::Value)>>;
 }
 
-pub trait AsyncOrderedStore: AsyncOrderedStoreRead + AsyncStoreWrite {}
-impl<T> AsyncOrderedStore for T where T: AsyncOrderedStoreRead + AsyncStoreWrite {}
+pub trait OrderedStore: OrderedStoreRead + StoreWrite {}
+impl<T> OrderedStore for T where T: OrderedStoreRead + StoreWrite {}
 
 /// Extension to regular [`Stores`](Store), which use an index as a key
 ///
@@ -84,7 +84,7 @@ impl<T> AsyncOrderedStore for T where T: AsyncOrderedStoreRead + AsyncStoreWrite
 /// The key is then returned after insertion.
 ///
 /// The key that was returned last must have be the largest value wrt [`Ord`].
-pub trait AsyncAppendableStore: AsyncOrderedStoreRead {
+pub trait AppendableStore: OrderedStoreRead {
     /// Insert a value into the store and return the index
     ///
     /// # Arguments:
@@ -97,7 +97,7 @@ pub trait AsyncAppendableStore: AsyncOrderedStoreRead {
 
 /// Extension to a [`OrderedStoreRead`], that allows looking through the store to look for specific
 /// entries.
-pub trait AsyncSearchableStoreRead: AsyncOrderedStoreRead {
+pub trait SearchableStoreRead: OrderedStoreRead {
     /// Search for all entries in the store, that fulfill a certain predicate
     ///
     /// Note that the elements are being searched through in the order specified by [`Ord`] of key
@@ -140,5 +140,5 @@ pub trait AsyncSearchableStoreRead: AsyncOrderedStoreRead {
     }
 }
 
-pub trait AsyncSearchableStore: AsyncSearchableStoreRead + AsyncStoreWrite {}
-impl<T> AsyncSearchableStore for T where T: AsyncSearchableStoreRead + AsyncStoreWrite {}
+pub trait SearchableStore: SearchableStoreRead + StoreWrite {}
+impl<T> SearchableStore for T where T: SearchableStoreRead + StoreWrite {}

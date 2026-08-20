@@ -1,6 +1,6 @@
 use crate::{HashOutput, ScannerImpl, log::ScannerLogInner};
 use luct_core::{
-    store::{AsyncOrderedStoreRead, AsyncStoreRead, Hashable, MemoryStore, StoreBase},
+    store::{OrderedStoreRead, StoreRead, Hashable, MemoryStore, StoreBase},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
@@ -151,7 +151,7 @@ impl<S: ScannerImpl> StoreBase for TileFetchStore<S> {
     type Value = HashOutput;
 }
 
-impl<S: ScannerImpl> AsyncStoreRead for TileFetchStore<S> {
+impl<S: ScannerImpl> StoreRead for TileFetchStore<S> {
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // If not available, calculate which tile should have the value and fetch it

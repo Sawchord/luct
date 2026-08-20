@@ -1,7 +1,7 @@
 use crate::{ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
 use luct_client::CtClient;
 use luct_core::{
-    store::{AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreWrite},
+    store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use std::{

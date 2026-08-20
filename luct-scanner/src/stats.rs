@@ -2,7 +2,7 @@ use std::collections::BTreeMap;
 
 use crate::{Scanner, ScannerImpl};
 use chrono::DateTime;
-use luct_core::store::AsyncSearchableStoreRead;
+use luct_core::store::SearchableStoreRead;
 use serde::{Deserialize, Serialize};
 use web_time::{SystemTime, UNIX_EPOCH};
 

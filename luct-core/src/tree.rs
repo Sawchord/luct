@@ -1,4 +1,4 @@
-use crate::store::{AsyncAppendableStore, AsyncStore, Hashable};
+use crate::store::{AppendableStore, Hashable, Store};
 pub use crate::tree::{
     consistency::ConsistencyProof,
     inclusion::AuditProof,
@@ -68,8 +68,8 @@ impl<N, L> Tree<N, L> {
 
 impl<N, L> Tree<N, L>
 where
-    N: AsyncStore<Key = NodeKey, Value = HashOutput>,
-    L: AsyncAppendableStore<Key = u64, Value: Hashable>,
+    N: Store<Key = NodeKey, Value = HashOutput>,
+    L: AppendableStore<Key = u64, Value: Hashable>,
 {
     pub async fn insert_entry(&self, entry: L::Value) {
         let entry_hash = entry.hash();

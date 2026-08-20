@@ -1,6 +1,6 @@
 use crate::store::{
-    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, StoreBase,
+    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreRead,
+    StoreWrite, StoreBase,
 };
 use std::{
     collections::BTreeMap,
@@ -25,7 +25,7 @@ impl<K, V> StoreBase for MemoryStore<K, V> {
     type Value = V;
 }
 
-impl<K: Ord, V: Clone> AsyncStoreRead for MemoryStore<K, V> {
+impl<K: Ord, V: Clone> StoreRead for MemoryStore<K, V> {
     async fn get(&self, key: K) -> Option<V> {
         self.0.read().unwrap().get(&key).cloned()
     }
@@ -35,7 +35,7 @@ impl<K: Ord, V: Clone> AsyncStoreRead for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord, V: Clone> AsyncStoreWrite for MemoryStore<K, V> {
+impl<K: Ord, V: Clone> StoreWrite for MemoryStore<K, V> {
     async fn insert(&self, key: K, value: V) {
         self.0.write().unwrap().insert(key, value);
     }
@@ -45,7 +45,7 @@ impl<K: Ord, V: Clone> AsyncStoreWrite for MemoryStore<K, V> {
     }
 }
 
-impl<K: Ord + Clone, V: Clone> AsyncOrderedStoreRead for MemoryStore<K, V> {
+impl<K: Ord + Clone, V: Clone> OrderedStoreRead for MemoryStore<K, V> {
     async fn last(&self) -> Option<(K, V)> {
         self.0
             .read()
@@ -56,7 +56,7 @@ impl<K: Ord + Clone, V: Clone> AsyncOrderedStoreRead for MemoryStore<K, V> {
     }
 }
 
-impl<V: Clone> AsyncAppendableStore for MemoryStore<u64, V> {
+impl<V: Clone> AppendableStore for MemoryStore<u64, V> {
     async fn append(&self, value: V) -> u64 {
         let mut store = self.0.write().unwrap();
 
@@ -72,7 +72,7 @@ impl<V: Clone> AsyncAppendableStore for MemoryStore<u64, V> {
     }
 }
 
-impl<K: Ord + Clone, V: Clone> AsyncSearchableStoreRead for MemoryStore<K, V> {
+impl<K: Ord + Clone, V: Clone> SearchableStoreRead for MemoryStore<K, V> {
     async fn filter(&self, mut pred: impl FnMut(&K, &V) -> bool) -> Vec<(K, V)> {
         self.0
             .read()
