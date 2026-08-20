@@ -1,6 +1,6 @@
 use luct_core::store::{
     AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, StoreBase, StoreRead, StoreWrite,
+    AsyncStoreWrite, StoreBase,
 };
 
 /// [`Store`](luct_core::store::Store) implementation that switches between two different
@@ -20,46 +20,6 @@ where
 {
     type Key = K;
     type Value = V;
-}
-
-impl<A, B, K, V> StoreRead for StoreSwitch<A, B>
-where
-    A: StoreRead<Key = K, Value = V>,
-    B: StoreRead<Key = K, Value = V>,
-{
-    fn get(&self, key: &K) -> Option<V> {
-        match self {
-            StoreSwitch::A(a) => a.get(key),
-            StoreSwitch::B(b) => b.get(key),
-        }
-    }
-
-    fn len(&self) -> usize {
-        match self {
-            StoreSwitch::A(a) => a.len(),
-            StoreSwitch::B(b) => b.len(),
-        }
-    }
-}
-
-impl<A, B, K, V> StoreWrite for StoreSwitch<A, B>
-where
-    A: StoreWrite<Key = K, Value = V>,
-    B: StoreWrite<Key = K, Value = V>,
-{
-    fn insert(&self, key: K, value: V) {
-        match self {
-            StoreSwitch::A(a) => a.insert(key, value),
-            StoreSwitch::B(b) => b.insert(key, value),
-        }
-    }
-
-    fn delete(&self, key: &K) -> bool {
-        match self {
-            StoreSwitch::A(a) => a.delete(key),
-            StoreSwitch::B(b) => b.delete(key),
-        }
-    }
 }
 
 impl<A, B, K, V> AsyncStoreRead for StoreSwitch<A, B>

@@ -1,7 +1,7 @@
 use lru::LruCache;
 use luct_core::store::{
-    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, Store, StoreBase, StoreRead, StoreWrite,
+    AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStore,
+    AsyncStoreRead, AsyncStoreWrite, StoreBase,
 };
 use std::{
     cell::RefCell,
@@ -48,7 +48,7 @@ where
 
 impl<S> DerefMut for LruCacheStore<S>
 where
-    S: Store,
+    S: AsyncStore,
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
@@ -73,41 +73,6 @@ where
 {
     type Key = S::Key;
     type Value = S::Value;
-}
-
-impl<S> StoreRead for LruCacheStore<S>
-where
-    S: StoreRead<Key: Clone + Hash + Eq, Value: Clone>,
-{
-    fn get(&self, key: &Self::Key) -> Option<Self::Value> {
-        if let Some(val) = self.cache.borrow_mut().get(key) {
-            Some(val.clone())
-        } else {
-            let val = self.inner.get(key)?;
-            self.cache.borrow_mut().put(key.clone(), val.clone());
-            Some(val)
-        }
-    }
-
-    fn len(&self) -> usize {
-        self.inner.len()
-    }
-}
-
-impl<S> StoreWrite for LruCacheStore<S>
-where
-    S: StoreWrite<Key: Hash + Eq>,
-{
-    fn insert(&self, key: Self::Key, value: Self::Value) {
-        self.cache.borrow_mut().pop(&key);
-        self.inner.insert(key, value);
-    }
-
-    fn delete(&self, key: &Self::Key) -> bool {
-        let contained = self.inner.delete(key);
-        self.cache.borrow_mut().pop(key);
-        contained
-    }
 }
 
 impl<S> AsyncStoreRead for LruCacheStore<S>
@@ -186,11 +151,25 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::store::store_test;
+    use luct_test::async_store::{
+        async_ordered_store_test, async_searchable_store_test, async_store_test,
+    };
 
-    #[test]
-    fn lru_cache_store() {
+    #[tokio::test]
+    async fn lru_cache_store() {
         let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
-        store_test(store);
+        async_store_test(store).await;
+    }
+
+    #[tokio::test]
+    async fn async_last_val_ordered_store() {
+        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
+        async_ordered_store_test(store).await;
+    }
+
+    #[tokio::test]
+    async fn async_last_val_searchable_store() {
+        let store = LruCacheStore::new(MemoryStore::<u64, String>::default(), 1000);
+        async_searchable_store_test(store).await;
     }
 }

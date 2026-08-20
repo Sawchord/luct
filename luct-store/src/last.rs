@@ -1,6 +1,6 @@
 use luct_core::store::{
     AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, StoreBase, StoreRead, StoreWrite,
+    AsyncStoreWrite, StoreBase,
 };
 use std::{
     cell::RefCell,
@@ -56,34 +56,6 @@ where
 {
     type Key = S::Key;
     type Value = S::Value;
-}
-
-impl<S> StoreRead for LastValCacheStore<S>
-where
-    S: StoreRead,
-{
-    fn get(&self, key: &Self::Key) -> Option<Self::Value> {
-        self.inner.get(key)
-    }
-
-    fn len(&self) -> usize {
-        self.inner.len()
-    }
-}
-
-impl<S> StoreWrite for LastValCacheStore<S>
-where
-    S: StoreWrite,
-{
-    fn insert(&self, key: Self::Key, value: Self::Value) {
-        *self.last.borrow_mut() = None;
-        self.inner.insert(key, value);
-    }
-
-    fn delete(&self, key: &Self::Key) -> bool {
-        *self.last.borrow_mut() = None;
-        self.inner.delete(key)
-    }
 }
 
 impl<S> AsyncStoreRead for LastValCacheStore<S>
@@ -164,16 +136,9 @@ where
 mod tests {
     use super::*;
     use luct_core::store::MemoryStore;
-    use luct_test::{
-        async_store::{async_ordered_store_test, async_searchable_store_test, async_store_test},
-        store::store_test,
+    use luct_test::async_store::{
+        async_ordered_store_test, async_searchable_store_test, async_store_test,
     };
-
-    #[test]
-    fn last_val_store() {
-        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
-        store_test(store);
-    }
 
     #[tokio::test]
     async fn async_last_val_store() {

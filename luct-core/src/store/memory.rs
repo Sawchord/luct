@@ -1,6 +1,6 @@
 use crate::store::{
     AsyncAppendableStore, AsyncOrderedStoreRead, AsyncSearchableStoreRead, AsyncStoreRead,
-    AsyncStoreWrite, StoreBase, StoreRead, StoreWrite,
+    AsyncStoreWrite, StoreBase,
 };
 use std::{
     collections::BTreeMap,
@@ -23,26 +23,6 @@ impl<K, V> Default for MemoryStore<K, V> {
 impl<K, V> StoreBase for MemoryStore<K, V> {
     type Key = K;
     type Value = V;
-}
-
-impl<K: Ord, V: Clone> StoreRead for MemoryStore<K, V> {
-    fn get(&self, key: &K) -> Option<V> {
-        self.0.read().unwrap().get(key).cloned()
-    }
-
-    fn len(&self) -> usize {
-        self.0.read().unwrap().len()
-    }
-}
-
-impl<K: Ord, V: Clone> StoreWrite for MemoryStore<K, V> {
-    fn insert(&self, key: K, value: V) {
-        self.0.write().unwrap().insert(key, value);
-    }
-
-    fn delete(&self, key: &K) -> bool {
-        self.0.write().unwrap().remove(key).is_some()
-    }
 }
 
 impl<K: Ord, V: Clone> AsyncStoreRead for MemoryStore<K, V> {
