@@ -1,22 +1,20 @@
-use crate::{HashOutput, ScannerImpl, log::ScannerLogInner};
+use crate::{ScannerImpl, log::ScannerLogInner};
+use luct_client::TileFetchStore;
 use luct_core::{
-    store::{OrderedStoreRead, StoreRead, Hashable, MemoryStore, StoreBase},
-    tiling::{TileId, TilingError},
-    tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
+    store::MemoryStore,
+    tiling::TilingError,
+    tree::{ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use luct_store::LruCacheStore;
 use std::{
     fmt::{self, Debug},
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
+    sync::Arc,
 };
 
 pub(crate) struct TileFetcher<S: ScannerImpl>(
     #[allow(clippy::type_complexity)]
-    Tree<LruCacheStore<TileFetchStore<S>>, MemoryStore<u64, SignedCertificateTimestamp>>,
+    Tree<LruCacheStore<TileFetchStore<S::Client>>, MemoryStore<u64, SignedCertificateTimestamp>>,
 );
 
 impl<S: ScannerImpl> Debug for TileFetcher<S> {
@@ -29,7 +27,10 @@ impl<S: ScannerImpl> TileFetcher<S> {
     pub(crate) fn new(log: &Arc<ScannerLogInner<S>>) -> Self {
         Self(Tree::new(
             // TODO: Make caps configurable
-            LruCacheStore::new(TileFetchStore::new(log.clone()), 1000),
+            LruCacheStore::new(
+                TileFetchStore::new(log.name.clone(), log.client.clone()),
+                1000,
+            ),
             MemoryStore::default(),
         ))
     }
@@ -119,135 +120,5 @@ impl<S: ScannerImpl> TileFetcher<S> {
             .map_err(TilingError::ConsistencyProofError)?;
 
         Ok(())
-    }
-}
-
-pub(crate) struct TileFetchStore<S: ScannerImpl> {
-    log: Arc<ScannerLogInner<S>>,
-    tree_size: AtomicU64,
-}
-
-impl<S: ScannerImpl> fmt::Debug for TileFetchStore<S> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TileFetchStore").finish()
-    }
-}
-
-impl<S: ScannerImpl> TileFetchStore<S> {
-    fn new(log: Arc<ScannerLogInner<S>>) -> Self {
-        Self {
-            log,
-            tree_size: AtomicU64::new(0),
-        }
-    }
-
-    fn set_tree_size(&self, tree_size: u64) {
-        self.tree_size.store(tree_size, Ordering::Release);
-    }
-}
-
-impl<S: ScannerImpl> StoreBase for TileFetchStore<S> {
-    type Key = NodeKey;
-    type Value = HashOutput;
-}
-
-impl<S: ScannerImpl> StoreRead for TileFetchStore<S> {
-    #[tracing::instrument(level = "trace")]
-    async fn get(&self, key: NodeKey) -> Option<HashOutput> {
-        // If not available, calculate which tile should have the value and fetch it
-        let tree_size = self.tree_size.load(Ordering::Acquire);
-        if tree_size == 0 {
-            tracing::error!(
-                "Failed to retrieve STH for log {}. Initialize STH before checking inclusions",
-                self.log.name
-            );
-            return None;
-        }
-
-        tracing::trace!("Fetching key {:?} against tree size {}", key, tree_size);
-        let nodes = self.fetch_unbalanced_keys(&key, tree_size).await?;
-
-        // Pick the result from the recomputed nodes
-        let result = nodes
-            .iter()
-            .find(|(nk, _)| nk == &key)
-            .map(|(_, hash)| *hash)
-            .expect("Node was not included in result. This is a bug");
-
-        Some(result)
-    }
-
-    async fn len(&self) -> usize {
-        self.log
-            .sth_store
-            .last()
-            .await
-            .map(|last| last.1.tree_size() as usize)
-            .unwrap_or(0)
-    }
-}
-
-impl<S: ScannerImpl> TileFetchStore<S> {
-    async fn fetch_unbalanced_keys(
-        &self,
-        key: &NodeKey,
-        tree_size: u64,
-    ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        let nodes = if key.is_balanced() {
-            // If the key is balanced, we know it is contained within exactly one tile.
-            // We call `fetch_balanced_tile` to fetch the tile and then recompute the nodes
-            tracing::trace!("Fetching balanced key: {:?}", key);
-            self.fetch_balanced_keys(key, tree_size).await?
-        } else {
-            // If the key is unbalanced, we might need to fetch multiple tiles.
-            // We split the key into a balanced left part and an unbalanced right part which we fetch recursively
-            let (left, right) = key.split();
-            tracing::trace!("Fetching balanced key: {:?}", left);
-            tracing::trace!("Fetching unbalanced key: {:?}", right);
-            let (left_nodes, right_nodes) = futures::join!(
-                self.fetch_balanced_keys(&left, tree_size),
-                Box::pin(self.fetch_unbalanced_keys(&right, tree_size)),
-            );
-
-            let mut left_nodes = left_nodes?;
-            let mut right_nodes = right_nodes?;
-
-            let left_hash = left_nodes.iter().find(|(key, _)| key == &left)?.1;
-            let right_hash = right_nodes.iter().find(|(key, _)| key == &right)?.1;
-
-            let hash = Node {
-                left: left_hash,
-                right: right_hash,
-            }
-            .hash();
-
-            left_nodes.append(&mut right_nodes);
-            left_nodes.push((key.clone(), hash));
-
-            tracing::trace!("Fetched unbalanced key: {:?}", key);
-            left_nodes
-        };
-
-        tracing::trace!("Fetched {} nodes", nodes.len());
-        Some(nodes)
-    }
-
-    async fn fetch_balanced_keys(
-        &self,
-        key: &NodeKey,
-        tree_size: u64,
-    ) -> Option<Vec<(NodeKey, [u8; 32])>> {
-        let tile_id = TileId::from_node_key(key, tree_size)?;
-        let tile = self.log.client.get_tile(tile_id.clone()).await;
-
-        if tile.is_err() {
-            tracing::error!("Failed to fetch tile {:?}, reason: {:?}", tile_id, tile);
-        }
-
-        let tile = tile.ok()?;
-        let nodes = tile.recompute_node_keys();
-
-        tracing::trace!("Fetched balanced key: {:?}", key);
-        Some(nodes)
     }
 }
