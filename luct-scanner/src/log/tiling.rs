@@ -1,18 +1,15 @@
-use crate::{HashOutput, ScannerImpl, log::ScannerLogInner};
-use luct_client::{Client, CtClient};
+use crate::{ScannerImpl, log::ScannerLogInner};
+use luct_client::TileFetchStore;
 use luct_core::{
-    store::{Hashable, MemoryStore, StoreBase, StoreRead},
-    tiling::{TileId, TilingError},
-    tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
+    store::MemoryStore,
+    tiling::TilingError,
+    tree::{ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use luct_store::LruCacheStore;
 use std::{
     fmt::{self, Debug},
-    sync::{
-        Arc,
-        atomic::{AtomicU64, Ordering},
-    },
+    sync::Arc,
 };
 
 pub(crate) struct TileFetcher<S: ScannerImpl>(
@@ -30,7 +27,10 @@ impl<S: ScannerImpl> TileFetcher<S> {
     pub(crate) fn new(log: &Arc<ScannerLogInner<S>>) -> Self {
         Self(Tree::new(
             // TODO: Make caps configurable
-            LruCacheStore::new(TileFetchStore::new(log), 1000),
+            LruCacheStore::new(
+                TileFetchStore::new(log.name.clone(), log.client.clone()),
+                1000,
+            ),
             MemoryStore::default(),
         ))
     }
@@ -120,33 +120,5 @@ impl<S: ScannerImpl> TileFetcher<S> {
             .map_err(TilingError::ConsistencyProofError)?;
 
         Ok(())
-    }
-}
-
-pub(crate) struct TileFetchStore<C> {
-    name: String,
-    client: CtClient<C>,
-    tree_size: AtomicU64,
-}
-
-impl<C> fmt::Debug for TileFetchStore<C> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TileFetchStore")
-            .field("name", &self.name)
-            .finish()
-    }
-}
-
-impl<C> TileFetchStore<C> {
-    fn new<S>(log: &ScannerLogInner<S>) -> TileFetchStore<S::Client>
-    where
-        C: Clone,
-        S: ScannerImpl<Client = C>,
-    {
-        TileFetchStore {
-            name: log.name.clone(),
-            client: log.client.clone(),
-            tree_size: AtomicU64::new(0),
-        }
     }
 }
