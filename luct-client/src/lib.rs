@@ -10,9 +10,11 @@ use thiserror::Error;
 use url::Url;
 
 pub use impls::*;
+pub use tiling::TileFetchStore;
 
 mod impls;
 mod request;
+mod tiling;
 mod util;
 
 // TODO: Fetch entries API

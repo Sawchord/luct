@@ -11,7 +11,7 @@ mod consistency;
 mod inclusion;
 mod node;
 
-pub(crate) type HashOutput = [u8; 32];
+pub type HashOutput = [u8; 32];
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]
 pub enum ProofGenerationError {
