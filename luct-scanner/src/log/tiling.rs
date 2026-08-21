@@ -1,6 +1,7 @@
 use crate::{HashOutput, ScannerImpl, log::ScannerLogInner};
+use luct_client::{Client, CtClient};
 use luct_core::{
-    store::{OrderedStoreRead, StoreRead, Hashable, MemoryStore, StoreBase},
+    store::{Hashable, MemoryStore, StoreBase, StoreRead},
     tiling::{TileId, TilingError},
     tree::{Node, NodeKey, ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
@@ -16,7 +17,7 @@ use std::{
 
 pub(crate) struct TileFetcher<S: ScannerImpl>(
     #[allow(clippy::type_complexity)]
-    Tree<LruCacheStore<TileFetchStore<S>>, MemoryStore<u64, SignedCertificateTimestamp>>,
+    Tree<LruCacheStore<TileFetchStore<S::Client>>, MemoryStore<u64, SignedCertificateTimestamp>>,
 );
 
 impl<S: ScannerImpl> Debug for TileFetcher<S> {
@@ -29,7 +30,7 @@ impl<S: ScannerImpl> TileFetcher<S> {
     pub(crate) fn new(log: &Arc<ScannerLogInner<S>>) -> Self {
         Self(Tree::new(
             // TODO: Make caps configurable
-            LruCacheStore::new(TileFetchStore::new(log.clone()), 1000),
+            LruCacheStore::new(TileFetchStore::new(log), 1000),
             MemoryStore::default(),
         ))
     }
@@ -122,36 +123,46 @@ impl<S: ScannerImpl> TileFetcher<S> {
     }
 }
 
-pub(crate) struct TileFetchStore<S: ScannerImpl> {
-    log: Arc<ScannerLogInner<S>>,
+pub(crate) struct TileFetchStore<C> {
+    name: String,
+    client: CtClient<C>,
     tree_size: AtomicU64,
 }
 
-impl<S: ScannerImpl> fmt::Debug for TileFetchStore<S> {
+impl<C> fmt::Debug for TileFetchStore<C> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TileFetchStore").finish()
+        f.debug_struct("TileFetchStore")
+            .field("name", &self.name)
+            .finish()
     }
 }
 
-impl<S: ScannerImpl> TileFetchStore<S> {
-    fn new(log: Arc<ScannerLogInner<S>>) -> Self {
-        Self {
-            log,
+impl<C> TileFetchStore<C> {
+    fn new<S>(log: &ScannerLogInner<S>) -> TileFetchStore<S::Client>
+    where
+        C: Clone,
+        S: ScannerImpl<Client = C>,
+    {
+        TileFetchStore {
+            name: log.name.clone(),
+            client: log.client.clone(),
             tree_size: AtomicU64::new(0),
         }
     }
+}
 
+impl<C> TileFetchStore<C> {
     fn set_tree_size(&self, tree_size: u64) {
         self.tree_size.store(tree_size, Ordering::Release);
     }
 }
 
-impl<S: ScannerImpl> StoreBase for TileFetchStore<S> {
+impl<C> StoreBase for TileFetchStore<C> {
     type Key = NodeKey;
     type Value = HashOutput;
 }
 
-impl<S: ScannerImpl> StoreRead for TileFetchStore<S> {
+impl<C: Client> StoreRead for TileFetchStore<C> {
     #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // If not available, calculate which tile should have the value and fetch it
@@ -159,7 +170,7 @@ impl<S: ScannerImpl> StoreRead for TileFetchStore<S> {
         if tree_size == 0 {
             tracing::error!(
                 "Failed to retrieve STH for log {}. Initialize STH before checking inclusions",
-                self.log.name
+                self.name
             );
             return None;
         }
@@ -178,16 +189,11 @@ impl<S: ScannerImpl> StoreRead for TileFetchStore<S> {
     }
 
     async fn len(&self) -> usize {
-        self.log
-            .sth_store
-            .last()
-            .await
-            .map(|last| last.1.tree_size() as usize)
-            .unwrap_or(0)
+        self.tree_size.load(Ordering::Acquire) as usize
     }
 }
 
-impl<S: ScannerImpl> TileFetchStore<S> {
+impl<C: Client> TileFetchStore<C> {
     async fn fetch_unbalanced_keys(
         &self,
         key: &NodeKey,
@@ -238,7 +244,7 @@ impl<S: ScannerImpl> TileFetchStore<S> {
         tree_size: u64,
     ) -> Option<Vec<(NodeKey, [u8; 32])>> {
         let tile_id = TileId::from_node_key(key, tree_size)?;
-        let tile = self.log.client.get_tile(tile_id.clone()).await;
+        let tile = self.client.get_tile(tile_id.clone()).await;
 
         if tile.is_err() {
             tracing::error!("Failed to fetch tile {:?}, reason: {:?}", tile_id, tile);
