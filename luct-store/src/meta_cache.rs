@@ -12,6 +12,7 @@ where
     S: StoreBase,
 {
     last: Option<(S::Key, S::Value)>,
+    len: Option<usize>,
 }
 
 impl<S> Default for CachedMetadata<S>
@@ -19,7 +20,10 @@ where
     S: StoreBase,
 {
     fn default() -> Self {
-        Self { last: None }
+        Self {
+            last: None,
+            len: None,
+        }
     }
 }
 
@@ -91,7 +95,15 @@ where
     }
 
     async fn len(&self) -> usize {
-        self.inner.len().await
+        let len = self.meta.borrow().len;
+
+        if let Some(len) = len {
+            len
+        } else {
+            let new_len = self.inner.len().await;
+            self.meta.borrow_mut().len = Some(new_len);
+            new_len
+        }
     }
 }
 
