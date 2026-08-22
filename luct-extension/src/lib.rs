@@ -10,7 +10,7 @@ use luct_core::{
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
-use luct_store::{LastValCacheStore, LruCacheStore};
+use luct_store::{LruCacheStore, MetadataCacheStore};
 use std::sync::Arc;
 use tracing::{Level, info};
 use tracing_wasm::WASMLayerConfigBuilder;
@@ -33,7 +33,7 @@ struct ExtensionScannerImpl;
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = LruCacheStore<BrowserStorage<Fingerprint, Report>>;
-    type SthStore = LastValCacheStore<BrowserStorage<u64, Validated<SignedTreeHead>>>;
+    type SthStore = MetadataCacheStore<BrowserStorage<u64, Validated<SignedTreeHead>>>;
 }
 
 #[wasm_bindgen]
@@ -128,7 +128,7 @@ impl Scanner {
             let name = log.description();
             scanner.add_log(
                 &log,
-                LastValCacheStore::new(BrowserStorage::new_local_store(format!("sth/{name}"))?),
+                MetadataCacheStore::new(BrowserStorage::new_local_store(format!("sth/{name}"))?),
             );
         }
 

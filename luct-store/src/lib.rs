@@ -3,18 +3,18 @@
 
 #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 mod file;
-mod last;
 mod lru;
+mod meta_cache;
 mod switch;
 
 #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 pub use file::FilesystemStore;
-pub use last::LastValCacheStore;
 pub use lru::LruCacheStore;
 use luct_core::{
     Fingerprint,
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
+pub use meta_cache::MetadataCacheStore;
 pub use switch::StoreSwitch;
 
 /// Indicates, that a key can be serialized as a [`String`].
