@@ -15,8 +15,6 @@ pub use {
     utils::Validated,
 };
 
-type HashOutput = [u8; 32];
-
 mod config;
 mod error;
 mod log;

@@ -1,8 +1,6 @@
 use futures::lock::Mutex;
 use js_sys::{Array, Object, Reflect};
-use luct_core::store::{
-    OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite, StoreBase,
-};
+use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite};
 use luct_store::StringStoreKey;
 use serde::{Serialize, de::DeserializeOwned};
 use tracing::warn;
@@ -176,21 +174,19 @@ where
     V: DeserializeOwned,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        // TODO: Move prefix outside of lock and drop lock before iterating through elements
+        // TODO: Remove lock
 
         let storage = self.0.lock().await;
 
-        // TODO: Use getKeys to avoid deserializing the whole store
-        let all_elems = storage
+        let all_keys = storage
             .storage
-            .get(&JsValue::null())
+            .get_keys()
             .await
-            .expect("Failed to retrieve all values");
+            .expect("Failed to retrieve keys");
 
         let mut largest_key = None;
-
-        Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
-            let key_str = Array::from(&elem).get(0).as_string().unwrap();
+        Array::from(&all_keys).into_iter().for_each(|key| {
+            let key_str = key.as_string().unwrap();
             let Some(key) = storage.key_from_str(&key_str) else {
                 return;
             };
@@ -207,6 +203,7 @@ where
 
         let largest_key = largest_key?;
         let largest_key_str = storage.get_key_string(&largest_key);
+
         let val = storage.get_item(&largest_key_str).await.unwrap();
         let val: Self::Value =
             serde_wasm_bindgen::from_value(val).expect("Failed to deserialize a stored value");
