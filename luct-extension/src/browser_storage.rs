@@ -131,7 +131,21 @@ where
     }
 
     async fn len(&self) -> usize {
-        self.0.lock().await.get_count().await
+        //self.0.lock().await.get_count().await
+        let storage = self.0.lock().await;
+
+        let all_keys = storage
+            .storage
+            .get_keys()
+            .await
+            .expect("Failed to get keys");
+
+        let keys = Array::from(&all_keys).filter(&mut |key: JsValue, _, _| {
+            let key_str = key.as_string().unwrap();
+            storage.key_from_str(&key_str).is_some()
+        });
+
+        keys.length() as usize
     }
 }
 
