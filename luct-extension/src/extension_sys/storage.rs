@@ -14,6 +14,9 @@ extern "C" {
 
     #[wasm_bindgen(catch, method)]
     pub async fn get(this: &StorageAreaRead, keys: &JsValue) -> Result<JsValue, JsValue>;
+
+    #[wasm_bindgen(catch, method, js_name = "getKeys")]
+    pub async fn get_keys(this: &StorageAreaRead) -> Result<JsValue, JsValue>;
 }
 
 #[wasm_bindgen]
