@@ -1,4 +1,3 @@
-use futures::lock::Mutex;
 use js_sys::{Array, Object, Reflect};
 use luct_core::store::{OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite};
 use luct_store::StringStoreKey;
@@ -9,16 +8,13 @@ use wasm_bindgen::JsValue;
 use crate::extension_sys::{StorageArea, browser};
 use std::{cmp::Ord, fmt, marker::PhantomData};
 
-#[derive(Debug)]
-pub struct BrowserStorage<K, V>(Mutex<BrowserStorageInner<K, V>>);
-
-struct BrowserStorageInner<K, V> {
+pub struct BrowserStorage<K, V> {
     _kv: PhantomData<(K, V)>,
     prefix: String,
     storage: StorageArea,
 }
 
-impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for BrowserStorageInner<K, V> {
+impl<K: fmt::Debug, V: fmt::Debug> fmt::Debug for BrowserStorage<K, V> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("BrowserStorage")
             .field("prefix", &self.prefix)
@@ -30,15 +26,15 @@ impl<K, V> BrowserStorage<K, V> {
     pub fn new_local_store(prefix: String) -> Result<Self, String> {
         let storage = browser().with(|browser| browser.storage().local());
 
-        Ok(Self(Mutex::new(BrowserStorageInner {
+        Ok(Self {
             _kv: PhantomData,
             prefix,
             storage,
-        })))
+        })
     }
 }
 
-impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
+impl<K: StringStoreKey, V> BrowserStorage<K, V> {
     fn get_key_string(&self, key: &K) -> String {
         format!("{}/{}", self.prefix, key.serialize_key())
     }
@@ -85,27 +81,6 @@ impl<K: StringStoreKey, V> BrowserStorageInner<K, V> {
             .await
             .expect("Failed to remove item");
     }
-
-    async fn get_count(&self) -> usize {
-        self.get_item(&self.count_key())
-            .await
-            .map(|val| val.as_f64().unwrap() as usize)
-            .unwrap_or(0)
-    }
-
-    async fn inc_count(&self) {
-        let count: usize = self.get_count().await;
-
-        self.set_item(&self.count_key(), &JsValue::from(count + 1))
-            .await;
-    }
-
-    async fn dec_count(&self) {
-        let count: usize = self.get_count().await;
-
-        self.set_item(&self.count_key(), &JsValue::from(count - 1))
-            .await;
-    }
 }
 
 impl<K, V> StoreBase for BrowserStorage<K, V> {
@@ -120,10 +95,8 @@ where
 {
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
         let value = {
-            let storage = self.0.lock().await;
-            let key = storage.get_key_string(&key);
-
-            storage.get_item(&key).await?
+            let key = self.get_key_string(&key);
+            self.get_item(&key).await?
         };
         let value: Self::Value = serde_wasm_bindgen::from_value(value).unwrap();
 
@@ -131,18 +104,11 @@ where
     }
 
     async fn len(&self) -> usize {
-        //self.0.lock().await.get_count().await
-        let storage = self.0.lock().await;
-
-        let all_keys = storage
-            .storage
-            .get_keys()
-            .await
-            .expect("Failed to get keys");
+        let all_keys = self.storage.get_keys().await.expect("Failed to get keys");
 
         let keys = Array::from(&all_keys).filter(&mut |key: JsValue, _, _| {
             let key_str = key.as_string().unwrap();
-            storage.key_from_str(&key_str).is_some()
+            self.key_from_str(&key_str).is_some()
         });
 
         keys.length() as usize
@@ -157,27 +123,19 @@ where
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         let value = serde_wasm_bindgen::to_value(&value).expect("Failed to convert to JS value");
 
-        let storage = self.0.lock().await;
-        let key = storage.get_key_string(&key);
+        // Migration code to remove the old count values
+        // TODO: Remove after rollout of 0.3.0
+        self.remove_item(&self.count_key()).await;
 
-        if storage.get_item(&key).await.is_none() {
-            storage.inc_count().await;
-        }
-
-        storage.set_item(&key, &value).await;
+        let key = self.get_key_string(&key);
+        self.set_item(&key, &value).await;
     }
 
     async fn delete(&self, key: Self::Key) -> bool {
-        let storage = self.0.lock().await;
-        let key = storage.get_key_string(&key);
+        let key = self.get_key_string(&key);
+        let had_item = self.get_item(&key).await.is_some();
 
-        let had_item = storage.get_item(&key).await.is_some();
-
-        if had_item {
-            storage.dec_count().await;
-        }
-
-        storage.remove_item(&key).await;
+        self.remove_item(&key).await;
         had_item
     }
 }
@@ -188,11 +146,7 @@ where
     V: DeserializeOwned,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        // TODO: Remove lock
-
-        let storage = self.0.lock().await;
-
-        let all_keys = storage
+        let all_keys = self
             .storage
             .get_keys()
             .await
@@ -201,7 +155,7 @@ where
         let mut largest_key = None;
         Array::from(&all_keys).into_iter().for_each(|key| {
             let key_str = key.as_string().unwrap();
-            let Some(key) = storage.key_from_str(&key_str) else {
+            let Some(key) = self.key_from_str(&key_str) else {
                 return;
             };
 
@@ -216,9 +170,9 @@ where
         });
 
         let largest_key = largest_key?;
-        let largest_key_str = storage.get_key_string(&largest_key);
+        let largest_key_str = self.get_key_string(&largest_key);
 
-        let val = storage.get_item(&largest_key_str).await.unwrap();
+        let val = self.get_item(&largest_key_str).await.unwrap();
         let val: Self::Value =
             serde_wasm_bindgen::from_value(val).expect("Failed to deserialize a stored value");
 
@@ -235,11 +189,7 @@ where
         &self,
         mut pred: impl FnMut(&Self::Key, &Self::Value) -> bool,
     ) -> Vec<(Self::Key, Self::Value)> {
-        // TODO: Move prefix outside of lock and drop lock before iterating through elements
-
-        let storage = self.0.lock().await;
-
-        let all_elems = storage
+        let all_elems = self
             .storage
             .get(&JsValue::null())
             .await
@@ -251,7 +201,7 @@ where
             let elem = Array::from(&elem);
 
             let key_str = elem.get(0).as_string().unwrap();
-            let Some(key) = storage.key_from_str(&key_str) else {
+            let Some(key) = self.key_from_str(&key_str) else {
                 return;
             };
 
