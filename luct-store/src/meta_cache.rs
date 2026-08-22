@@ -6,18 +6,39 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-/// A [`OrderedStore`](luct_core::store::OrderedStore) that caches the `last` value in memory
-///
-/// If you need to call [`OrderedStoreRead::last`] as lot, this will speed up access
-pub struct LastValCacheStore<S>
+#[derive(Debug, Clone)]
+struct CachedMetadata<S>
 where
     S: StoreBase,
 {
-    last: RefCell<Option<(S::Key, S::Value)>>,
+    last: Option<(S::Key, S::Value)>,
+}
+
+impl<S> Default for CachedMetadata<S>
+where
+    S: StoreBase,
+{
+    fn default() -> Self {
+        Self { last: None }
+    }
+}
+
+/// A [`OrderedStore`](luct_core::store::OrderedStore) that caches some metadata values in memeoty
+///
+/// Some methods such as [`StoreRead::len`] or [`OrderedStoreRead::last`] might be slow
+/// to call on some [`Store`](luct_core::store::Store) implementations.
+///
+/// This wrapper will cache the results returned by these calls and return the
+/// same value on successive calls, until a write call is made.
+pub struct MetadataCacheStore<S>
+where
+    S: StoreBase,
+{
+    meta: RefCell<CachedMetadata<S>>,
     inner: S,
 }
 
-impl<S> Deref for LastValCacheStore<S>
+impl<S> Deref for MetadataCacheStore<S>
 where
     S: StoreBase,
 {
@@ -28,7 +49,7 @@ where
     }
 }
 
-impl<S> DerefMut for LastValCacheStore<S>
+impl<S> DerefMut for MetadataCacheStore<S>
 where
     S: StoreBase,
 {
@@ -37,19 +58,23 @@ where
     }
 }
 
-impl<S> LastValCacheStore<S>
+impl<S> MetadataCacheStore<S>
 where
     S: StoreBase,
 {
     pub fn new(store: S) -> Self {
         Self {
-            last: RefCell::new(None),
+            meta: RefCell::new(CachedMetadata::default()),
             inner: store,
         }
     }
+
+    fn reset_metadata(&self) {
+        *self.meta.borrow_mut() = CachedMetadata::default();
+    }
 }
 
-impl<S> StoreBase for LastValCacheStore<S>
+impl<S> StoreBase for MetadataCacheStore<S>
 where
     S: StoreBase,
 {
@@ -57,7 +82,7 @@ where
     type Value = S::Value;
 }
 
-impl<S> StoreRead for LastValCacheStore<S>
+impl<S> StoreRead for MetadataCacheStore<S>
 where
     S: StoreRead<Key: Clone>,
 {
@@ -70,49 +95,49 @@ where
     }
 }
 
-impl<S> StoreWrite for LastValCacheStore<S>
+impl<S> StoreWrite for MetadataCacheStore<S>
 where
     S: StoreWrite<Key: Clone>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
-        *self.last.borrow_mut() = None;
+        self.reset_metadata();
         self.inner.insert(key, value).await
     }
 
     async fn delete(&self, key: Self::Key) -> bool {
-        *self.last.borrow_mut() = None;
+        self.reset_metadata();
         self.inner.delete(key).await
     }
 }
 
-impl<S> OrderedStoreRead for LastValCacheStore<S>
+impl<S> OrderedStoreRead for MetadataCacheStore<S>
 where
     S: OrderedStoreRead<Key: Clone, Value: Clone>,
 {
     async fn last(&self) -> Option<(Self::Key, Self::Value)> {
-        let last = self.last.borrow().clone();
+        let last = self.meta.borrow().last.clone();
 
         if let Some(last) = last {
             Some(last)
         } else {
             let new_last = self.inner.last().await;
-            *self.last.borrow_mut() = new_last.clone();
+            self.meta.borrow_mut().last = new_last.clone();
             new_last
         }
     }
 }
 
-impl<S> AppendableStore for LastValCacheStore<S>
+impl<S> AppendableStore for MetadataCacheStore<S>
 where
     S: AppendableStore<Key: Clone, Value: Clone>,
 {
     async fn append(&self, value: Self::Value) -> Self::Key {
-        *self.last.borrow_mut() = None;
+        self.reset_metadata();
         self.inner.append(value).await
     }
 }
 
-impl<S> SearchableStoreRead for LastValCacheStore<S>
+impl<S> SearchableStoreRead for MetadataCacheStore<S>
 where
     S: SearchableStoreRead<Key: Clone, Value: Clone>,
 {
@@ -138,20 +163,20 @@ mod tests {
     use luct_test::store::{ordered_store_test, searchable_store_test, store_test};
 
     #[tokio::test]
-    async fn last_val_store() {
-        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
+    async fn metadata_cache_store() {
+        let store = MetadataCacheStore::new(MemoryStore::<u64, String>::default());
         store_test(store).await;
     }
 
     #[tokio::test]
-    async fn last_val_ordered_store() {
-        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
+    async fn metadata_cache_ordered_store() {
+        let store = MetadataCacheStore::new(MemoryStore::<u64, String>::default());
         ordered_store_test(store).await;
     }
 
     #[tokio::test]
-    async fn last_val_searchable_store() {
-        let store = LastValCacheStore::new(MemoryStore::<u64, String>::default());
+    async fn metadata_cache_searchable_store() {
+        let store = MetadataCacheStore::new(MemoryStore::<u64, String>::default());
         searchable_store_test(store).await;
     }
 }
