@@ -46,7 +46,6 @@ impl<C> StoreBase for TileFetchStore<C> {
 }
 
 impl<C: Client> StoreRead for TileFetchStore<C> {
-    #[tracing::instrument(level = "trace")]
     async fn get(&self, key: NodeKey) -> Option<HashOutput> {
         // If not available, calculate which tile should have the value and fetch it
         let tree_size = self.tree_size.load(Ordering::Acquire);

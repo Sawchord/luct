@@ -47,7 +47,6 @@ impl<S: ScannerImpl> ScannerLog<S> {
         &self.log.client
     }
 
-    #[tracing::instrument(level = "trace")]
     pub(crate) async fn check_sct_inclusion(
         &self,
         sct: &SignedCertificateTimestamp,
@@ -71,7 +70,6 @@ impl<S: ScannerImpl> ScannerLog<S> {
     /// Updates the log to the newest STH
     ///
     /// Checks consistency to the last STH, of one exists
-    #[tracing::instrument(level = "trace")]
     pub(crate) async fn update_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         let new_sth = self.fetch_sth().await?;
 
@@ -103,7 +101,6 @@ impl<S: ScannerImpl> ScannerLog<S> {
         Ok(new_sth)
     }
 
-    #[tracing::instrument(level = "trace")]
     pub(crate) async fn oldest_viable_sth(
         &self,
         sct: &SignedCertificateTimestamp,
@@ -118,7 +115,6 @@ impl<S: ScannerImpl> ScannerLog<S> {
         Some(tree_head.1)
     }
 
-    #[tracing::instrument(level = "trace")]
     async fn fetch_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.tiles {

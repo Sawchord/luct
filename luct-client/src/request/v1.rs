@@ -20,7 +20,6 @@ use std::cmp::Ordering;
 use url::Url;
 
 impl<C: Client> CtClient<C> {
-    #[tracing::instrument(level = "trace")]
     pub async fn get_sth_v1(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
         let url = self.get_full_v1_url().join("get-sth").unwrap();
@@ -41,7 +40,6 @@ impl<C: Client> CtClient<C> {
         Ok(response)
     }
 
-    #[tracing::instrument(level = "trace")]
     pub async fn update_sth_v1(
         &self,
         old_sth: Option<&SignedTreeHead>,
@@ -62,7 +60,6 @@ impl<C: Client> CtClient<C> {
         Ok(new_sth)
     }
 
-    #[tracing::instrument(level = "trace")]
     pub async fn check_consistency_v1(
         &self,
         first: &SignedTreeHead,
@@ -109,7 +106,6 @@ impl<C: Client> CtClient<C> {
         Ok(())
     }
 
-    #[tracing::instrument(level = "trace")]
     pub async fn check_sct_inclusion_v1(
         &self,
         sct: &SignedCertificateTimestamp,
@@ -149,7 +145,6 @@ impl<C: Client> CtClient<C> {
         Ok(proof.index())
     }
 
-    #[tracing::instrument(level = "trace")]
     pub async fn get_roots_v1(&self) -> Result<Vec<Certificate>, ClientError> {
         self.assert_v1()?;
 
