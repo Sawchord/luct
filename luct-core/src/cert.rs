@@ -49,6 +49,10 @@ impl Certificate {
         Ok(Self(Cert::from_der(input).map_err(CodecError::DerError)?))
     }
 
+    pub fn as_der(&self) -> Vec<u8> {
+        self.0.to_der().unwrap()
+    }
+
     /// Extract the [SCTs](v1::SignedCertificateTimestamp) embedded into this [`Certificate`]
     pub fn extract_scts_v1(&self) -> Result<Vec<v1::SignedCertificateTimestamp>, CertificateError> {
         let Some(extensions) = &self.0.tbs_certificate.extensions else {

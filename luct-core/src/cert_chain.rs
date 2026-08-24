@@ -6,6 +6,7 @@ use crate::{
 };
 use itertools::Itertools;
 use sha2::{Digest, Sha256};
+use std::ops::Index;
 use x509_cert::{
     Certificate as Cert,
     der::{Decode, Encode},
@@ -91,6 +92,14 @@ impl CertificateChain {
         self.0.last().unwrap()
     }
 
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
+
     pub(crate) fn as_log_entry_v1(&self, as_precert: bool) -> Result<v1::LogEntry, CodecError> {
         if !as_precert {
             return Ok(v1::LogEntry::X509(self.cert().0.clone()));
@@ -147,5 +156,13 @@ impl CertificateChain {
                 extensions: sct.extensions.clone(),
             }),
         })
+    }
+}
+
+impl Index<usize> for CertificateChain {
+    type Output = Certificate;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        &self.0[index]
     }
 }
