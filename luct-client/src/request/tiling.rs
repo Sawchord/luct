@@ -6,7 +6,6 @@ use luct_core::{
 use url::Url;
 
 impl<C: Client> CtClient<C> {
-    #[tracing::instrument(level = "trace")]
     pub async fn get_checkpoint(&self) -> Result<SignedTreeHead, ClientError> {
         self.assert_v1()?;
         let url = self.get_url("checkpoint")?;
@@ -31,7 +30,6 @@ impl<C: Client> CtClient<C> {
         Ok(sth)
     }
 
-    #[tracing::instrument(level = "trace")]
     pub async fn get_tile(&self, mut tile_id: TileId) -> Result<Tile, ClientError> {
         self.assert_v1()?;
         let url = self.get_url(&tile_id.as_url())?;

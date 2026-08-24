@@ -37,7 +37,6 @@ impl<S: ScannerImpl> TileFetcher<S> {
 }
 
 impl<S: ScannerImpl> TileFetcher<S> {
-    #[tracing::instrument(level = "trace")]
     pub(crate) async fn check_sct_inclusion(
         &self,
         sct: &SignedCertificateTimestamp,
