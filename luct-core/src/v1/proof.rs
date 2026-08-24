@@ -75,6 +75,7 @@ mod tests {
             ARGON2025H1_STH2806, ARGON2025H1_STH2906, CERT_CHAIN_GOOGLE_COM, get_log_argon2025h2,
         },
         v1::responses::{GetProofByHashResponse, GetSthResponse},
+        verify::verify_cert_chain,
     };
 
     const GOOGLE_AUDIT_PROOF: &str =
@@ -110,7 +111,7 @@ mod tests {
     #[test]
     fn audit_sct() {
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert.verify_chain().unwrap();
+        verify_cert_chain(&cert, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();

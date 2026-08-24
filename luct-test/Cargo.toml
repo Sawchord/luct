@@ -17,12 +17,6 @@ luct-core = { version = "0.2.2", path = "../luct-core" }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
 
-web-time = { workspace = true }
-chrono = { workspace = true }
-
-rustls = { workspace = true }
-webpki-roots = { workspace = true }
-
 [target.'cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))'.dependencies]
 tokio = { workspace = true, features = ["rt", "macros"] }
 

@@ -103,6 +103,7 @@ mod tests {
     use super::*;
     use crate::{
         CertificateChain, tests::CERT_CHAIN_GOOGLE_COM, v1::responses::GetEntriesResponse,
+        verify::verify_cert_chain,
     };
 
     const GOOGLE_GET_ENTRY: &str = include_str!("../../../testdata/google-entry.json");
@@ -127,7 +128,7 @@ mod tests {
         let log_entry1 = entry.log_entry;
 
         let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert2.verify_chain().unwrap();
+        verify_cert_chain(&cert2, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let log_entry2 = cert2.as_log_entry_v1(true).unwrap();
 
         assert_eq!(log_entry1, log_entry2);
@@ -139,7 +140,7 @@ mod tests {
         let leaf1 = response.entries[0].leaf_input.0.0.clone();
 
         let cert2 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert2.verify_chain().unwrap();
+        verify_cert_chain(&cert2, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let sct2 = cert2.cert().extract_scts_v1().unwrap();
         let leaf2 = cert2.as_leaf_v1(&sct2[0], true).unwrap();
 

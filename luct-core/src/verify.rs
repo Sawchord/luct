@@ -1,5 +1,4 @@
 use chrono::{DateTime, FixedOffset, Utc};
-use luct_core::CertificateChain;
 use rustls::{
     client::{WebPkiServerVerifier, danger::ServerCertVerifier},
     pki_types::{CertificateDer, UnixTime},
@@ -7,7 +6,11 @@ use rustls::{
 use std::sync::Arc;
 use web_time::Duration;
 
+use crate::CertificateChain;
+
 pub fn verify_cert_chain(chain: &CertificateChain, name: &str, time: &str) {
+    let _ = rustls_rustcrypto::provider().install_default();
+
     // TODO: Ability to add more roots
     let client_verifier = WebPkiServerVerifier::builder(Arc::new(
         webpki_roots::TLS_SERVER_ROOTS.iter().cloned().collect(),
