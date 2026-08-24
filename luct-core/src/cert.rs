@@ -181,15 +181,6 @@ pub enum CertificateError {
 
     #[error("Failed to decode a value: {0}")]
     CodecError(#[from] CodecError),
-
-    #[error("Failed to verify certificate: {0}")]
-    VerificationError(x509_verify::Error),
-}
-
-impl From<x509_verify::Error> for CertificateError {
-    fn from(value: x509_verify::Error) -> Self {
-        Self::VerificationError(value)
-    }
 }
 
 #[cfg(test)]
