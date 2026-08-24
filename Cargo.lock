@@ -1801,6 +1801,7 @@ dependencies = [
  "tracing",
  "tracing-subscriber",
  "url",
+ "webpki-root-certs",
 ]
 
 [[package]]

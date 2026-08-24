@@ -25,6 +25,8 @@ rustls = { workspace = true }
 rustls-platform-verifier = { workspace = true }
 rustls-rustcrypto = { workspace = true }
 
+webpki-root-certs = { workspace = true }
+
 url = { workspace = true }
 
 clap = { workspace = true, features = ["derive"] }
