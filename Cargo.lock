@@ -1590,18 +1590,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "k256"
-version = "0.13.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f6e3919bbaa2945715f0bb6d3934a173d1e9a59ac23767fbaaef277265a7411b"
-dependencies = [
- "cfg-if",
- "ecdsa",
- "elliptic-curve",
- "sha2 0.10.9",
-]
-
-[[package]]
 name = "lazy_static"
 version = "1.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1726,7 +1714,6 @@ dependencies = [
  "web-time",
  "webpki-roots 1.0.9",
  "x509-cert",
- "x509-verify",
 ]
 
 [[package]]
@@ -2066,19 +2053,6 @@ version = "0.13.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe42f1670a52a47d448f14b6a5c61dd78fce51856e68edaa38f7ae3a46b8d6b6"
 dependencies = [
- "ecdsa",
- "elliptic-curve",
- "primeorder",
- "sha2 0.10.9",
-]
-
-[[package]]
-name = "p521"
-version = "0.13.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0fc9e2161f1f215afdfce23677034ae137bbd45016a880c2eb3ba8eb95f085b2"
-dependencies = [
- "base16ct",
  "ecdsa",
  "elliptic-curve",
  "primeorder",
@@ -3861,40 +3835,6 @@ dependencies = [
  "der",
  "spki",
  "tls_codec",
-]
-
-[[package]]
-name = "x509-ocsp"
-version = "0.2.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5e54e695a31f0fecb826cf59ae2093c941d7ef932a1f8508185dd23b29ce2e2e"
-dependencies = [
- "const-oid 0.9.6",
- "der",
- "spki",
- "x509-cert",
-]
-
-[[package]]
-name = "x509-verify"
-version = "0.4.8"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c43a49bf845cd2f3aff9603a4276409dbf2b8fa4454d3e9501bf5b0028342964"
-dependencies = [
- "const-oid 0.9.6",
- "der",
- "ecdsa",
- "ed25519-dalek",
- "k256",
- "p256",
- "p384",
- "p521",
- "rsa",
- "sha2 0.10.9",
- "signature",
- "spki",
- "x509-cert",
- "x509-ocsp",
 ]
 
 [[package]]

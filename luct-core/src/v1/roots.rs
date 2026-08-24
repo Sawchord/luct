@@ -14,7 +14,7 @@ impl From<&GetRootsResponse> for Vec<Certificate> {
 mod tests {
     use crate::{
         Certificate, CertificateChain, cert::Fingerprint, tests::CERT_CHAIN_GOOGLE_COM,
-        v1::responses::GetRootsResponse,
+        v1::responses::GetRootsResponse, verify::verify_cert_chain,
     };
     use std::collections::BTreeMap;
 
@@ -45,8 +45,9 @@ mod tests {
             .collect();
 
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        let root = roots.get(&cert.root().fingerprint_sha256()).unwrap();
+        // Test that the root is contained in the list
+        let _root = roots.get(&cert.root().fingerprint_sha256()).unwrap();
 
-        cert.verify_chain_against_root(root).unwrap();
+        verify_cert_chain(&cert, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
     }
 }
