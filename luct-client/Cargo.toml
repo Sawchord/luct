@@ -31,6 +31,8 @@ futures = { workspace = true }
 rustls-rustcrypto = { workspace = true }
 
 [dev-dependencies]
+luct-test = { version = "0.2.2", path = "../luct-test" }
+
 tokio = { workspace = true, features = ["rt", "macros"] }
 
 [features]
