@@ -13,10 +13,6 @@ impl<S: ScannerImpl> Scanner<S> {
     pub async fn collect_report_pem(&self, data: &str) -> Result<Report, ScannerError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
 
-        if self.config.validate_cert_chain {
-            cert_chain.verify_chain()?;
-        }
-
         self.collect_report(cert_chain).await
     }
 

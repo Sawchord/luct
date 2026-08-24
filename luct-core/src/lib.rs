@@ -15,6 +15,8 @@ pub mod tiling;
 pub mod tree;
 pub(crate) mod utils;
 pub mod v1;
+#[cfg(test)]
+mod verify;
 mod version;
 
 pub use cert::{Certificate, CertificateError, Fingerprint};

@@ -199,6 +199,7 @@ mod tests {
         CertificateChain,
         tests::{CERT_CHAIN_GOOGLE_COM, get_log_argon2025h2},
         utils::codec::Encode,
+        verify::verify_cert_chain,
     };
 
     const CERT_GOOGLE_COM: &str = include_str!("../../testdata/google-cert.pem");
@@ -211,7 +212,7 @@ mod tests {
     #[test]
     fn sct_list_codec_roundtrip() {
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert.verify_chain().unwrap();
+        verify_cert_chain(&cert, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let mut writer = Cursor::new(vec![]);
@@ -226,7 +227,7 @@ mod tests {
     #[test]
     fn validate_scts() {
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert.verify_chain().unwrap();
+        verify_cert_chain(&cert, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let log = get_log_argon2025h2();
@@ -238,7 +239,7 @@ mod tests {
     #[test]
     fn precert_transformation() {
         let cert1 = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert1.verify_chain().unwrap();
+        verify_cert_chain(&cert1, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let cert2 = Certificate::from_pem(CERT_GOOGLE_COM).unwrap();
 
         assert_eq!(cert1.cert(), &cert2);
