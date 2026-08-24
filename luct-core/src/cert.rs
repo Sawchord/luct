@@ -119,11 +119,19 @@ impl Certificate {
             .unwrap_or_else(|| issuer.to_string())
     }
 
+    pub fn get_issuer(&self) -> String {
+        self.0.tbs_certificate.issuer.to_string()
+    }
+
     pub fn get_subject_name(&self) -> String {
         let subject = &self.0.tbs_certificate.subject;
         extract_oid_from_rdn(subject, CN)
             .or_else(|| extract_oid_from_rdn(subject, COMMON_NAME))
             .unwrap_or_else(|| subject.to_string())
+    }
+
+    pub fn get_subject(&self) -> String {
+        self.0.tbs_certificate.subject.to_string()
     }
 
     pub fn get_validity(&self) -> (DateTime<Utc>, DateTime<Utc>) {

@@ -3,9 +3,10 @@ use luct_core::{Certificate, CertificateChain};
 use rustls::pki_types::ServerName;
 use rustls_platform_verifier::BuilderVerifierExt as _;
 use std::{
+    collections::BTreeMap,
     io::{Read, Write},
     net::TcpStream,
-    sync::Arc,
+    sync::{Arc, LazyLock},
 };
 use url::Url;
 
@@ -15,6 +16,14 @@ use url::Url;
 // TODO: Add error type
 
 // NOTE: This code is copied and adapted from https://github.com/robjtede/inspect-cert-chain/blob/main/src/fetch.rs
+
+static ROOTS: LazyLock<BTreeMap<String, Certificate>> = LazyLock::new(|| {
+    webpki_root_certs::TLS_SERVER_ROOT_CERTS
+        .iter()
+        .map(|cert| Certificate::from_der(cert.as_ref()).unwrap())
+        .map(|cert| (cert.get_subject(), cert))
+        .collect()
+});
 
 pub(crate) fn fetch_cert_chain(url: &str) -> eyre::Result<CertificateChain> {
     let url = Url::parse(url).with_context(|| format!("failed to parse url: \"{url}\""))?;
@@ -63,19 +72,25 @@ Accept-Encoding: identity
 
     // peer_certificates method will return certificates by now
     // because app data has already been written
-    // FIXME: Root certificate is missing
     // Unlike the browser extension, this call does not include the root certificate
     // We need to compile webpki-root-certs into the tool and find and match the root certificate here
     let chain = tls
         .conn
         .peer_certificates()
-        .map(|c| {
-            CertificateChain::from(
-                c.iter()
-                    .filter_map(|c| Certificate::from_der(c).ok())
-                    .collect::<Vec<_>>(),
-            )
+        .map(|certs| {
+            certs
+                .iter()
+                .filter_map(|cert| Certificate::from_der(cert).ok())
+                .collect::<Vec<_>>()
         })
+        .map(|mut certs| {
+            if let Some(root_cert) = certs.last().and_then(|cert| ROOTS.get(&cert.get_issuer())) {
+                certs.push(root_cert.clone());
+            }
+
+            certs
+        })
+        .map(CertificateChain::from)
         .unwrap();
 
     Ok(chain)
