@@ -188,6 +188,7 @@ mod tests {
         CertificateChain, CtLogConfig,
         v1::{SignedTreeHead, responses::GetSthResponse},
     };
+    use luct_test::verify::verify_cert_chain;
 
     const ARGON2025H2: &str = "{
         \"description\": \"Google Argon\",
@@ -223,7 +224,7 @@ mod tests {
         let client = get_client();
 
         let cert = CertificateChain::from_pem_chain(CERT_CHAIN_GOOGLE_COM).unwrap();
-        cert.verify_chain().unwrap();
+        verify_cert_chain(&cert, "google.com", "Mon, 02 Jun 2025 08:35:30 GMT");
         let scts = cert.cert().extract_scts_v1().unwrap();
 
         let sth = client.get_sth_v1().await.unwrap();
