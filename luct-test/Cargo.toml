@@ -22,4 +22,4 @@ tokio = { workspace = true, features = ["rt", "macros"] }
 
 [target.'cfg(any(target_arch = "wasm32", target_arch = "wasm64"))'.dependencies]
 tracing-wasm = { workspace = true }
-getrandom = { version = "0.2", features = ["js"] }
+#getrandom = { version = "0.4", features = ["wasm_js"] }
