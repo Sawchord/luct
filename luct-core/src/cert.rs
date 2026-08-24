@@ -6,8 +6,10 @@ use crate::{
     v1,
 };
 use chrono::{DateTime, Utc};
-use const_oid::db::rfc4519::{CN, COMMON_NAME, O, ORGANIZATION, ORGANIZATION_NAME};
-use p256::pkcs8::ObjectIdentifier;
+use const_oid::{
+    ObjectIdentifier,
+    db::rfc4519::{CN, COMMON_NAME, O, ORGANIZATION, ORGANIZATION_NAME},
+};
 use sha2::{Digest, Sha256};
 use std::{
     fmt::{self, Display},
