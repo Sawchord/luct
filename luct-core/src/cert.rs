@@ -6,8 +6,10 @@ use crate::{
     v1,
 };
 use chrono::{DateTime, Utc};
-use const_oid::db::rfc4519::{CN, COMMON_NAME, O, ORGANIZATION, ORGANIZATION_NAME};
-use p256::pkcs8::ObjectIdentifier;
+use const_oid::{
+    ObjectIdentifier,
+    db::rfc4519::{CN, COMMON_NAME, O, ORGANIZATION, ORGANIZATION_NAME},
+};
 use sha2::{Digest, Sha256};
 use std::{
     fmt::{self, Display},
@@ -18,6 +20,7 @@ use x509_cert::{
     Certificate as Cert,
     der::{Decode as CertDecode, DecodePem, Encode as CertEncode, EncodePem, asn1::OctetString},
     ext::pkix::{AuthorityKeyIdentifier, SubjectKeyIdentifier},
+    name::RdnSequence,
 };
 
 pub(crate) const SCT_V1: ObjectIdentifier = const_oid::db::rfc6962::CT_PRECERT_SCTS;
@@ -55,7 +58,7 @@ impl Certificate {
 
     /// Extract the [SCTs](v1::SignedCertificateTimestamp) embedded into this [`Certificate`]
     pub fn extract_scts_v1(&self) -> Result<Vec<v1::SignedCertificateTimestamp>, CertificateError> {
-        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+        let Some(extensions) = &self.0.tbs_certificate().extensions() else {
             return Ok(vec![]);
         };
 
@@ -79,7 +82,7 @@ impl Certificate {
     }
 
     pub fn is_precert(&self) -> Result<bool, CertificateError> {
-        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+        let Some(extensions) = &self.0.tbs_certificate().extensions() else {
             return Ok(false);
         };
 
@@ -110,29 +113,41 @@ impl Certificate {
     }
 
     pub fn get_issuer_name(&self) -> String {
-        let issuer = &self.0.tbs_certificate.issuer;
-        extract_oid_from_rdn(issuer, O)
-            .or_else(|| extract_oid_from_rdn(issuer, ORGANIZATION))
-            .or_else(|| extract_oid_from_rdn(issuer, ORGANIZATION_NAME))
+        let issuer = RdnSequence::from(self.0.tbs_certificate().issuer().clone());
+        extract_oid_from_rdn(&issuer, O)
+            .or_else(|| extract_oid_from_rdn(&issuer, ORGANIZATION))
+            .or_else(|| extract_oid_from_rdn(&issuer, ORGANIZATION_NAME))
             .unwrap_or_else(|| issuer.to_string())
     }
 
     pub fn get_subject_name(&self) -> String {
-        let subject = &self.0.tbs_certificate.subject;
-        extract_oid_from_rdn(subject, CN)
-            .or_else(|| extract_oid_from_rdn(subject, COMMON_NAME))
+        let subject = RdnSequence::from(self.0.tbs_certificate().subject().clone());
+        extract_oid_from_rdn(&subject, CN)
+            .or_else(|| extract_oid_from_rdn(&subject, COMMON_NAME))
             .unwrap_or_else(|| subject.to_string())
     }
 
     pub fn get_validity(&self) -> (DateTime<Utc>, DateTime<Utc>) {
         (
-            DateTime::from(self.0.tbs_certificate.validity.not_before.to_system_time()),
-            DateTime::from(self.0.tbs_certificate.validity.not_after.to_system_time()),
+            DateTime::from(
+                self.0
+                    .tbs_certificate()
+                    .validity()
+                    .not_before
+                    .to_system_time(),
+            ),
+            DateTime::from(
+                self.0
+                    .tbs_certificate()
+                    .validity()
+                    .not_after
+                    .to_system_time(),
+            ),
         )
     }
 
     pub fn get_subject_key_info(&self) -> Option<Vec<u8>> {
-        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+        let Some(extensions) = &self.0.tbs_certificate().extensions() else {
             return None;
         };
 
@@ -146,7 +161,7 @@ impl Certificate {
     }
 
     pub fn get_authority_key_info(&self) -> Option<Vec<u8>> {
-        let Some(extensions) = &self.0.tbs_certificate.extensions else {
+        let Some(extensions) = &self.0.tbs_certificate().extensions() else {
             return None;
         };
 

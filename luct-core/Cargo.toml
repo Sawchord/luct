@@ -23,7 +23,7 @@ url = { workspace = true }
 p256 = { workspace = true, features = ["pkcs8"] }
 digest = { workspace = true }
 sha2 = { workspace = true }
-x509-cert = { workspace = true }
+x509-cert = { workspace = true, features = ["builder"] }
 const-oid = { workspace = true }
 
 thiserror = { workspace = true }

@@ -25,9 +25,8 @@ pub(crate) fn extract_oid_from_rdn(
     oid: ObjectIdentifier,
 ) -> Option<String> {
     let attr = sequence
-        .0
         .iter()
-        .flat_map(|inner| inner.0.iter())
+        .flat_map(|inner| inner.iter())
         .find(|val| val.oid == oid)?;
 
     if let Ok(string) = attr.value.decode_as::<PrintableString>() {

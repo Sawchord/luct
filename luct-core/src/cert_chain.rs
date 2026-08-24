@@ -9,6 +9,13 @@ use sha2::{Digest, Sha256};
 use std::ops::Index;
 use x509_cert::{
     Certificate as Cert,
+    builder::{
+        Builder, CertificateBuilder,
+        profile::cabf::{
+            self,
+            tls::{CertificateType, DomainValidated, Subscriber},
+        },
+    },
     der::{Decode, Encode},
 };
 
@@ -89,24 +96,47 @@ impl CertificateChain {
         // the issuer should be the subject public key info of that certificates parent
         self.0[1]
             .0
-            .tbs_certificate
-            .subject_public_key_info
+            .tbs_certificate()
+            .subject_public_key_info()
             .encode_to_vec(&mut subject_public_key_bytes)
             .map_err(CodecError::DerError)?;
         let issuer_key_hash: [u8; 32] = Sha256::digest(&subject_public_key_bytes).into();
 
-        let mut tbs_certificate = self.cert().0.tbs_certificate.clone();
-        tbs_certificate.extensions = tbs_certificate.extensions.map(|extensions| {
+        let tbs_certificate = self.cert().0.tbs_certificate().clone();
+
+        let mut builder = CertificateBuilder::new(
+            // Subscriber {
+            //     certificate_type: CertificateType::DomainValidated(
+            //         cabf::Root::new(false, tbs_certificate.subject().clone()).unwrap(),
+            //     ),
+            //     issuer: tbs_certificate.issuer().clone(),
+            //     client_auth: false,
+            // },
+            cabf::Root::new(false, tbs_certificate.issuer().clone()).unwrap(),
+            tbs_certificate.serial_number().clone(),
+            *tbs_certificate.validity(),
+            tbs_certificate.subject_public_key_info().clone(),
+        )
+        .unwrap();
+
+        if let Some(extensions) = tbs_certificate.extensions() {
             extensions
-                .into_iter()
+                .iter()
                 // NOTE: We need to remove all SCT and POISON extensions
                 .filter(|extension| extension.extn_id != SCT_V1 && extension.extn_id != CT_POISON)
-                .collect::<Vec<_>>()
-        });
+                .try_for_each(|extension| builder.add_extension(extension.clone()))?;
+        }
+
+        struct DummySigner;
+        impl KeyPair for DummySigner {}
+
+        let new_tbs_certificate = builder
+            .assemble(self.0[1].0.signature().clone(), &DummySigner)
+            .unwrap();
 
         Ok(v1::LogEntry::PreCert(v1::PreCert {
             issuer_key_hash,
-            tbs_certificate,
+            tbs_certificate: new_tbs_certificate.tbs_certificate().clone(),
         }))
     }
 

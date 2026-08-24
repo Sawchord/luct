@@ -34,14 +34,14 @@ impl<WS: WebsocketStream> OtlspConnectionBuilder<WS> {
     pub fn with_root_cert(mut self, cert: Certificate) -> Self {
         self.roots.push(TrustAnchor {
             subject: cert
-                .tbs_certificate
-                .subject
+                .tbs_certificate()
+                .subject()
                 .to_der()
                 .expect("Failed to parse DER for tbs_certificate")
                 .into(),
             subject_public_key_info: cert
-                .tbs_certificate
-                .subject_public_key_info
+                .tbs_certificate()
+                .subject_public_key_info()
                 .to_der()
                 .expect("Failed to parse DER for subject_public_key_info")
                 .into(),
