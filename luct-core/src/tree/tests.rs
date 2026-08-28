@@ -95,46 +95,42 @@ async fn proof_cut_test() {
         MemoryStore::default(),
     );
 
-    fill_tree_until(&tree, &mut rng, 5).await;
-    let head_5 = tree.recompute_tree_head().await;
+    let a = 842;
+    let b = 2865;
+    let c = 3614;
+    let d = 4000;
 
-    fill_tree_until(&tree, &mut rng, 17).await;
-    let head_17 = tree.recompute_tree_head().await;
+    fill_tree_until(&tree, &mut rng, a).await;
+    let head_a = tree.recompute_tree_head().await;
 
-    fill_tree_until(&tree, &mut rng, 27).await;
-    let head_27 = tree.recompute_tree_head().await;
+    fill_tree_until(&tree, &mut rng, b).await;
+    let head_b = tree.recompute_tree_head().await;
 
-    fill_tree_until(&tree, &mut rng, 31).await;
-    let head_31 = tree.recompute_tree_head().await;
+    fill_tree_until(&tree, &mut rng, c).await;
+    let head_c = tree.recompute_tree_head().await;
 
-    let proof_5_27 = tree.get_consistency_proof(&head_5, &head_27).await.unwrap();
-    proof_5_27.validate(&head_5, &head_27).unwrap();
-    println!("{:?}", lookup_proof(&proof_5_27, &test_store));
+    fill_tree_until(&tree, &mut rng, d).await;
+    let head_d = tree.recompute_tree_head().await;
 
-    let proof_17_31 = tree
-        .get_consistency_proof(&head_17, &head_31)
-        .await
-        .unwrap();
-    proof_17_31.validate(&head_17, &head_31).unwrap();
-    println!("{:?}", lookup_proof(&proof_17_31, &test_store));
+    let proof_a_c = tree.get_consistency_proof(&head_a, &head_c).await.unwrap();
+    proof_a_c.validate(&head_a, &head_c).unwrap();
+    println!("(a-c): {:?}", lookup_proof(&proof_a_c, &test_store));
 
-    let proof_5_17 = tree.get_consistency_proof(&head_5, &head_17).await.unwrap();
-    proof_5_17.validate(&head_5, &head_17).unwrap();
-    println!("{:?}", lookup_proof(&proof_5_17, &test_store));
+    let proof_b_d = tree.get_consistency_proof(&head_b, &head_d).await.unwrap();
+    proof_b_d.validate(&head_b, &head_d).unwrap();
+    println!("(b-d): {:?}", lookup_proof(&proof_b_d, &test_store));
 
-    let proof_17_27 = tree
-        .get_consistency_proof(&head_17, &head_27)
-        .await
-        .unwrap();
-    proof_17_27.validate(&head_17, &head_27).unwrap();
-    println!("{:?}", lookup_proof(&proof_17_27, &test_store));
+    let proof_a_b = tree.get_consistency_proof(&head_a, &head_b).await.unwrap();
+    proof_a_b.validate(&head_a, &head_b).unwrap();
+    println!("(a-b): {:?}", lookup_proof(&proof_a_b, &test_store));
 
-    let proof_27_31 = tree
-        .get_consistency_proof(&head_27, &head_31)
-        .await
-        .unwrap();
-    proof_27_31.validate(&head_27, &head_31).unwrap();
-    println!("{:?}", lookup_proof(&proof_27_31, &test_store));
+    let proof_b_c = tree.get_consistency_proof(&head_b, &head_c).await.unwrap();
+    proof_b_c.validate(&head_b, &head_c).unwrap();
+    println!("(b-c): {:?}", lookup_proof(&proof_b_c, &test_store));
+
+    let proof_c_d = tree.get_consistency_proof(&head_c, &head_d).await.unwrap();
+    proof_c_d.validate(&head_c, &head_d).unwrap();
+    println!("(c-d): {:?}", lookup_proof(&proof_c_d, &test_store));
 
     todo!()
 }
