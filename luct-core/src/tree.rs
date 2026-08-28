@@ -10,6 +10,8 @@ use thiserror::Error;
 mod consistency;
 mod inclusion;
 mod node;
+#[cfg(test)]
+mod tests;
 
 pub type HashOutput = [u8; 32];
 
@@ -151,23 +153,5 @@ pub struct TreeHead {
 impl TreeHead {
     pub fn tree_size(&self) -> u64 {
         self.tree_size
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use sha2::{Digest, Sha256};
-
-    impl Hashable for String {
-        fn hash(&self) -> HashOutput {
-            Sha256::digest(self.as_bytes()).into()
-        }
-    }
-
-    impl Hashable for HashOutput {
-        fn hash(&self) -> HashOutput {
-            Sha256::digest(self).into()
-        }
     }
 }

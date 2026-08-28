@@ -3,11 +3,21 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::cmp::Ordering;
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Clone, PartialEq, Eq, Serialize, Deserialize, Hash)]
 
 pub struct NodeKey {
     pub(crate) start: u64,
     pub(crate) end: u64,
+}
+
+impl std::fmt::Debug for NodeKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        // f.debug_struct("NodeKey")
+        //     .field("start", &self.start)
+        //     .field("end", &self.end)
+        //     .finish()
+        f.debug_list().entry(&self.start).entry(&self.end).finish()
+    }
 }
 
 impl NodeKey {
