@@ -111,11 +111,11 @@ impl<S: ScannerImpl> Scanner<S> {
         let Some(log) = self.logs.get(&sct.log_id()) else {
             return report.error_description("Unknown log id".to_string());
         };
-        let log_name = log.client().log().description().to_string();
+        let log_name = log.sct_client().log().description().to_string();
         let report = report.log_name(log_name);
 
         // Validate the signature
-        if let Err(err) = log.client().log().validate_sct_v1(chain, &sct, true) {
+        if let Err(err) = log.sct_client().log().validate_sct_v1(chain, &sct, true) {
             return report.error_description(format!("Failed to validate signature: {}", err));
         };
         let report = report.signature_validation_time(

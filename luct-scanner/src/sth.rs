@@ -25,7 +25,7 @@ impl<S: ScannerImpl> Scanner<S> {
         log: &ScannerLog<S>,
         cert: &Certificate,
     ) -> Option<Validated<SignedTreeHead>> {
-        let log_name = log.client().log().description();
+        let log_name = log.sth_client().log().description();
 
         // If we have no STH whatsoever, simply fetch it
         let Some(last_sth) = log.get_latest_sth().await else {
