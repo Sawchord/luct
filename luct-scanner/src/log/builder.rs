@@ -21,7 +21,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
         let client = CtClient::new(log.config().clone(), impls.client);
         let tiles = config
             .is_tiling()
-            .then(|| TileFetcher::new2(name.clone(), client.clone()));
+            .then(|| TileFetcher::new(name.clone(), client.clone()));
 
         let log = Arc::new(ScannerLogInner::<S> {
             name,
@@ -30,13 +30,6 @@ impl<S: ScannerImpl> ScannerLog<S> {
             tiles,
         });
 
-        let tiles = log
-            .client
-            .log()
-            .config()
-            .is_tiling()
-            .then(|| TileFetcher::new(&log));
-
-        ScannerLog { log, tiles }
+        ScannerLog { log }
     }
 }

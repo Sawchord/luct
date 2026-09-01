@@ -15,18 +15,9 @@ pub(crate) mod tiling;
 
 /// Internal structure holding references to per log
 /// clients and stores
+#[derive(Debug)]
 pub(crate) struct ScannerLog<S: ScannerImpl> {
     log: Arc<ScannerLogInner<S>>,
-    tiles: Option<TileFetcher<S>>,
-}
-
-impl<S: ScannerImpl> Debug for ScannerLog<S> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("ScannerLog")
-            .field("log", &self.log)
-            .field("tiles", &self.tiles)
-            .finish()
-    }
 }
 
 pub(crate) struct ScannerLogInner<S: ScannerImpl> {
@@ -55,7 +46,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
         sth: &Validated<SignedTreeHead>,
         leaf: &MerkleTreeLeaf,
     ) -> Result<u64, ScannerError> {
-        match &self.tiles {
+        match &self.log.tiles {
             Some(tiles) => Ok(tiles.check_sct_inclusion(sct, sth, leaf).await?),
             None => Ok(self
                 .log
@@ -95,7 +86,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
                 old_sth.tree_size()
             );
 
-            match &self.tiles {
+            match &self.log.tiles {
                 Some(tiles) => tiles.check_sth_consistency(&old_sth, &new_sth).await?,
                 None => {
                     self.log
@@ -129,7 +120,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
 
     async fn fetch_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
-        match &self.tiles {
+        match &self.log.tiles {
             Some(_) => Ok(Validated::new(self.log.client.get_checkpoint().await?)),
             None => Ok(Validated::new(self.log.client.get_sth_v1().await?)),
         }
