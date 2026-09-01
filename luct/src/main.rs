@@ -8,7 +8,7 @@ use crate::{
 use chrono::DateTime;
 use clap::Parser;
 use eyre::Context;
-use luct_client::deduplication::RequestDeduplicationClient;
+use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
@@ -36,6 +36,7 @@ struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
     type SctClient = RequestDeduplicationClient<OtlspClient>;
+    type SthClient = RequestDeduplicationClient<ReqwestClient>;
     type ReportStore = FilesystemStore<Fingerprint, Report>;
     type NonpersistentReportStore = MemoryStore<Fingerprint, Report>;
     type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
@@ -79,14 +80,17 @@ async fn main() -> eyre::Result<()> {
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
     let client_config = OtlspClientConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
 
-    let client = RequestDeduplicationClient::new(OtlspClient::new(client_config));
+    let sct_client = RequestDeduplicationClient::new(OtlspClient::new(client_config));
+    let sth_client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
+
     let time_source = || DateTime::from(SystemTime::now());
 
     let mut scanner = Scanner::<CliScannerImpl>::new(
         scanner_config,
         report_store,
         priv_report_store,
-        client,
+        sct_client,
+        sth_client,
         time_source,
     );
     tracing::info!("Initialized scanner");
