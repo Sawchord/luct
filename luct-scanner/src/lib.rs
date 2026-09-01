@@ -8,6 +8,7 @@ use futures::future::try_join_all;
 use luct_client::Client;
 use luct_core::{CtLog, Fingerprint, LogId, store::SearchableStore, v1::SignedTreeHead};
 use std::{collections::BTreeMap, sync::Arc};
+use web_time::SystemTime;
 pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
     error::ScannerError,
@@ -97,11 +98,24 @@ impl<S: ScannerImpl> Scanner<S> {
     }
 
     /// Updates all log's to the latest STHs
-    pub async fn update_all_logs(&self) -> Result<(), ScannerError> {
+    pub async fn update_all_sths(&self) -> Result<(), ScannerError> {
         let updates = self
             .logs
             .values()
             .map(|log| log.update_sth())
+            .collect::<Vec<_>>();
+
+        try_join_all(updates).await?;
+
+        Ok(())
+    }
+
+    pub async fn refesh_all_sths(&self) -> Result<(), ScannerError> {
+        let now = SystemTime::now();
+        let updates = self
+            .logs
+            .values()
+            .map(|log| log.get_fresh_sth(now, None))
             .collect::<Vec<_>>();
 
         try_join_all(updates).await?;
