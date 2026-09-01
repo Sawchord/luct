@@ -150,6 +150,15 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
+    pub async fn refresh_sths(&self) -> Result<(), String> {
+        self.scanner
+            .refesh_all_sths()
+            .await
+            .map_err(|err| err.to_string())?;
+        Ok(())
+    }
+
+    #[wasm_bindgen]
     pub async fn collect_report(
         &self,
         url: String,

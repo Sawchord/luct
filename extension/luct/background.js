@@ -109,6 +109,7 @@ async function load_scanner() {
             res.text().then((logs) => {
                 log('parsed log');
                 scanner = new Scanner(logs);
+                scanner.refresh_sths();
             })
         })
 }
