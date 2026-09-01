@@ -1,4 +1,4 @@
-use crate::{ScannerImpl, log::ScannerLogInner};
+use crate::ScannerImpl;
 use luct_client::{CtClient, TileFetchStore};
 use luct_core::{
     store::MemoryStore,
@@ -7,10 +7,7 @@ use luct_core::{
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
 use luct_store::LruCacheStore;
-use std::{
-    fmt::{self, Debug},
-    sync::Arc,
-};
+use std::fmt::{self, Debug};
 
 pub(crate) struct TileFetcher<S: ScannerImpl>(
     #[allow(clippy::type_complexity)]
@@ -27,18 +24,7 @@ impl<S: ScannerImpl> Debug for TileFetcher<S> {
 }
 
 impl<S: ScannerImpl> TileFetcher<S> {
-    pub(crate) fn new(log: &Arc<ScannerLogInner<S>>) -> Self {
-        Self(Tree::new(
-            // TODO: Make caps configurable
-            LruCacheStore::new(
-                TileFetchStore::new(log.name.clone(), log.client.clone()),
-                1000,
-            ),
-            MemoryStore::default(),
-        ))
-    }
-
-    pub(crate) fn new2(name: String, client: CtClient<S::SctClient>) -> Self {
+    pub(crate) fn new(name: String, client: CtClient<S::SctClient>) -> Self {
         Self(Tree::new(
             // TODO: Make caps configurable
             LruCacheStore::new(TileFetchStore::new(name, client), 1000),
