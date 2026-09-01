@@ -29,6 +29,7 @@ const-oid = { workspace = true }
 thiserror = { workspace = true }
 itertools = { workspace = true }
 chrono = { workspace = true }
+web-time = { workspace = true }
 
 futures = { workspace = true }
 
