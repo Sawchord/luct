@@ -1,5 +1,5 @@
 use crate::{
-    ScannerImpl,
+    ScannerConfig, ScannerImpl,
     log::{ScannerLog, ScannerLogInner, tiling::TileFetcher},
 };
 use futures::lock::Mutex;
@@ -9,6 +9,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub(crate) struct LogImpls<S: ScannerImpl> {
+    pub config: Arc<ScannerConfig>,
     pub sct_client: S::SctClient,
     pub sth_client: S::SthClient,
     pub sth_store: S::SthStore,
@@ -33,6 +34,9 @@ impl<S: ScannerImpl> ScannerLog<S> {
             tiles,
         });
 
-        ScannerLog { log }
+        ScannerLog {
+            log,
+            config: impls.config.clone(),
+        }
     }
 }

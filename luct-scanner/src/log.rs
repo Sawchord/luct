@@ -1,4 +1,4 @@
-use crate::{ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
+use crate::{ScannerConfig, ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
 use futures::lock::Mutex;
 use luct_client::CtClient;
 use luct_core::{
@@ -18,6 +18,7 @@ pub(crate) mod tiling;
 #[derive(Debug)]
 pub(crate) struct ScannerLog<S: ScannerImpl> {
     log: Arc<ScannerLogInner<S>>,
+    config: Arc<ScannerConfig>,
 }
 
 pub(crate) struct ScannerLogInner<S: ScannerImpl> {
