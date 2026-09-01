@@ -15,12 +15,19 @@ pub(crate) struct LogImpls<S: ScannerImpl> {
 
 impl<S: ScannerImpl> ScannerLog<S> {
     pub fn new(log: &CtLog, impls: LogImpls<S>) -> Self {
+        let config = log.config();
+        let name = log.description().to_owned();
+
         let client = CtClient::new(log.config().clone(), impls.client);
+        let tiles = config
+            .is_tiling()
+            .then(|| TileFetcher::new2(name.clone(), client.clone()));
 
         let log = Arc::new(ScannerLogInner::<S> {
-            name: log.description().to_owned(),
+            name,
             client,
             sth_store: Mutex::new(impls.sth_store),
+            tiles,
         });
 
         let tiles = log
