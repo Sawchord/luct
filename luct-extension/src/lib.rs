@@ -6,7 +6,8 @@ use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
 use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
-    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, v1::SignedTreeHead,
+    CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, store::MemoryStore,
+    v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
@@ -33,6 +34,7 @@ struct ExtensionScannerImpl;
 impl ScannerImpl for ExtensionScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = LruCacheStore<BrowserStorage<Fingerprint, Report>>;
+    type NonpersistentReportStore = MemoryStore<Fingerprint, Report>;
     type SthStore = MetadataCacheStore<BrowserStorage<u64, Validated<SignedTreeHead>>>;
 }
 
@@ -111,6 +113,7 @@ impl Scanner {
         let report_cache =
             BrowserStorage::<Fingerprint, Report>::new_local_store("report".to_string())?;
         let report_cache = LruCacheStore::new(report_cache, extension_config.report_lru_cache());
+        let priv_report_store = MemoryStore::default();
 
         let time_source = || {
             DateTime::from_timestamp_millis(
@@ -122,7 +125,13 @@ impl Scanner {
             .unwrap()
         };
 
-        let mut scanner = CtScanner::new(scanner_config, report_cache, client, time_source);
+        let mut scanner = CtScanner::new(
+            scanner_config,
+            report_cache,
+            priv_report_store,
+            client,
+            time_source,
+        );
 
         for log in logs {
             let name = log.description();

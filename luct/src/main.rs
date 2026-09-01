@@ -12,7 +12,7 @@ use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     Fingerprint,
     log_list::v3::LogList,
-    store::{StoreRead, MemoryStore},
+    store::{MemoryStore, StoreRead},
     v1::SignedTreeHead,
 };
 use luct_otlsp::{OtlspClient, OtlspClientConfig};
@@ -38,6 +38,7 @@ impl ScannerImpl for CliScannerImpl {
     type Client = RequestDeduplicationClient<OtlspClient>;
     type ReportStore =
         StoreSwitch<MemoryStore<Fingerprint, Report>, FilesystemStore<Fingerprint, Report>>;
+    type NonpersistentReportStore = MemoryStore<Fingerprint, Report>;
     type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;
 }
 
@@ -68,7 +69,7 @@ async fn main() -> eyre::Result<()> {
     let logs = log_list.currently_active_logs();
     tracing::info!("Imported {} logs", logs.len());
 
-    let report_cache = if args.no_cache {
+    let report_store = if args.no_cache {
         StoreSwitch::A(MemoryStore::default())
     } else {
         let store = StoreSwitch::B(FilesystemStore::new(workdir.join("report")));
@@ -78,6 +79,7 @@ async fn main() -> eyre::Result<()> {
         );
         store
     };
+    let priv_report_store = MemoryStore::default();
 
     let scanner_config = ScannerConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
     let client_config = OtlspClientConfig::try_from(&config).map_err(|err| eyre::eyre!(err))?;
@@ -85,8 +87,13 @@ async fn main() -> eyre::Result<()> {
     let client = RequestDeduplicationClient::new(OtlspClient::new(client_config));
     let time_source = || DateTime::from(SystemTime::now());
 
-    let mut scanner =
-        Scanner::<CliScannerImpl>::new(scanner_config, report_cache, client, time_source);
+    let mut scanner = Scanner::<CliScannerImpl>::new(
+        scanner_config,
+        report_store,
+        priv_report_store,
+        client,
+        time_source,
+    );
     tracing::info!("Initialized scanner");
 
     for log in logs {

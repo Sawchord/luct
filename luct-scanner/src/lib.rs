@@ -31,6 +31,9 @@ pub trait ScannerImpl {
     type Client: Client + Clone;
     /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) of audit results
     type ReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
+    /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) that should
+    /// persist beyond the current session (i.e. in private browsing)
+    type NonpersistentReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
     /// The [`Store`](luct_core::store::Store) use to store [`SignedTreeHeads`](SignedTreeHead)
     type SthStore: SearchableStore<Key = u64, Value = Validated<SignedTreeHead>>;
 }
@@ -43,6 +46,7 @@ pub struct Scanner<S: ScannerImpl> {
     config: ScannerConfig,
     logs: BTreeMap<LogId, ScannerLog<S>>,
     report_store: S::ReportStore,
+    priv_report_store: S::NonpersistentReportStore,
     client: S::Client,
     time_source: Box<dyn Fn() -> DateTime<Utc>>,
 }
@@ -56,6 +60,7 @@ impl<S: ScannerImpl> Scanner<S> {
     pub fn new<F: Fn() -> DateTime<Utc> + 'static>(
         config: ScannerConfig,
         report_store: S::ReportStore,
+        priv_report_store: S::NonpersistentReportStore,
         client: S::Client,
         time_source: F,
     ) -> Self {
@@ -63,6 +68,7 @@ impl<S: ScannerImpl> Scanner<S> {
             config,
             logs: BTreeMap::new(),
             report_store,
+            priv_report_store,
             client,
             time_source: Box::new(time_source) as _,
         }
