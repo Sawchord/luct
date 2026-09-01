@@ -129,7 +129,8 @@ function add_listener() {
 
             let certs = new CertificateChain(securityInfo.certificates.map((info) => info.rawDER));
             tabState.updateTab(details.tabId, certs.report(), "processing");
-            let report = await scanner.collect_report(details.url, certs);
+            // TODO: Collect private report is tab has incognito flag set
+            let report = await scanner.collect_report(details.url, certs, false);
 
             // Skip the recursive calls
             if (!(report)) {

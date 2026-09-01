@@ -151,6 +151,7 @@ impl Scanner {
         &self,
         url: String,
         certs: CertificateChain,
+        is_nonpersistent: bool,
     ) -> Result<Option<JsValue>, String> {
         // Check that this is not a recursion
         if self.is_recursion(&url)? {
@@ -161,7 +162,7 @@ impl Scanner {
         // Generate the report
         let report = self
             .scanner
-            .collect_report(Arc::new(certs.cert_chain))
+            .collect_report(Arc::new(certs.cert_chain), is_nonpersistent)
             .await
             .map_err(|err| err.to_string())?;
 
