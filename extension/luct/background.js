@@ -115,7 +115,6 @@ async function load_scanner() {
 
 function add_listener() {
     browser.webRequest.onHeadersReceived.addListener(async (details) => {
-        //log(`Got a request for ${details.url} with ID ${details.requestId}`)
         let requestId = details.requestId
 
         browser.webRequest.getSecurityInfo(requestId, {
@@ -129,8 +128,7 @@ function add_listener() {
 
             let certs = new CertificateChain(securityInfo.certificates.map((info) => info.rawDER));
             tabState.updateTab(details.tabId, certs.report(), "processing");
-            // TODO: Collect private report is tab has incognito flag set
-            let report = await scanner.collect_report(details.url, certs, false);
+            let report = await scanner.collect_report(details.url, certs, details.incognito);
 
             // Skip the recursive calls
             if (!(report)) {
