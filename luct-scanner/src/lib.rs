@@ -7,7 +7,7 @@ use chrono::{DateTime, Utc};
 use futures::future::try_join_all;
 use luct_client::Client;
 use luct_core::{CtLog, Fingerprint, LogId, store::SearchableStore, v1::SignedTreeHead};
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
     error::ScannerError,
@@ -49,7 +49,7 @@ pub trait ScannerImpl {
 /// It is generic over [`ScannerImpl`], which is a bundle trait containing implementations of [`Stores`](luct_core::store::Store)
 /// and [`Clients`](Client).
 pub struct Scanner<S: ScannerImpl> {
-    config: ScannerConfig,
+    config: Arc<ScannerConfig>,
     logs: BTreeMap<LogId, ScannerLog<S>>,
     report_store: S::ReportStore,
     priv_report_store: S::NonpersistentReportStore,
@@ -73,7 +73,7 @@ impl<S: ScannerImpl> Scanner<S> {
         time_source: F,
     ) -> Self {
         Self {
-            config,
+            config: Arc::new(config),
             logs: BTreeMap::new(),
             report_store,
             priv_report_store,
@@ -85,6 +85,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
     pub fn add_log(&mut self, log: &CtLog, sth_store: S::SthStore) -> &mut Self {
         let impls = LogImpls {
+            config: self.config.clone(),
             sct_client: self.sct_client.clone(),
             sth_client: self.sth_client.clone(),
             sth_store,
