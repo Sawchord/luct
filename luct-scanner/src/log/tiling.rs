@@ -14,7 +14,10 @@ use std::{
 
 pub(crate) struct TileFetcher<S: ScannerImpl>(
     #[allow(clippy::type_complexity)]
-    Tree<LruCacheStore<TileFetchStore<S::Client>>, MemoryStore<u64, SignedCertificateTimestamp>>,
+    Tree<
+        LruCacheStore<TileFetchStore<S::SctClient>>,
+        MemoryStore<u64, SignedCertificateTimestamp>,
+    >,
 );
 
 impl<S: ScannerImpl> Debug for TileFetcher<S> {

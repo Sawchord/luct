@@ -9,7 +9,7 @@ use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub(crate) struct LogImpls<S: ScannerImpl> {
-    pub client: S::Client,
+    pub client: S::SctClient,
     pub sth_store: S::SthStore,
 }
 
