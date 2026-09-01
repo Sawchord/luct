@@ -35,7 +35,7 @@ const LOG_LIST: &str = include_str!("../log_list.json");
 struct CliScannerImpl;
 
 impl ScannerImpl for CliScannerImpl {
-    type Client = RequestDeduplicationClient<OtlspClient>;
+    type SctClient = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = FilesystemStore<Fingerprint, Report>;
     type NonpersistentReportStore = MemoryStore<Fingerprint, Report>;
     type SthStore = FilesystemStore<u64, Validated<SignedTreeHead>>;

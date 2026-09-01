@@ -27,13 +27,16 @@ mod utils;
 ///
 /// Defines the [`Store`](luct_core::store::Store) and [`Client`] backends to be used by the scanner
 pub trait ScannerImpl {
-    /// [`Client`] implementation to make connections to logs to
-    type Client: Client + Clone;
+    /// The [`Client`] that makes the connections when fetching Scts.
+    type SctClient: Client + Clone;
+
     /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) of audit results
     type ReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
+
     /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) that should
     /// persist beyond the current session (i.e. in private browsing)
     type NonpersistentReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
+
     /// The [`Store`](luct_core::store::Store) use to store [`SignedTreeHeads`](SignedTreeHead)
     type SthStore: SearchableStore<Key = u64, Value = Validated<SignedTreeHead>>;
 }
@@ -47,7 +50,7 @@ pub struct Scanner<S: ScannerImpl> {
     logs: BTreeMap<LogId, ScannerLog<S>>,
     report_store: S::ReportStore,
     priv_report_store: S::NonpersistentReportStore,
-    client: S::Client,
+    sct_client: S::SctClient,
     time_source: Box<dyn Fn() -> DateTime<Utc>>,
 }
 
@@ -61,7 +64,7 @@ impl<S: ScannerImpl> Scanner<S> {
         config: ScannerConfig,
         report_store: S::ReportStore,
         priv_report_store: S::NonpersistentReportStore,
-        client: S::Client,
+        sct_client: S::SctClient,
         time_source: F,
     ) -> Self {
         Self {
@@ -69,14 +72,14 @@ impl<S: ScannerImpl> Scanner<S> {
             logs: BTreeMap::new(),
             report_store,
             priv_report_store,
-            client,
+            sct_client,
             time_source: Box::new(time_source) as _,
         }
     }
 
     pub fn add_log(&mut self, log: &CtLog, sth_store: S::SthStore) -> &mut Self {
         let impls = LogImpls {
-            client: self.client.clone(),
+            client: self.sct_client.clone(),
             sth_store,
         };
         let scanner_log = ScannerLog::new(log, impls);

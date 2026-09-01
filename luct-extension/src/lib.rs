@@ -32,7 +32,7 @@ const USER_AGENT: &str = concat!(
 struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
-    type Client = RequestDeduplicationClient<OtlspClient>;
+    type SctClient = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = LruCacheStore<BrowserStorage<Fingerprint, Report>>;
     type NonpersistentReportStore = MemoryStore<Fingerprint, Report>;
     type SthStore = MetadataCacheStore<BrowserStorage<u64, Validated<SignedTreeHead>>>;

@@ -31,7 +31,7 @@ impl<S: ScannerImpl> Debug for ScannerLog<S> {
 
 pub(crate) struct ScannerLogInner<S: ScannerImpl> {
     name: String,
-    client: CtClient<S::Client>,
+    client: CtClient<S::SctClient>,
     sth_store: Mutex<S::SthStore>,
 }
 
@@ -44,7 +44,7 @@ impl<S: ScannerImpl> fmt::Debug for ScannerLogInner<S> {
 }
 
 impl<S: ScannerImpl> ScannerLog<S> {
-    pub(crate) fn client(&self) -> &CtClient<S::Client> {
+    pub(crate) fn client(&self) -> &CtClient<S::SctClient> {
         &self.log.client
     }
 
