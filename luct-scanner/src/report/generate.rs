@@ -127,7 +127,7 @@ impl<S: ScannerImpl> Scanner<S> {
         );
 
         // Get a fresh sth
-        let fresh_sth = match self.update_fresh_sth(now, log, chain.cert()).await {
+        let fresh_sth = match self.get_fresh_sth(now, log, chain.cert()).await {
             Ok(sth) => sth,
             Err(err) => {
                 return report.error_description(format!("Failed to fetch a fresh STH: {}", err));
@@ -184,7 +184,7 @@ impl<S: ScannerImpl> Scanner<S> {
             return Ok(report.error_description("Unknown log id".to_string()));
         };
 
-        let fresh_sth = match self.update_fresh_sth(now, log, chain.cert()).await {
+        let fresh_sth = match self.get_fresh_sth(now, log, chain.cert()).await {
             Ok(sth) => sth,
             Err(err) => {
                 return Ok(

@@ -7,19 +7,19 @@ impl<S: ScannerImpl> Scanner<S> {
     ///
     /// Checks whether the latest STH is still new enough.
     /// If it is too old, it will fetch a fresh one
-    pub(crate) async fn update_fresh_sth(
+    pub(crate) async fn get_fresh_sth(
         &self,
         now: SystemTime,
         log: &ScannerLog<S>,
         cert: &Certificate,
     ) -> Result<Validated<SignedTreeHead>, ScannerError> {
-        match self.get_fresh_sth(now, log, cert).await {
+        match self.try_get_fresh_sth(now, log, cert).await {
             Some(sth) => Ok(sth),
             None => log.update_sth().await,
         }
     }
 
-    pub(crate) async fn get_fresh_sth(
+    async fn try_get_fresh_sth(
         &self,
         now: SystemTime,
         log: &ScannerLog<S>,

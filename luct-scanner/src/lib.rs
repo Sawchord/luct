@@ -86,8 +86,8 @@ impl<S: ScannerImpl> Scanner<S> {
         self
     }
 
-    /// Updates all log's STHs
-    pub async fn refresh_all_logs(&self) -> Result<(), ScannerError> {
+    /// Updates all log's to the latest STHs
+    pub async fn update_all_logs(&self) -> Result<(), ScannerError> {
         let updates = self
             .logs
             .values()
