@@ -5,7 +5,6 @@
 mod file;
 mod lru;
 mod meta_cache;
-mod switch;
 
 #[cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))]
 pub use file::FilesystemStore;
@@ -15,7 +14,6 @@ use luct_core::{
     v1::{SignedCertificateTimestamp, SignedTreeHead},
 };
 pub use meta_cache::MetadataCacheStore;
-pub use switch::StoreSwitch;
 
 /// Indicates, that a key can be serialized as a [`String`].
 ///
