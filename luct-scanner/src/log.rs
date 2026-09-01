@@ -33,6 +33,7 @@ pub(crate) struct ScannerLogInner<S: ScannerImpl> {
     name: String,
     client: CtClient<S::SctClient>,
     sth_store: Mutex<S::SthStore>,
+    tiles: Option<TileFetcher<S>>,
 }
 
 impl<S: ScannerImpl> fmt::Debug for ScannerLogInner<S> {

@@ -1,5 +1,5 @@
 use crate::{ScannerImpl, log::ScannerLogInner};
-use luct_client::TileFetchStore;
+use luct_client::{CtClient, TileFetchStore};
 use luct_core::{
     store::MemoryStore,
     tiling::TilingError,
@@ -34,6 +34,14 @@ impl<S: ScannerImpl> TileFetcher<S> {
                 TileFetchStore::new(log.name.clone(), log.client.clone()),
                 1000,
             ),
+            MemoryStore::default(),
+        ))
+    }
+
+    pub(crate) fn new2(name: String, client: CtClient<S::SctClient>) -> Self {
+        Self(Tree::new(
+            // TODO: Make caps configurable
+            LruCacheStore::new(TileFetchStore::new(name, client), 1000),
             MemoryStore::default(),
         ))
     }
