@@ -30,6 +30,9 @@ pub trait ScannerImpl {
     /// The [`Client`] that makes the connections when fetching Scts.
     type SctClient: Client + Clone;
 
+    /// The [`Client`] that fetches STHs, when there is no connection to an SCT.
+    type SthClient: Client + Clone;
+
     /// The [`Store`](luct_core::store::Store) type used to store cached [`Reports`](Report) of audit results
     type ReportStore: SearchableStore<Key = Fingerprint, Value = Report>;
 
@@ -51,6 +54,7 @@ pub struct Scanner<S: ScannerImpl> {
     report_store: S::ReportStore,
     priv_report_store: S::NonpersistentReportStore,
     sct_client: S::SctClient,
+    sth_client: S::SthClient,
     time_source: Box<dyn Fn() -> DateTime<Utc>>,
 }
 
@@ -65,6 +69,7 @@ impl<S: ScannerImpl> Scanner<S> {
         report_store: S::ReportStore,
         priv_report_store: S::NonpersistentReportStore,
         sct_client: S::SctClient,
+        sth_client: S::SthClient,
         time_source: F,
     ) -> Self {
         Self {
@@ -73,6 +78,7 @@ impl<S: ScannerImpl> Scanner<S> {
             report_store,
             priv_report_store,
             sct_client,
+            sth_client,
             time_source: Box::new(time_source) as _,
         }
     }
