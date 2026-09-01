@@ -22,7 +22,8 @@ pub(crate) struct ScannerLog<S: ScannerImpl> {
 
 pub(crate) struct ScannerLogInner<S: ScannerImpl> {
     name: String,
-    client: CtClient<S::SctClient>,
+    sct_client: CtClient<S::SctClient>,
+    sth_client: CtClient<S::SthClient>,
     sth_store: Mutex<S::SthStore>,
     tiles: Option<TileFetcher<S>>,
 }
@@ -36,8 +37,12 @@ impl<S: ScannerImpl> fmt::Debug for ScannerLogInner<S> {
 }
 
 impl<S: ScannerImpl> ScannerLog<S> {
-    pub(crate) fn client(&self) -> &CtClient<S::SctClient> {
-        &self.log.client
+    pub(crate) fn sct_client(&self) -> &CtClient<S::SctClient> {
+        &self.log.sct_client
+    }
+
+    pub(crate) fn sth_client(&self) -> &CtClient<S::SthClient> {
+        &self.log.sth_client
     }
 
     pub(crate) async fn check_sct_inclusion(
@@ -50,7 +55,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
             Some(tiles) => Ok(tiles.check_sct_inclusion(sct, sth, leaf).await?),
             None => Ok(self
                 .log
-                .client
+                .sct_client
                 .check_sct_inclusion_v1(sct, sth, leaf)
                 .await?),
         }
@@ -90,7 +95,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
                 Some(tiles) => tiles.check_sth_consistency(&old_sth, &new_sth).await?,
                 None => {
                     self.log
-                        .client
+                        .sth_client
                         .check_consistency_v1(&old_sth, &new_sth)
                         .await?
                 }
@@ -121,8 +126,8 @@ impl<S: ScannerImpl> ScannerLog<S> {
     async fn fetch_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.log.tiles {
-            Some(_) => Ok(Validated::new(self.log.client.get_checkpoint().await?)),
-            None => Ok(Validated::new(self.log.client.get_sth_v1().await?)),
+            Some(_) => Ok(Validated::new(self.log.sth_client.get_checkpoint().await?)),
+            None => Ok(Validated::new(self.log.sth_client.get_sth_v1().await?)),
         }
     }
 }

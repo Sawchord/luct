@@ -61,7 +61,7 @@ pub struct Scanner<S: ScannerImpl> {
 #[allow(clippy::type_complexity)]
 impl<S: ScannerImpl> Scanner<S> {
     pub fn logs<'a>(&'a self) -> Box<dyn Iterator<Item = &'a CtLog> + 'a> {
-        Box::new(self.logs.values().map(|val| val.client().log()))
+        Box::new(self.logs.values().map(|val| val.sct_client().log()))
     }
 
     pub fn new<F: Fn() -> DateTime<Utc> + 'static>(
@@ -85,11 +85,12 @@ impl<S: ScannerImpl> Scanner<S> {
 
     pub fn add_log(&mut self, log: &CtLog, sth_store: S::SthStore) -> &mut Self {
         let impls = LogImpls {
-            client: self.sct_client.clone(),
+            sct_client: self.sct_client.clone(),
+            sth_client: self.sth_client.clone(),
             sth_store,
         };
         let scanner_log = ScannerLog::new(log, impls);
-        let log_id = scanner_log.client().log().log_id().clone();
+        let log_id = scanner_log.sct_client().log().log_id().clone();
 
         self.logs.insert(log_id, scanner_log);
         self

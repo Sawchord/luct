@@ -9,27 +9,42 @@ use luct_core::{
 use luct_store::LruCacheStore;
 use std::fmt::{self, Debug};
 
-pub(crate) struct TileFetcher<S: ScannerImpl>(
-    #[allow(clippy::type_complexity)]
-    Tree<
+pub(crate) struct TileFetcher<S: ScannerImpl> {
+    sct_fetcher: Tree<
         LruCacheStore<TileFetchStore<S::SctClient>>,
         MemoryStore<u64, SignedCertificateTimestamp>,
     >,
-);
+    sth_fetcher: Tree<
+        LruCacheStore<TileFetchStore<S::SthClient>>,
+        MemoryStore<u64, SignedCertificateTimestamp>,
+    >,
+}
 
 impl<S: ScannerImpl> Debug for TileFetcher<S> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_tuple("TileFetcher").field(&self.0).finish()
+        f.debug_struct("TileFetcher")
+            .field("sct_fetcher", &self.sct_fetcher)
+            .finish()
     }
 }
 
 impl<S: ScannerImpl> TileFetcher<S> {
-    pub(crate) fn new(name: String, client: CtClient<S::SctClient>) -> Self {
-        Self(Tree::new(
-            // TODO: Make caps configurable
-            LruCacheStore::new(TileFetchStore::new(name, client), 1000),
-            MemoryStore::default(),
-        ))
+    pub(crate) fn new(
+        name: String,
+        sct_client: CtClient<S::SctClient>,
+        sth_client: CtClient<S::SthClient>,
+    ) -> Self {
+        // TODO: Make caps configurable
+        Self {
+            sct_fetcher: Tree::new(
+                LruCacheStore::new(TileFetchStore::new(name.clone(), sct_client), 1000),
+                MemoryStore::default(),
+            ),
+            sth_fetcher: Tree::new(
+                LruCacheStore::new(TileFetchStore::new(name, sth_client), 1000),
+                MemoryStore::default(),
+            ),
+        }
     }
 }
 
@@ -53,10 +68,12 @@ impl<S: ScannerImpl> TileFetcher<S> {
         );
 
         // Need to set the sth correctly for the async proof to work
-        self.0.nodes().set_tree_size(tree_head.tree_size());
+        self.sct_fetcher
+            .nodes()
+            .set_tree_size(tree_head.tree_size());
 
         let audit_proof = self
-            .0
+            .sct_fetcher
             .get_audit_proof(&tree_head, *leaf_index)
             .await
             .map_err(TilingError::AuditProofGenerationError)?;
@@ -103,10 +120,12 @@ impl<S: ScannerImpl> TileFetcher<S> {
         );
 
         // Need to set the sth correctly for the async proof to work
-        self.0.nodes().set_tree_size(new_tree_head.tree_size());
+        self.sth_fetcher
+            .nodes()
+            .set_tree_size(new_tree_head.tree_size());
 
         let consistency_proof = self
-            .0
+            .sth_fetcher
             .get_consistency_proof(&old_tree_head, &new_tree_head)
             .await
             .map_err(TilingError::ConsistencyProofGenerationError)?;
