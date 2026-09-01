@@ -2,6 +2,7 @@ use crate::{
     ScannerImpl,
     log::{ScannerLog, ScannerLogInner, tiling::TileFetcher},
 };
+use futures::lock::Mutex;
 use luct_client::CtClient;
 use luct_core::CtLog;
 use std::sync::Arc;
@@ -19,7 +20,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
         let log = Arc::new(ScannerLogInner::<S> {
             name: log.description().to_owned(),
             client,
-            sth_store: impls.sth_store,
+            sth_store: Mutex::new(impls.sth_store),
         });
 
         let tiles = log

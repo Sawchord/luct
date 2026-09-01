@@ -1,4 +1,5 @@
 use crate::{ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
+use futures::lock::Mutex;
 use luct_client::CtClient;
 use luct_core::{
     store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
@@ -31,7 +32,7 @@ impl<S: ScannerImpl> Debug for ScannerLog<S> {
 pub(crate) struct ScannerLogInner<S: ScannerImpl> {
     name: String,
     client: CtClient<S::Client>,
-    sth_store: S::SthStore,
+    sth_store: Mutex<S::SthStore>,
 }
 
 impl<S: ScannerImpl> fmt::Debug for ScannerLogInner<S> {
@@ -64,16 +65,27 @@ impl<S: ScannerImpl> ScannerLog<S> {
     }
 
     pub(crate) async fn get_latest_sth(&self) -> Option<Validated<SignedTreeHead>> {
-        self.log.sth_store.last().await.map(|sth| sth.1)
+        self.log
+            .sth_store
+            .lock()
+            .await
+            .last()
+            .await
+            .map(|sth| sth.1)
     }
 
     /// Updates the log to the newest STH
     ///
-    /// Checks consistency to the last STH, of one exists
+    /// Checks consistency to the last STH, if one exists
     pub(crate) async fn update_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
+        // NOTE: We hold the lock over the STH store while we fetch the new STH
+        // This way, every request to the STH store will be queued until the update has finished
+        // Most updates will want to have the updated store anyway, so this potentially reduces the
+        // number of requests necessary
+        let store = self.log.sth_store.lock().await;
         let new_sth = self.fetch_sth().await?;
 
-        if let Some((_, old_sth)) = self.log.sth_store.last().await
+        if let Some((_, old_sth)) = store.last().await
             && old_sth.tree_size() < new_sth.tree_size()
         {
             tracing::debug!(
@@ -93,10 +105,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
             };
         };
 
-        self.log
-            .sth_store
-            .insert(new_sth.tree_size(), new_sth.clone())
-            .await;
+        store.insert(new_sth.tree_size(), new_sth.clone()).await;
 
         Ok(new_sth)
     }
@@ -110,6 +119,8 @@ impl<S: ScannerImpl> ScannerLog<S> {
         let tree_head = self
             .log
             .sth_store
+            .lock()
+            .await
             .find(|_, sth| sth.timestamp() > timestamp)
             .await?;
         Some(tree_head.1)

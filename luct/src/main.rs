@@ -97,7 +97,7 @@ async fn main() -> eyre::Result<()> {
     }
 
     if args.update_sths {
-        scanner.refresh_all_logs().await?;
+        scanner.update_all_logs().await?;
     }
 
     let chain = fetch_cert_chain(&args.source)?;
