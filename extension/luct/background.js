@@ -1,6 +1,5 @@
 import init, { Scanner, CertificateChain } from './wasm/luct_extension.js';
 
-let log = console.log.bind(console)
 let ALL_SITES = { urls: ['<all_urls>'] }
 let extraInfoSpec = ['blocking'];
 
@@ -19,7 +18,7 @@ class TabState {
 
         var tab = this.tabs.get(tabId);
         if (!tab) {
-            log("Initializing new tab: " + tabId);
+            console.log("Initializing new tab: " + tabId);
             tab = new TabSecurity(tabId);
         }
 
@@ -74,7 +73,7 @@ class TabSecurity {
     }
 }
 
-log(`Loading luCT extension`)
+console.log(`Loading luCT extension`)
 
 init().then(load_scanner).then(setup_tab_actions).then(add_listener)
 
@@ -107,7 +106,7 @@ async function load_scanner() {
     fetch(browser.runtime.getURL('logs/log_list.json'))
         .then(res => {
             res.text().then((logs) => {
-                log('parsed log');
+                console.log('parsed log');
                 scanner = new Scanner(logs);
                 scanner.refresh_sths();
             })
@@ -116,6 +115,7 @@ async function load_scanner() {
 
 function add_listener() {
     browser.webRequest.onHeadersReceived.addListener(async (details) => {
+        //console.log(details)
         let requestId = details.requestId
 
         browser.webRequest.getSecurityInfo(requestId, {
@@ -133,7 +133,7 @@ function add_listener() {
 
             // Skip the recursive calls
             if (!(report)) {
-                log("Skipping recursive request");
+                console.log("Skipping recursive request");
                 return;
             }
 
@@ -167,17 +167,17 @@ function add_listener() {
 
     });
 
-    log('Added listeners')
+    console.log('Added listeners')
 }
 
 function setup_tab_actions() {
     browser.tabs.onRemoved.addListener((tabId) => {
-        log(`Tab ${tabId} was closed`)
+        console.log(`Tab ${tabId} was closed`)
         tabState.deleteTab(tabId);
     });
 
     browser.tabs.onUpdated.addListener(async (tabId, _changeInfo, tab) => {
-        log(`Tab ${tabId} has updated url`)
+        console.log(`Tab ${tabId} has updated url`)
         tabState.deleteTab(tabId);
     },
         { properties: ["url"] }
