@@ -2,7 +2,7 @@ use crate::{Report, Scanner, ScannerError, ScannerImpl, SctReport, SthReport};
 use chrono::DateTime;
 use futures::future::join_all;
 use luct_core::{
-    CertificateChain, LogId,
+    CertificateChain, Fingerprint, LogId,
     store::{StoreRead, StoreWrite},
     v1::{self, SignedCertificateTimestamp},
 };
@@ -10,21 +10,26 @@ use std::sync::Arc;
 use web_time::{SystemTime, UNIX_EPOCH};
 
 impl<S: ScannerImpl> Scanner<S> {
-    pub async fn collect_report_pem(&self, data: &str) -> Result<Report, ScannerError> {
+    pub async fn collect_report_pem(
+        &self,
+        data: &str,
+        is_nonpersistent: bool,
+    ) -> Result<Report, ScannerError> {
         let cert_chain = Arc::new(CertificateChain::from_pem_chain(data)?);
 
-        self.collect_report(cert_chain).await
+        self.collect_report(cert_chain, is_nonpersistent).await
     }
 
     // TODO: Remove Result here
     pub async fn collect_report(
         &self,
         chain: Arc<CertificateChain>,
+        is_nonpersistent: bool,
     ) -> Result<Report, ScannerError> {
         let cert = chain.cert();
         let cert_fp = cert.fingerprint_sha256();
 
-        let report = match self.report_store.get(cert_fp.clone()).await {
+        let report = match self.get_report(cert_fp.clone(), is_nonpersistent).await {
             Some(report) => {
                 tracing::debug!("Found report for {} in cache", cert_fp.to_string());
 
@@ -47,11 +52,27 @@ impl<S: ScannerImpl> Scanner<S> {
         };
 
         let report = self.evaluate_policy(report, (self.time_source)());
-        if report.get_error().is_none() {
+        if !is_nonpersistent && report.get_error().is_none() {
             self.report_store.insert(cert_fp, report.clone()).await;
         }
 
         Ok(report)
+    }
+
+    /// If the flag `is_nonpersistent` is set, this function will try to fetch the report from
+    /// the non-persistent store first, and then fall back to the persistent store
+    ///
+    /// Otherwise, it will simply fetch from the persistent store
+    async fn get_report(&self, key: Fingerprint, is_nonpersistent: bool) -> Option<Report> {
+        if is_nonpersistent {
+            if let Some(report) = self.priv_report_store.get(key.clone()).await {
+                Some(report)
+            } else {
+                self.report_store.get(key).await
+            }
+        } else {
+            self.report_store.get(key).await
+        }
     }
 
     async fn create_report(&self, chain: Arc<CertificateChain>) -> Report {

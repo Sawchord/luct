@@ -114,7 +114,7 @@ async fn main() -> eyre::Result<()> {
     }
 
     let report = scanner
-        .collect_report(Arc::new(chain))
+        .collect_report(Arc::new(chain), args.no_cache)
         .await
         .with_context(|| format!("failed to collext leads for {}", args.source))?;
 
