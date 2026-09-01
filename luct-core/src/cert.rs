@@ -1,7 +1,7 @@
 use crate::{
     utils::{
         codec::{CodecError, Decode},
-        extract_oid_from_rdn, hex_with_colons,
+        extract_oid_from_rdn, hex_with_colons, std_systime_to_web_systime,
     },
     v1,
 };
@@ -16,6 +16,7 @@ use std::{
     io::Cursor,
 };
 use thiserror::Error;
+use web_time::SystemTime;
 use x509_cert::{
     Certificate as Cert,
     der::{Decode as CertDecode, DecodePem, Encode as CertEncode, EncodePem, asn1::OctetString},
@@ -138,6 +139,13 @@ impl Certificate {
         (
             DateTime::from(self.0.tbs_certificate.validity.not_before.to_system_time()),
             DateTime::from(self.0.tbs_certificate.validity.not_after.to_system_time()),
+        )
+    }
+
+    pub fn get_validity_systemtime(&self) -> (SystemTime, SystemTime) {
+        (
+            std_systime_to_web_systime(self.0.tbs_certificate.validity.not_before.to_system_time()),
+            std_systime_to_web_systime(self.0.tbs_certificate.validity.not_after.to_system_time()),
         )
     }
 

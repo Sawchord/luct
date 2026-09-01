@@ -44,9 +44,7 @@ impl<S: ScannerImpl> Scanner<S> {
         }
 
         // Update STH if cert is younger than latest STH
-        let cert_timestamp = cert.get_validity().0;
-        let cert_timestamp =
-            UNIX_EPOCH + Duration::from_millis(cert_timestamp.timestamp_millis() as u64);
+        let cert_timestamp = cert.get_validity_systemtime().0;
         if cert_timestamp > sth_timestamp {
             tracing::debug!(
                 "STH for {} needs update because certificate is newer than STH",

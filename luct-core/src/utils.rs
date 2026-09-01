@@ -40,3 +40,7 @@ pub(crate) fn extract_oid_from_rdn(
 
     None
 }
+
+pub(crate) fn std_systime_to_web_systime(time: std::time::SystemTime) -> web_time::SystemTime {
+    web_time::UNIX_EPOCH + time.duration_since(std::time::UNIX_EPOCH).unwrap()
+}
