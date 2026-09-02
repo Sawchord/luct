@@ -23,9 +23,11 @@ use tokio::{
 };
 use url::{Host, Url};
 
+mod config;
 mod metrics;
 mod state;
 
+pub use config::OtlspConfig;
 pub use metrics::OtlspMetrics;
 pub use state::OtlspState;
 
