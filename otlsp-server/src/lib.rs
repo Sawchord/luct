@@ -15,11 +15,13 @@ use serde::{Deserialize, Serialize};
 use std::{
     io::{self, ErrorKind},
     sync::Arc,
+    time::Duration,
 };
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
     select,
+    time::sleep,
 };
 use url::{Host, Url};
 
@@ -170,6 +172,8 @@ async fn connection_loop(
     let mut buf = [0; FRAME_SIZE];
 
     loop {
+        let timeout_timer = sleep(Duration::from_secs(state.config.connection_timeout_seconds));
+
         select! {
             biased;
 
@@ -192,9 +196,16 @@ async fn connection_loop(
             }
             data = ws.recv() => {
                 to_server_tx.send(data)
-                .await
-                .expect("to_client_rx dropped unexpectedly");
+                    .await
+                    .expect("to_client_rx dropped unexpectedly");
             },
+            () = timeout_timer => {
+                tracing::debug!("Closing idle connection to {}", destination.as_str());
+                // ws.send(Message::Close(Some(CloseFrame { code: 1000, reason: "Closing idle connection".into() })))
+                //     .await
+                //     .expect("Failed to send close message to idle connection");
+                let _ = stream.shutdown().await;
+            }
         }
     }
 }
@@ -234,7 +245,7 @@ async fn handle_websocket_receive(
                     true
                 }
                 Message::Close(close_frame) => {
-                    tracing::debug!("Shutting down conntextion to {}", destination.as_str());
+                    tracing::debug!("Shutting down conntection to {}", destination.as_str());
 
                     state.metrics.connection_closed(
                         destination.as_str(),
@@ -272,7 +283,10 @@ async fn handle_tcp_stream_receive(
 ) -> bool {
     match read {
         None => {
-            tracing::warn!("Channel to client closed, dst: {}", destination.as_str());
+            tracing::warn!(
+                "Channel to destination {} closed unexpectedly",
+                destination.as_str()
+            );
             state
                 .metrics
                 .connection_closed(destination.as_str(), false, None);
@@ -299,7 +313,18 @@ async fn handle_tcp_stream_receive(
             tracing::trace!("Read {} bytes of data", read);
 
             if read == 0 {
-                let _ = ws.send(Message::Close(None)).await;
+                state
+                    .metrics
+                    .connection_closed(destination.as_str(), false, None);
+
+                tracing::debug!("Server connection terminated, closing client connection");
+
+                let _ = ws
+                    .send(Message::Close(Some(CloseFrame {
+                        code: 1000,
+                        reason: "Proxy connection closed".into(),
+                    })))
+                    .await;
                 false
             } else {
                 let new_buf = buf[..read].to_vec();
