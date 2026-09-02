@@ -1,0 +1,5 @@
+endpoint_addr = "0.0.0.0:1037"
+
+log_list = "./log_list.json"
+otlsp_path = "/otlsp"
+metrics_path = "/metrics"
