@@ -13,6 +13,9 @@ pub(crate) struct Config {
     /// Path at which to serve the oblivious TLS proxy
     pub(crate) otlsp_path: Option<String>,
 
+    /// Time (in seconds) until a connection is terminated
+    pub(crate) otlsp_timeout_seconds: Option<u64>,
+
     /// Path at which to serve the metrics endpoint
     pub(crate) metrics_path: Option<String>,
 }
