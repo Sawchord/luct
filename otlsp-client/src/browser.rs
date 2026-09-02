@@ -16,7 +16,10 @@ use web_sys::{BinaryType, Blob, CloseEvent, MessageEvent, WebSocket};
 
 use super::async_stream::WsAsyncStream;
 
-#[allow(dead_code)]
+#[cfg_attr(
+    not(any(target_arch = "wasm32", target_arch = "wasm64")),
+    allow(dead_code)
+)]
 #[derive(Debug, Clone)]
 pub struct BrowserWebsocketStream {
     websocket: WebSocket,
@@ -91,16 +94,23 @@ impl WebsocketStream for BrowserWebsocketStream {
 
         let dst_clone = dst.clone();
         let onclose_callback = Closure::<dyn FnMut(_)>::new(move |event: MessageEvent| {
-            tracing::debug!(
-                "Received close event: {:?}, dst: {}",
-                event.data(),
-                dst_clone.as_str()
-            );
+            tracing::debug!("Received close event for {}", dst_clone.as_str());
 
             let mut connection_status = connection_status_clone.borrow_mut();
             *connection_status = match event.dyn_into::<CloseEvent>().ok() {
-                None => Some(Ok(())),
-                Some(close) => Some(Err(close_event_to_io_err(close))),
+                None => {
+                    tracing::debug!("Closing connection without error");
+                    Some(Ok(()))
+                }
+                Some(close) if close.code() == 1000 => {
+                    tracing::debug!("Closing connection without error");
+                    Some(Ok(()))
+                }
+                Some(close) => {
+                    let io_err = close_event_to_io_err(close);
+                    tracing::debug!("Closing connection with IO error: {:?}", io_err);
+                    Some(Err(io_err))
+                }
             };
 
             Self::wake_all(&waker_cloned);
