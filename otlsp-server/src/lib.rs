@@ -12,7 +12,10 @@ use axum::{
 };
 use otlsp_core::OtlspErrorCode;
 use serde::{Deserialize, Serialize};
-use std::io::{self, ErrorKind};
+use std::{
+    io::{self, ErrorKind},
+    sync::Arc,
+};
 use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     net::TcpStream,
@@ -21,7 +24,10 @@ use tokio::{
 use url::{Host, Url};
 
 mod metrics;
+mod state;
+
 pub use metrics::OtlspMetrics;
+pub use state::OtlspState;
 
 const FRAME_SIZE: usize = 1500;
 
@@ -50,7 +56,7 @@ impl Destination {
 pub async fn handle_connection<F>(
     destination: Destination,
     ws: WebSocketUpgrade,
-    metrics: State<OtlspMetrics>,
+    state: State<OtlspState>,
     access: F,
 ) -> Response
 where
@@ -62,7 +68,7 @@ where
             let error_kind = ErrorKind::InvalidInput;
 
             tracing::debug!("Failed to parse destination url {}", destination);
-            metrics.connection_error(destination, error_kind);
+            state.metrics.connection_error(destination, error_kind);
 
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
@@ -81,7 +87,9 @@ where
                 "Connection request rejected since {:?} is not target enabled URL",
                 destination
             );
-            metrics.connection_error(destination.as_str(), error_kind);
+            state
+                .metrics
+                .connection_error(destination.as_str(), error_kind);
 
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
@@ -101,7 +109,9 @@ where
                 let error_kind = ErrorKind::InvalidInput;
 
                 tracing::debug!("Failed to parse destination {}", destination);
-                metrics.connection_error(destination.as_str(), error_kind);
+                state
+                    .metrics
+                    .connection_error(destination.as_str(), error_kind);
 
                 let _ = ws
                     .send(Message::Close(Some(io_error_to_close_msg(io::Error::new(
@@ -119,7 +129,9 @@ where
         let stream = match stream {
             Err(err) => {
                 tracing::debug!("Failed to connect to connection: {}", destination);
-                metrics.connection_error(destination.as_str(), err.kind());
+                state
+                    .metrics
+                    .connection_error(destination.as_str(), err.kind());
 
                 let _ = ws
                     .send(Message::Close(Some(io_error_to_close_msg(err))))
@@ -130,12 +142,12 @@ where
         };
 
         tracing::debug!("TCP stream established to {}", destination.as_str());
-        metrics.connection_opened(destination.as_str());
+        state.metrics.connection_opened(destination.as_str());
 
         let _ = ws.send(Message::Text("accept".into())).await;
         tracing::debug!("OTLSP connection accepted to {}", destination.as_str());
 
-        connection_loop(ws, stream, destination, metrics.0).await;
+        connection_loop(ws, stream, destination, Arc::new(state.0)).await;
     })
 }
 
@@ -143,7 +155,7 @@ async fn connection_loop(
     mut ws: WebSocket,
     mut stream: TcpStream,
     destination: Url,
-    metrics: OtlspMetrics,
+    state: Arc<OtlspState>,
 ) {
     // TODO: Make size configurable
     let (to_server_tx, mut to_server_rx) =
@@ -162,13 +174,13 @@ async fn connection_loop(
 
             // Handle receiving data from the web socket side
             data = to_server_rx.recv() => {
-                if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination, metrics.clone()).await {
+                if !handle_websocket_receive(data.flatten(), &mut ws, &mut stream, &destination, state.clone()).await {
                     break;
                 }
             },
             // Handle receiving data from the tcp socket side
             read = to_client_rx.recv() => {
-                if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination, metrics.clone()).await {
+                if !handle_tcp_stream_receive(read, &mut ws, &mut stream, &destination, state.clone()).await {
                     break;
                 }
             },
@@ -191,7 +203,7 @@ async fn handle_websocket_receive(
     ws: &mut WebSocket,
     stream: &mut TcpStream,
     destination: &Url,
-    metrics: OtlspMetrics,
+    state: Arc<OtlspState>,
 ) -> bool {
     match data {
         None => {
@@ -215,13 +227,15 @@ async fn handle_websocket_receive(
                     tracing::trace!("Received {} bytes of data from websocket", bytes.len());
 
                     let _ = stream.write_all(&bytes).await;
-                    metrics.bytes_send(destination.as_str(), bytes.len() as u64);
+                    state
+                        .metrics
+                        .bytes_send(destination.as_str(), bytes.len() as u64);
                     true
                 }
                 Message::Close(close_frame) => {
                     tracing::debug!("Shutting down conntextion to {}", destination.as_str());
 
-                    metrics.connection_closed(
+                    state.metrics.connection_closed(
                         destination.as_str(),
                         true,
                         close_frame.map(|frame| close_frame_to_io_error(&frame).kind()),
@@ -253,12 +267,14 @@ async fn handle_tcp_stream_receive(
     ws: &mut WebSocket,
     _stream: &mut TcpStream,
     destination: &Url,
-    metrics: OtlspMetrics,
+    state: Arc<OtlspState>,
 ) -> bool {
     match read {
         None => {
             tracing::warn!("Channel to client closed, dst: {}", destination.as_str());
-            metrics.connection_closed(destination.as_str(), false, None);
+            state
+                .metrics
+                .connection_closed(destination.as_str(), false, None);
 
             let _ = ws.send(Message::Close(None)).await;
             false
@@ -269,7 +285,9 @@ async fn handle_tcp_stream_receive(
                 err,
                 destination.as_str()
             );
-            metrics.connection_closed(destination.as_str(), false, Some(err.kind()));
+            state
+                .metrics
+                .connection_closed(destination.as_str(), false, Some(err.kind()));
 
             let _ = ws
                 .send(Message::Close(Some(io_error_to_close_msg(err))))
@@ -287,7 +305,9 @@ async fn handle_tcp_stream_receive(
                 let buf_len = new_buf.len();
 
                 let _ = ws.send(Message::Binary(new_buf.into())).await;
-                metrics.bytes_received(destination.as_str(), buf_len as u64);
+                state
+                    .metrics
+                    .bytes_received(destination.as_str(), buf_len as u64);
                 true
             }
         }
