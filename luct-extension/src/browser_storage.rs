@@ -196,19 +196,22 @@ where
             .expect("Failed to retrieve all values");
 
         let mut matches = vec![];
-        let mut errors = 0;
+        let mut errors = vec![];
         Object::entries(&Object::from(all_elems)).for_each(&mut |elem, _, _| {
             let elem = Array::from(&elem);
 
             let key_str = elem.get(0).as_string().unwrap();
             let Some(key) = self.key_from_str(&key_str) else {
+                // NOTE: Since we are iterating also over keys from others stores
+                // (since they all use the same repository), failing to parse a key here
+                // is NOT an error and we should just leave the keys alone
                 return;
             };
 
             let value: Self::Value = match serde_wasm_bindgen::from_value(elem.get(1)) {
                 Ok(value) => value,
                 Err(_) => {
-                    errors += 1;
+                    errors.push(key_str);
                     return;
                 }
             };
@@ -218,12 +221,20 @@ where
             }
         });
 
-        if errors != 0 {
-            warn!("{} elements could not be deserialized", errors)
+        if !errors.is_empty() {
+            warn!("{} elements could not be deserialized", errors.len());
+
+            for key in errors {
+                self.remove_item(&key).await;
+                tracing::info!("Removed item {}", key)
+            }
         }
 
         matches
     }
 
-    // TODO: Efficient find implementation
+    // TODO: Efficient find implementation using Array::find
 }
+
+// TODO: Find a way to test using wasm-bindgen-test
+// Currently
