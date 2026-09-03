@@ -173,6 +173,7 @@ where
         let largest_key_str = self.get_key_string(&largest_key);
 
         let val = self.get_item(&largest_key_str).await.unwrap();
+        tracing::debug!("Largest key: {}, item: {:?}", largest_key_str, val);
         let val: Self::Value =
             serde_wasm_bindgen::from_value(val).expect("Failed to deserialize a stored value");
 
