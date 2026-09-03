@@ -224,6 +224,7 @@ impl Scanner {
 #[cfg(test)]
 mod test {
     use super::*;
+    use js_sys::JSON;
     use luct_test::utils::test_tracing;
     use serde::{Deserialize, Serialize};
     use wasm_bindgen_test::wasm_bindgen_test;
@@ -247,7 +248,10 @@ mod test {
             b: String::from("Test"),
         });
         let js = serde_wasm_bindgen::to_value(&test_data).unwrap();
-        let new_test_data = serde_wasm_bindgen::from_value(js).unwrap();
+        let as_string = JSON::stringify(&js).unwrap().as_string().unwrap();
+        let new_js = JSON::parse(&as_string).unwrap();
+
+        let new_test_data = serde_wasm_bindgen::from_value(new_js).unwrap();
         assert_eq!(test_data, new_test_data)
     }
 
