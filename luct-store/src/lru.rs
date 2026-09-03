@@ -99,7 +99,8 @@ where
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
         self.cache.borrow_mut().pop(&key);
-        self.inner.insert(key, value).await
+        self.inner.insert(key.clone(), value.clone()).await;
+        self.cache.borrow_mut().push(key, value);
     }
 
     async fn delete(&self, key: Self::Key) -> bool {
@@ -123,7 +124,10 @@ where
     S: AppendableStore<Key: Clone + Hash, Value: Clone>,
 {
     async fn append(&self, value: Self::Value) -> Self::Key {
-        self.inner.append(value).await
+        let new_key = self.inner.append(value.clone()).await;
+        self.cache.borrow_mut().push(new_key.clone(), value);
+
+        new_key
     }
 }
 
