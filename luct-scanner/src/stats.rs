@@ -1,10 +1,8 @@
-use std::collections::BTreeMap;
-
-use crate::{Scanner, ScannerImpl};
-use chrono::DateTime;
+use crate::{Scanner, ScannerImpl, utils::system_time_to_date_time};
 use luct_core::store::SearchableStoreRead;
 use serde::{Deserialize, Serialize};
-use web_time::{SystemTime, UNIX_EPOCH};
+use std::collections::BTreeMap;
+use web_time::SystemTime;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BasicStatistics {
@@ -14,13 +12,7 @@ pub struct BasicStatistics {
 
 impl<S: ScannerImpl> Scanner<S> {
     pub async fn basic_statistics(&self) -> BasicStatistics {
-        let now = DateTime::from_timestamp_millis(
-            SystemTime::now()
-                .duration_since(UNIX_EPOCH)
-                .unwrap()
-                .as_millis() as i64,
-        )
-        .unwrap();
+        let now = system_time_to_date_time(SystemTime::now());
 
         let reports = self
             .report_store
