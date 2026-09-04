@@ -1,9 +1,8 @@
-use crate::Validated;
-use chrono::{DateTime, Local, Utc};
+use crate::{Validated, utils::system_time_to_date_time};
+use chrono::{DateTime, Utc};
 use luct_core::{CertificateChain, LogId, v1::SignedTreeHead};
 use luct_store::StringStoreValue;
 use serde::{Deserialize, Serialize};
-use web_time::UNIX_EPOCH;
 
 mod evaluate;
 mod generate;
@@ -69,7 +68,7 @@ impl StringStoreValue for Report {
 pub struct SctReport {
     pub(crate) log_id: String,
     #[serde(skip_serializing_if = "Option::is_none", default)]
-    pub(crate) signature_validation_time: Option<DateTime<Local>>,
+    pub(crate) signature_validation_time: Option<DateTime<Utc>>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
     pub(crate) log_name: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none", default)]
@@ -95,7 +94,7 @@ impl SctReport {
         }
     }
 
-    pub(crate) fn signature_validation_time(mut self, time: DateTime<Local>) -> Self {
+    pub(crate) fn signature_validation_time(mut self, time: DateTime<Utc>) -> Self {
         self.signature_validation_time = Some(time);
         self
     }
@@ -142,14 +141,7 @@ impl From<&Validated<SignedTreeHead>> for SthReport {
         Self {
             height: value.tree_size(),
             timestamp: DateTime::from_timestamp_millis(value.timestamp() as i64).unwrap(),
-            verification_time: DateTime::from_timestamp_millis(
-                value
-                    .validated_at()
-                    .duration_since(UNIX_EPOCH)
-                    .unwrap()
-                    .as_millis() as i64,
-            )
-            .unwrap(),
+            verification_time: system_time_to_date_time(value.validated_at()),
         }
     }
 }

@@ -21,6 +21,7 @@ mod error;
 mod log;
 mod report;
 mod stats;
+mod utils;
 mod validated;
 
 /// Bundle trait for [`Scanner`]

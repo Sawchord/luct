@@ -1,5 +1,8 @@
-use crate::{Report, Scanner, ScannerError, ScannerImpl, SctReport, SthReport};
-use chrono::DateTime;
+use crate::{
+    Report, Scanner, ScannerError, ScannerImpl, SctReport, SthReport,
+    utils::system_time_to_date_time,
+};
+
 use futures::future::join_all;
 use luct_core::{
     CertificateChain, Fingerprint, LogId,
@@ -7,7 +10,7 @@ use luct_core::{
     v1::{self, SignedCertificateTimestamp},
 };
 use std::sync::Arc;
-use web_time::{SystemTime, UNIX_EPOCH};
+use web_time::SystemTime;
 
 impl<S: ScannerImpl> Scanner<S> {
     pub async fn collect_report_pem(
@@ -118,13 +121,7 @@ impl<S: ScannerImpl> Scanner<S> {
         if let Err(err) = log.sct_client().log().validate_sct_v1(chain, &sct, true) {
             return report.error_description(format!("Failed to validate signature: {}", err));
         };
-        let report = report.signature_validation_time(
-            DateTime::from_timestamp_millis(
-                now.duration_since(UNIX_EPOCH).unwrap().as_millis() as i64
-            )
-            .unwrap()
-            .into(),
-        );
+        let report = report.signature_validation_time(system_time_to_date_time(SystemTime::now()));
 
         // Get a fresh sth
         let fresh_sth = match log.get_fresh_sth(now, Some(chain.cert())).await {
