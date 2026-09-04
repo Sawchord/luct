@@ -29,8 +29,12 @@ impl CodecVecLen for u64 {
 ///
 /// The length value can be of different type and size, as long as they implement [`CodecVecLen`].
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+// TODO: Allow transparent and non-transparent parsing via manual implementation
 #[serde_as]
-pub(crate) struct CodecVec<L>(#[serde_as(as = "Bytes")] Vec<u8>, PhantomData<L>);
+pub(crate) struct CodecVec<L>(
+    #[serde_as(as = "Bytes")] Vec<u8>,
+    #[serde(skip)] PhantomData<L>,
+);
 
 impl<L> AsRef<[u8]> for CodecVec<L> {
     fn as_ref(&self) -> &[u8] {

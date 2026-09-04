@@ -88,7 +88,7 @@ async function load_scanner() {
 
     // These tasks can be done asynchronously
     scanner.refresh_sths();
-    //scanner.refresh_reports();
+    scanner.refresh_reports();
 }
 
 function add_listener() {

@@ -19,6 +19,7 @@ use thiserror::Error;
 pub(crate) struct Signature<T> {
     algorithm: SignatureAndHashAlgorithm,
     signature: CodecVec<u16>,
+    #[serde(skip)]
     inner: PhantomData<T>,
 }
 
