@@ -16,6 +16,9 @@ pub(crate) struct Config {
     /// Time (in seconds) until a connection is terminated
     pub(crate) otlsp_timeout_seconds: Option<u64>,
 
+    /// Number of in-flight packets of an OTLSP channel (per directrion)
+    pub(crate) otlsp_packet_buffer_size: Option<usize>,
+
     /// Path at which to serve the metrics endpoint
     pub(crate) metrics_path: Option<String>,
 }

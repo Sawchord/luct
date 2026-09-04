@@ -19,7 +19,9 @@ impl NodeState {
     pub(crate) fn new(config: Config) -> eyre::Result<Self> {
         let urls = config.get_otlsp_urls()?;
 
-        let otlsp_config = Arc::new(OtlspConfig {});
+        let otlsp_config = Arc::new(OtlspConfig {
+            buffer_size: config.otlsp_packet_buffer_size.unwrap_or(100),
+        });
 
         Ok(Self(Arc::new(NodeStateInner {
             config: Arc::new(config),
