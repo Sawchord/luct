@@ -210,7 +210,9 @@ where
 
             let value: Self::Value = match serde_wasm_bindgen::from_value(elem.get(1)) {
                 Ok(value) => value,
-                Err(_) => {
+                Err(err) => {
+                    tracing::warn!("Failed to deserialize {}:  {:?}", key_str, elem.get(1));
+                    tracing::warn!("Error {:?}", err);
                     errors.push(key_str);
                     return;
                 }
@@ -226,7 +228,7 @@ where
 
             for key in errors {
                 self.remove_item(&key).await;
-                tracing::info!("Removed item {}", key)
+                tracing::warn!("Removed item {}", key)
             }
         }
 
