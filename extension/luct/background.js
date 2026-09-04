@@ -81,14 +81,14 @@ async function load_scanner() {
     const usage = await browser.storage.local.getBytesInUse();
     console.log("Storage: " + usage + " bytes in use");
 
-    fetch(browser.runtime.getURL('logs/log_list.json'))
-        .then(res => {
-            res.text().then((logs) => {
-                console.log('parsed log');
-                scanner = new Scanner(logs);
-                scanner.refresh_sths();
-            })
-        })
+    let res = await fetch(browser.runtime.getURL('logs/log_list.json'));
+    let logs = await res.text();
+    console.log('parsed log');
+    scanner = new Scanner(logs);
+
+    // These tasks can be done asynchronously
+    scanner.refresh_sths();
+    //scanner.refresh_reports();
 }
 
 function add_listener() {
