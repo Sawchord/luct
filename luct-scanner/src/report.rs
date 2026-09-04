@@ -1,11 +1,41 @@
-use crate::{Validated, utils::system_time_to_date_time};
+use crate::{Scanner, ScannerImpl, Validated, utils::system_time_to_date_time};
 use chrono::{DateTime, Utc};
-use luct_core::{CertificateChain, LogId, v1::SignedTreeHead};
+use luct_core::{
+    CertificateChain, LogId,
+    store::{SearchableStoreRead, StoreWrite},
+    v1::SignedTreeHead,
+};
 use luct_store::StringStoreValue;
 use serde::{Deserialize, Serialize};
+use web_time::SystemTime;
 
 mod evaluate;
 mod generate;
+
+impl<S: ScannerImpl> Scanner<S> {
+    pub async fn refresh_reports(&self) {
+        let now = system_time_to_date_time(SystemTime::now());
+
+        let outdated_reports = self
+            .report_store
+            .filter(|_, value| value.not_after < now)
+            .await;
+
+        if !outdated_reports.is_empty() {
+            tracing::info!(
+                "Found {} outdated reports. Will remove them.",
+                outdated_reports.len()
+            )
+        }
+
+        for (fp, report) in outdated_reports {
+            self.report_store.delete(fp).await;
+            tracing::info!("Removed outdated report for {}", report.cert_subject)
+        }
+
+        tracing::info!("Refreshed reports")
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Report {

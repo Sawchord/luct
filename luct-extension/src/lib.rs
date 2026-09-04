@@ -159,6 +159,13 @@ impl Scanner {
     }
 
     #[wasm_bindgen]
+    pub async fn refresh_reports(&self) -> Result<(), String> {
+        self.scanner.refresh_reports().await;
+
+        Ok(())
+    }
+
+    #[wasm_bindgen]
     pub async fn collect_report(
         &self,
         url: String,
