@@ -13,7 +13,7 @@ pub use {
     config::{ScannerConfig, ScannerConfigBuilder},
     error::ScannerError,
     report::{Report, SctReport, SthReport},
-    utils::Validated,
+    validated::Validated,
 };
 
 mod config;
@@ -21,7 +21,7 @@ mod error;
 mod log;
 mod report;
 mod stats;
-mod utils;
+mod validated;
 
 /// Bundle trait for [`Scanner`]
 ///
