@@ -7,7 +7,7 @@ luCT (pronounced "lucid") is a digital self defense tool that adds an extra laye
 
 1. Install the Firefox extension
 2. Browse normally
-3. Look for the <img src="./extension/luct/icons/luct_safe.svg" atl="luCT icon" width="12em"> indicator when CT inclusion is verified
+3. Look for the <img src="./extension/luct/icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when CT inclusion is verified
 
 ![](docs/gifs/example-usage.gif)
 
@@ -120,3 +120,10 @@ At your discretion:
 
 - [Apache License, Version 2.0](http://www.apache.org/licenses/LICENSE-2.0)
 - [MIT license](http://opensource.org/licenses/MIT)
+
+## Sponsors
+
+This project is supported by a grant from [NLNet](https://nlnet.nl/project/luCT/).
+
+[<img src="https://nlnet.nl/logo/banner.svg" atl="luCT icon" height="60">](https://nlnet.nl)
+[<img src="https://nlnet.nl/image/logos/NGI0CommonsFund_tag.svg" atl="luCT icon" height="60">](https://nlnet.nl/core/)
