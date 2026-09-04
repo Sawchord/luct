@@ -159,11 +159,12 @@ async fn connection_loop(
     destination: Url,
     state: Arc<OtlspState>,
 ) {
-    // TODO: Make size configurable
+    let buffer_size = state.config.buffer_size;
+
     let (to_server_tx, mut to_server_rx) =
-        tokio::sync::mpsc::channel::<Option<Result<Message, Error>>>(100);
+        tokio::sync::mpsc::channel::<Option<Result<Message, Error>>>(buffer_size);
     let (to_client_tx, mut to_client_rx) =
-        tokio::sync::mpsc::channel::<(tokio::io::Result<usize>, [u8; 1500])>(100);
+        tokio::sync::mpsc::channel::<(tokio::io::Result<usize>, [u8; FRAME_SIZE])>(buffer_size);
 
     // TODO: Close WS with a reason
     // TODO: Error handling in the ws.send calls
