@@ -1,4 +1,4 @@
-use crate::{ScannerConfig, ScannerError, ScannerImpl, log::tiling::TileFetcher, utils::Validated};
+use crate::{ScannerConfig, ScannerError, ScannerImpl, log::tiling::TileFetcher, validated::Validated};
 use futures::lock::Mutex;
 use luct_client::CtClient;
 use luct_core::{
