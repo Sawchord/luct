@@ -121,6 +121,7 @@ impl<S: ScannerImpl> Scanner<S> {
 
         try_join_all(updates).await?;
 
+        tracing::info!("Refreshed STHs");
         Ok(())
     }
 }
