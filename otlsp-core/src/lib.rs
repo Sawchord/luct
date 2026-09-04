@@ -6,6 +6,9 @@
 
 use std::io::ErrorKind;
 
+/// The size of the TCP frames
+pub const FRAME_SIZE: usize = 1500;
+
 /// Error codes returned by the oblivious TLS proxy protocol
 ///
 /// This is an arbitrary mappings from OS level error codes to

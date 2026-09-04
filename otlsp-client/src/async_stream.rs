@@ -1,6 +1,7 @@
 use crate::{OtlspError, WebsocketStream};
 use futures::io;
 use hyper::rt::{self, ReadBufCursor};
+use otlsp_core::FRAME_SIZE;
 use rustls::{ClientConnection, StreamOwned};
 use std::{
     io::{ErrorKind, Read, Write},
@@ -33,10 +34,11 @@ impl<WS: WebsocketStream> rt::Read for WsAsyncStream<WS> {
         cx: &mut Context<'_>,
         mut read_buf: ReadBufCursor<'_>,
     ) -> Poll<Result<(), io::Error>> {
-        let mut buf = [0u8; 1500];
+        let mut buf = [0u8; FRAME_SIZE];
+        let space_left = std::cmp::min(read_buf.remaining(), FRAME_SIZE);
 
         // Try to read the inner stream
-        match self.0.read(&mut buf) {
+        match self.0.read(&mut buf[..space_left]) {
             // If we got data back, we return it
             Ok(read) => {
                 // TODO: Handle situation where read+buf has not enough space
