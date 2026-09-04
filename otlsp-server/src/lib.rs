@@ -10,7 +10,7 @@ use axum::{
     },
     response::Response,
 };
-use otlsp_core::OtlspErrorCode;
+use otlsp_core::{FRAME_SIZE, OtlspErrorCode};
 use serde::{Deserialize, Serialize};
 use std::{
     io::{self, ErrorKind},
@@ -30,8 +30,6 @@ mod state;
 pub use config::OtlspConfig;
 pub use metrics::OtlspMetrics;
 pub use state::OtlspState;
-
-const FRAME_SIZE: usize = 1500;
 
 /// Url query parameters used by the oblivious TLS proxy endpoint
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
