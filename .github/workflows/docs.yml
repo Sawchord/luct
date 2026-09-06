@@ -26,5 +26,6 @@ jobs:
         with:
           path: docs/website/public
       - name: Deploy to GitHub Pages
+        if: github.event_name == 'push'
         id: deployment
         uses: actions/deploy-pages@v5
