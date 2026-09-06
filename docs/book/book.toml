@@ -13,8 +13,6 @@ renderer = ["html"]
 [preprocessor.katex]
 renderer = ["html"]
 
-# [preprocessor.svgbob2]
-
 # [output.linkcheck]
 # warning-policy = "warn"
 
