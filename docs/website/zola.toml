@@ -9,6 +9,8 @@ build_search_index = true
 
 [markdown]
 
+render_emoji = true
+
 [markdown.highlighting]
 theme = "catppuccin-mocha"
 

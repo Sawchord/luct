@@ -10,6 +10,10 @@ template = "index.html"
 2. Browse normally
 3. Look for the <img src="./icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when CT inclusion is verified 
 
+<div>
+    <img class="example" src="./gifs/example-usage.gif" alt="Example usage of luCT" />
+</div>
+
 ## Project status 
 
 This project is 🚧 **experimental and not yet audited** 🚧.
@@ -32,25 +36,26 @@ luCT closes that gap by checking log inclusions while you browse. If everything 
 
 ## Features and roadmap
 
-### MVP
+### Current features
 
-- ✅ Validate inclusion proofs of signed certificate timestamps
-- ✅ Fetch and update signed tree heads
-- ✅ Validate extension proofs
+- ✅ Validate signed certificate timestamps of certificagtes
+- ✅ Fetch and update signed tree heads using extension proofs
 - ✅ static-ct-api support
 - ✅ Oblivious TLS proxy to preserve privacy
 - ✅ UI sidebar
-- ✅ Publish in Mozilla extension store
 
-### Alpha (Planned features)
+### Planned features
 
+- 🚧 STH checkpointing (Gossip)
 - 🚧 Stability, performance and UI improvements
 - 🚧 UI dashboards for statistics deep dives
-- 🚧 STH checkpointing (Gossip)
-- 🚧 Oblivious TLS proxy for CLI
 - 🚧 Timelocks for Root Certificate authorities
-
-### Post release (Ideas for future extensions)
-
 - 🚧 DNS over HTTPs
 - 🚧 CAA and TLSA cross-checking
+
+## Sponsors
+
+This project is supported by a grant from [NLNet](https://nlnet.nl/project/luCT/).
+
+[<img src="https://nlnet.nl/logo/banner.svg" atl="luCT icon" height="60">](https://nlnet.nl)
+[<img src="https://nlnet.nl/image/logos/NGI0CommonsFund_tag.svg" atl="luCT icon" height="60">](https://nlnet.nl/core/)
