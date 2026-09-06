@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<section class="hero">
+    <h1>{{ section.title }}</h1>
+    <p> {{ section.description }} </p>
+
+    <div class="buttons">
+        <a href="https://download.luct.dev/luct.xpi" class="primary"><img class="luct-button-logo"
+                src="./pics/luct_safe.svg" alt="luCT icon" width="18em" /> Install luCT</a>
+        <a href="https://github.com/Sawchord/luct" class="secondary">
+            ⭐ Get Source Code
+            <img class="github-badge" alt="Badge displaying number of github stars"
+                src="https://img.shields.io/github/stars/Sawchord/luct?style=flat" />
+        </a>
+        <a href="https://matrix.to/#/#luct:matrix.org" class="secondary">💬 Join Matrix Chat</a>
+    </div>
+</section>
+
+{{ section.content | safe }}
+
+<footer>
+    Built with 🤎 by <a href="https://github.com/Sawchord" class="link">Sawchord </a>
+</footer>
+
+{% endblock content %}
