@@ -1,8 +1,14 @@
 +++
 title = "luCT"
-description = "luCT (pronounced \"lucid\") is a digital self defense tool that adds an extra layer of security to HTTPs by auditing certificate's log inclusion proofs locally in real time, as you browse"
+description = "luCT (pronounced \"lucid\") is a digital self defense tool that adds an extra layer of security to HTTPs by auditing certificate's log inclusion proofs locally in real time, as you browse."
 template = "index.html"
 +++
+
+## Try it for yourself!
+
+1. [Download](https://download.luct.dev/luct.xpi) the Firefox extension
+2. Browse normally
+3. Look for the <img src="./icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when CT inclusion is verified 
 
 ## Project status 
 
