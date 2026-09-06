@@ -29,7 +29,7 @@ The tool is accompanied by a book, explaining it's capablilites.
 To install `mdbook`, run:
 
 ```
-cargo install mdbook mdbook-toc mdbook-katex mdbook-svgbob2 mdbook-linkcheck
+cargo install mdbook mdbook-toc mdbook-katex mdbook-linkcheck
 ```
 
 Then to see changes you are making to the book run:
