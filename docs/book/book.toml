@@ -1,0 +1,25 @@
+[book]
+authors = ["Sawchord"]
+language = "en"
+src = "content"
+title = "luCT Book"
+
+[build]
+build-dir = "public"
+
+[preprocessor.toc]
+renderer = ["html"]
+
+[preprocessor.katex]
+renderer = ["html"]
+
+# [preprocessor.svgbob2]
+
+# [output.linkcheck]
+# warning-policy = "warn"
+
+# [preprocessor.emoji]
+# renderer = ["html"]
+
+[output.html]
+mathjax-support = true

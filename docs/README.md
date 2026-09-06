@@ -21,3 +21,19 @@ Then to work on the content of the site, run:
 ```
 zola serve
 ```
+
+## Book
+
+The tool is accompanied by a book, explaining it's capablilites.
+
+To install `mdbook`, run:
+
+```
+cargo install mdbook mdbook-toc mdbook-katex mdbook-svgbob2 mdbook-linkcheck
+```
+
+Then to see changes you are making to the book run:
+
+```
+mdbook serve
+```
