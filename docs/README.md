@@ -12,7 +12,12 @@ on their web site.
 Since you like have a rust toolchain already, probably the easiest is to run:
 
 ```
-$ cargo install --locked --git https://github.com/getzola/zola
-$ zola --version
+cargo install --locked --git https://github.com/getzola/zola
+zola --version
 ```
 
+Then to work on the content of the site, run:
+
+```
+zola serve
+```
