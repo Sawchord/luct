@@ -1,6 +1,5 @@
-//! Certificate transparency auditing logic used by luCT firefox extension and CLI tool
-
 #![forbid(unsafe_code)]
+//! Certificate transparency auditing logic used by luCT firefox extension and CLI tool
 
 use crate::log::{ScannerLog, builder::LogImpls};
 use chrono::{DateTime, Utc};

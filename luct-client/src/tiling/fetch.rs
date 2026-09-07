@@ -4,20 +4,12 @@ use luct_core::{
     tree::{ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
-use std::fmt::{self, Debug};
+use std::fmt::Debug;
 
+#[derive(Debug)]
 pub struct TileFetcher<SCT, STH> {
     sct_fetcher: Tree<SCT, MemoryStore<u64, SignedCertificateTimestamp>>,
     sth_fetcher: Tree<STH, MemoryStore<u64, SignedCertificateTimestamp>>,
-}
-
-impl<SCT: Debug, STH: Debug> Debug for TileFetcher<SCT, STH> {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("TileFetcher")
-            .field("sct_fetcher", &self.sct_fetcher)
-            .field("sth_fetcher", &self.sth_fetcher)
-            .finish()
-    }
 }
 
 impl<SCT, STH> TileFetcher<SCT, STH> {
