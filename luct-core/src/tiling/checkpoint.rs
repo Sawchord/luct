@@ -1,8 +1,3 @@
-use std::{
-    borrow::Cow,
-    io::{Cursor, Read, Write},
-};
-
 use crate::{
     CtLog, LogId, SignatureValidationError, Version,
     signature::Signature as Signed,
@@ -12,8 +7,11 @@ use crate::{
 };
 use base64::{Engine, prelude::BASE64_STANDARD};
 use sha2::{Digest, Sha256};
+use std::{
+    borrow::Cow,
+    io::{Cursor, Read, Write},
+};
 use thiserror::Error;
-use url::Url;
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum ParseCheckpointError {
@@ -39,8 +37,10 @@ impl CtLog {
         checkpoint: &Checkpoint,
     ) -> Result<(), SignatureValidationError> {
         // Check that origin line matches the logs submission url
-        let origin = Self::url_to_origin(self.config().url())
+        let origin = self
+            .origin_url()
             .ok_or(SignatureValidationError::MalformedKey)?;
+
         if origin != checkpoint.origin {
             return Err(SignatureValidationError::MalformedKey);
         }
@@ -77,7 +77,34 @@ impl CtLog {
         })
     }
 
-    fn url_to_origin(url: &Url) -> Option<String> {
+    pub fn sth_to_cp(&self, sth: &SignedTreeHead) -> Result<Checkpoint, SignatureValidationError> {
+        let origin = self
+            .origin_url()
+            .ok_or(SignatureValidationError::MalformedKey)?;
+
+        let id = Checkpoint::compute_checkpoint_key_id(&origin, self.log_id());
+        let note_sig = NoteSignature {
+            timestamp: sth.timestamp,
+            signature: sth.tree_head_signature.clone(),
+        };
+        let mut body = Cursor::new(vec![]);
+        note_sig.encode(&mut body)?;
+
+        Ok(Checkpoint {
+            origin: origin.clone(),
+            tree_size: sth.tree_size,
+            root_hash: sth.sha256_root_hash,
+            signatures: vec![Signature {
+                name: origin,
+                id,
+                body: body.into_inner(),
+            }],
+        })
+    }
+
+    fn origin_url(&self) -> Option<String> {
+        let url = self.config.url();
+
         let path = url.path().strip_suffix("/")?;
         url.host_str().map(|host| format!("{}{}", host, path))
     }
@@ -279,6 +306,11 @@ impl Decode for NoteSignature {
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        tests::{ARGON2025H1_STH2806, get_log_argon2025h1},
+        v1::responses::GetSthResponse,
+    };
+
     use super::*;
     use rand::{
         Rng, RngExt, SeedableRng,
@@ -312,7 +344,7 @@ mod tests {
     ";
 
     #[test]
-    fn signature_roundtrip() {
+    fn signature_serialization_roundtrip() {
         let mut rng = ChaCha8Rng::seed_from_u64(6767);
 
         for _ in 0..1000 {
@@ -326,7 +358,7 @@ mod tests {
     }
 
     #[test]
-    fn checkpoint_roundtrip() {
+    fn checkpoint_serialization_roundtrip() {
         let mut rng = ChaCha8Rng::seed_from_u64(6767);
 
         for _ in 0..1000 {
@@ -381,5 +413,17 @@ mod tests {
             id: rng.random(),
             body,
         }
+    }
+
+    #[test]
+    fn sth_to_checkpoint_roundtrip() {
+        let log = get_log_argon2025h1();
+        let sth: GetSthResponse = serde_json::from_str(ARGON2025H1_STH2806).unwrap();
+        let sth = SignedTreeHead::try_from(sth).unwrap();
+
+        let cp = log.sth_to_cp(&sth).unwrap();
+        let new_sth = log.cp_to_sth(&cp).unwrap();
+
+        assert_eq!(sth, new_sth);
     }
 }
