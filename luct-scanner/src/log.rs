@@ -30,12 +30,12 @@ pub(crate) struct ScannerLogInner<S: ScannerImpl> {
     sct_client: CtClient<S::SctClient>,
     sth_client: CtClient<S::SthClient>,
     sth_store: Mutex<S::SthStore>,
-    tiles: Option<
-        TileFetcher<
-            LruCacheStore<TileFetchStore<S::SctClient>>,
-            LruCacheStore<TileFetchStore<S::SthClient>>,
-        >,
-    >,
+    tiles: Option<TileFetchers<S>>,
+}
+
+struct TileFetchers<S: ScannerImpl> {
+    sct_tiles: TileFetcher<LruCacheStore<TileFetchStore<S::SctClient>>>,
+    sth_tiles: TileFetcher<LruCacheStore<TileFetchStore<S::SthClient>>>,
 }
 
 impl<S: ScannerImpl> fmt::Debug for ScannerLogInner<S> {
@@ -62,7 +62,7 @@ impl<S: ScannerImpl> ScannerLog<S> {
         leaf: &MerkleTreeLeaf,
     ) -> Result<u64, ScannerError> {
         match &self.log.tiles {
-            Some(tiles) => Ok(tiles.check_sct_inclusion(sct, sth, leaf).await?),
+            Some(tiles) => Ok(tiles.sct_tiles.check_sct_inclusion(sct, sth, leaf).await?),
             None => Ok(self
                 .log
                 .sct_client

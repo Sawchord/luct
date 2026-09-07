@@ -1,6 +1,6 @@
 use crate::{
     ScannerConfig, ScannerImpl,
-    log::{ScannerLog, ScannerLogInner},
+    log::{ScannerLog, ScannerLogInner, TileFetchers},
 };
 use futures::lock::Mutex;
 use luct_client::{
@@ -28,11 +28,16 @@ impl<S: ScannerImpl> ScannerLog<S> {
         let sth_client = CtClient::new(log.config().clone(), impls.sth_client);
         let tiles = config.is_tiling().then(|| {
             // TODO: Make cache caps configurable
-            let sct_store =
-                LruCacheStore::new(TileFetchStore::new(name.clone(), sct_client.clone()), 1000);
-            let sth_store =
-                LruCacheStore::new(TileFetchStore::new(name.clone(), sth_client.clone()), 1000);
-            TileFetcher::new(sct_store, sth_store)
+            TileFetchers {
+                sct_tiles: TileFetcher::new(LruCacheStore::new(
+                    TileFetchStore::new(name.clone(), sct_client.clone()),
+                    1000,
+                )),
+                sth_tiles: TileFetcher::new(LruCacheStore::new(
+                    TileFetchStore::new(name.clone(), sth_client.clone()),
+                    1000,
+                )),
+            }
         });
 
         let log = Arc::new(ScannerLogInner::<S> {
