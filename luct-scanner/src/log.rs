@@ -1,8 +1,9 @@
-use crate::{
-    ScannerConfig, ScannerError, ScannerImpl, log::tiling::TileFetcher, validated::Validated,
-};
+use crate::{ScannerConfig, ScannerError, ScannerImpl, validated::Validated};
 use futures::lock::Mutex;
-use luct_client::{CtClient, TileFetchStore};
+use luct_client::{
+    CtClient,
+    tiling::{TileFetchStore, TileFetcher},
+};
 use luct_core::{
     store::{OrderedStoreRead, SearchableStoreRead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
@@ -14,7 +15,6 @@ use std::{
 };
 
 pub(crate) mod builder;
-pub(crate) mod tiling;
 mod update;
 
 /// Internal structure holding references to per log

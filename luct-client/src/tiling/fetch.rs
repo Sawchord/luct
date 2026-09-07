@@ -6,7 +6,7 @@ use luct_core::{
 };
 use std::fmt::{self, Debug};
 
-pub(crate) struct TileFetcher<SCT, STH> {
+pub struct TileFetcher<SCT, STH> {
     sct_fetcher: Tree<SCT, MemoryStore<u64, SignedCertificateTimestamp>>,
     sth_fetcher: Tree<STH, MemoryStore<u64, SignedCertificateTimestamp>>,
 }
@@ -21,7 +21,7 @@ impl<SCT: Debug, STH: Debug> Debug for TileFetcher<SCT, STH> {
 }
 
 impl<SCT, STH> TileFetcher<SCT, STH> {
-    pub(crate) fn new(sct_store: SCT, sth_store: STH) -> Self {
+    pub fn new(sct_store: SCT, sth_store: STH) -> Self {
         Self {
             sct_fetcher: Tree::new(sct_store, MemoryStore::default()),
             sth_fetcher: Tree::new(sth_store, MemoryStore::default()),
@@ -34,7 +34,7 @@ where
     SCT: IsTileFetchStore,
     STH: IsTileFetchStore,
 {
-    pub(crate) async fn check_sct_inclusion(
+    pub async fn check_sct_inclusion(
         &self,
         sct: &SignedCertificateTimestamp,
         sth: &SignedTreeHead,
@@ -70,7 +70,7 @@ where
         Ok(audit_proof.index())
     }
 
-    pub(crate) async fn check_sth_consistency(
+    pub async fn check_sth_consistency(
         &self,
         old_sth: &SignedTreeHead,
         new_sth: &SignedTreeHead,
