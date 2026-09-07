@@ -3,6 +3,7 @@ use luct_client::Client;
 use luct_core::{store::SearchableStore, v1::LogId};
 use std::{collections::BTreeMap, sync::Arc};
 
+mod error;
 mod log;
 
 #[derive(Clone, Debug)]

@@ -128,6 +128,10 @@ impl From<Checkpoint> for TreeHead {
 }
 
 impl Checkpoint {
+    pub fn tree_size(&self) -> u64 {
+        self.tree_size
+    }
+
     pub fn parse(data: &str) -> Result<Self, ParseCheckpointError> {
         let mut data = data.lines();
 
