@@ -9,6 +9,7 @@ use clap::Parser;
 use tracing_subscriber::EnvFilter;
 
 mod args;
+mod checkpoint;
 mod conf;
 mod metrics;
 mod otlsp;

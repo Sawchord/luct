@@ -14,6 +14,9 @@ license = { workspace = true }
 
 [dependencies]
 luct-core = { version = "0.2.2", path = "../luct-core" }
+luct-client = { version = "0.2.2", path = "../luct-client" }
+luct-scanner = { version = "0.2.2", path = "../luct-scanner" }
+luct-store = { version = "0.2.2", path = "../luct-store" }
 otlsp-server = { version = "0.2.2", path = "../otlsp-server" }
 
 serde = { workspace = true }
