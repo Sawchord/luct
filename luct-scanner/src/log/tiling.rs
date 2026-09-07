@@ -1,54 +1,39 @@
-use crate::ScannerImpl;
-use luct_client::{CtClient, TileFetchStore};
 use luct_core::{
     store::MemoryStore,
-    tiling::TilingError,
+    tiling::{IsTileFetchStore, TilingError},
     tree::{ProofValidationError, Tree, TreeHead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
-use luct_store::LruCacheStore;
 use std::fmt::{self, Debug};
 
-pub(crate) struct TileFetcher<S: ScannerImpl> {
-    sct_fetcher: Tree<
-        LruCacheStore<TileFetchStore<S::SctClient>>,
-        MemoryStore<u64, SignedCertificateTimestamp>,
-    >,
-    sth_fetcher: Tree<
-        LruCacheStore<TileFetchStore<S::SthClient>>,
-        MemoryStore<u64, SignedCertificateTimestamp>,
-    >,
+pub(crate) struct TileFetcher<SCT, STH> {
+    sct_fetcher: Tree<SCT, MemoryStore<u64, SignedCertificateTimestamp>>,
+    sth_fetcher: Tree<STH, MemoryStore<u64, SignedCertificateTimestamp>>,
 }
 
-impl<S: ScannerImpl> Debug for TileFetcher<S> {
+impl<SCT: Debug, STH: Debug> Debug for TileFetcher<SCT, STH> {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("TileFetcher")
             .field("sct_fetcher", &self.sct_fetcher)
+            .field("sth_fetcher", &self.sth_fetcher)
             .finish()
     }
 }
 
-impl<S: ScannerImpl> TileFetcher<S> {
-    pub(crate) fn new(
-        name: String,
-        sct_client: CtClient<S::SctClient>,
-        sth_client: CtClient<S::SthClient>,
-    ) -> Self {
-        // TODO: Make caps configurable
+impl<SCT, STH> TileFetcher<SCT, STH> {
+    pub(crate) fn new(sct_store: SCT, sth_store: STH) -> Self {
         Self {
-            sct_fetcher: Tree::new(
-                LruCacheStore::new(TileFetchStore::new(name.clone(), sct_client), 1000),
-                MemoryStore::default(),
-            ),
-            sth_fetcher: Tree::new(
-                LruCacheStore::new(TileFetchStore::new(name, sth_client), 1000),
-                MemoryStore::default(),
-            ),
+            sct_fetcher: Tree::new(sct_store, MemoryStore::default()),
+            sth_fetcher: Tree::new(sth_store, MemoryStore::default()),
         }
     }
 }
 
-impl<S: ScannerImpl> TileFetcher<S> {
+impl<SCT, STH> TileFetcher<SCT, STH>
+where
+    SCT: IsTileFetchStore,
+    STH: IsTileFetchStore,
+{
     pub(crate) async fn check_sct_inclusion(
         &self,
         sct: &SignedCertificateTimestamp,

@@ -1,14 +1,13 @@
+use crate::{Client, CtClient};
 use luct_core::{
     store::{Hashable, StoreBase, StoreRead},
-    tiling::TileId,
+    tiling::{IsTileFetchStore, TileId},
     tree::{HashOutput, Node, NodeKey},
 };
 use std::{
     fmt::{self},
     sync::atomic::{AtomicU64, Ordering},
 };
-
-use crate::{Client, CtClient};
 
 pub struct TileFetchStore<C> {
     name: String,
@@ -34,8 +33,11 @@ impl<C> TileFetchStore<C> {
     }
 }
 
-impl<C> TileFetchStore<C> {
-    pub fn set_tree_size(&self, tree_size: u64) {
+impl<C> IsTileFetchStore for TileFetchStore<C>
+where
+    C: Client,
+{
+    fn set_tree_size(&self, tree_size: u64) {
         self.tree_size.store(tree_size, Ordering::Release);
     }
 }

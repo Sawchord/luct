@@ -1,10 +1,13 @@
-use crate::{ScannerConfig, ScannerError, ScannerImpl, log::tiling::TileFetcher, validated::Validated};
+use crate::{
+    ScannerConfig, ScannerError, ScannerImpl, log::tiling::TileFetcher, validated::Validated,
+};
 use futures::lock::Mutex;
-use luct_client::CtClient;
+use luct_client::{CtClient, TileFetchStore};
 use luct_core::{
     store::{OrderedStoreRead, SearchableStoreRead},
     v1::{MerkleTreeLeaf, SignedCertificateTimestamp, SignedTreeHead},
 };
+use luct_store::LruCacheStore;
 use std::{
     fmt::{self, Debug},
     sync::Arc,
@@ -27,7 +30,12 @@ pub(crate) struct ScannerLogInner<S: ScannerImpl> {
     sct_client: CtClient<S::SctClient>,
     sth_client: CtClient<S::SthClient>,
     sth_store: Mutex<S::SthStore>,
-    tiles: Option<TileFetcher<S>>,
+    tiles: Option<
+        TileFetcher<
+            LruCacheStore<TileFetchStore<S::SctClient>>,
+            LruCacheStore<TileFetchStore<S::SthClient>>,
+        >,
+    >,
 }
 
 impl<S: ScannerImpl> fmt::Debug for ScannerLogInner<S> {

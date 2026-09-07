@@ -1,6 +1,10 @@
 use lru::LruCache;
-use luct_core::store::{
-    AppendableStore, OrderedStoreRead, SearchableStoreRead, Store, StoreBase, StoreRead, StoreWrite,
+use luct_core::{
+    store::{
+        AppendableStore, OrderedStoreRead, SearchableStoreRead, Store, StoreBase, StoreRead,
+        StoreWrite,
+    },
+    tiling::IsTileFetchStore,
 };
 use std::{
     cell::RefCell,
@@ -51,6 +55,12 @@ where
 {
     fn deref_mut(&mut self) -> &mut Self::Target {
         &mut self.inner
+    }
+}
+
+impl<S: IsTileFetchStore> IsTileFetchStore for LruCacheStore<S> {
+    fn set_tree_size(&self, tree_size: u64) {
+        self.inner.set_tree_size(tree_size);
     }
 }
 
