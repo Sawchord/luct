@@ -26,6 +26,7 @@ toml = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
 config = { workspace = true }
 eyre = { workspace = true }
+thiserror = { workspace = true }
 dotenv = { workspace = true }
 prometheus = { workspace = true }
 
