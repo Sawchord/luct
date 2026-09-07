@@ -37,7 +37,7 @@ impl CtLog {
     pub fn validate_checkpoint(
         &self,
         checkpoint: &Checkpoint,
-    ) -> Result<SignedTreeHead, SignatureValidationError> {
+    ) -> Result<(), SignatureValidationError> {
         // Check that origin line matches the logs submission url
         let origin = Self::url_to_origin(self.config().url())
             .ok_or(SignatureValidationError::MalformedKey)?;
@@ -59,6 +59,15 @@ impl CtLog {
         note_sig
             .signature
             .validate(&tree_head, &self.config().key)?;
+
+        Ok(())
+    }
+
+    pub fn cp_to_sth(
+        &self,
+        checkpoint: &Checkpoint,
+    ) -> Result<SignedTreeHead, SignatureValidationError> {
+        let note_sig = checkpoint.get_node_signature(self.log_id())?;
 
         Ok(SignedTreeHead {
             tree_size: checkpoint.tree_size,

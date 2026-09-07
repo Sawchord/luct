@@ -1,7 +1,7 @@
 use crate::{ScannerConfig, ScannerError, ScannerImpl, validated::Validated};
 use futures::lock::Mutex;
 use luct_client::{
-    CtClient,
+    ClientError, CtClient,
     tiling::{TileFetchStore, TileFetcher},
 };
 use luct_core::{
@@ -101,7 +101,17 @@ impl<S: ScannerImpl> ScannerLog<S> {
     async fn fetch_sth(&self) -> Result<Validated<SignedTreeHead>, ScannerError> {
         tracing::debug!("Fetching new STH of log {}", self.log.name);
         match &self.log.tiles {
-            Some(_) => Ok(Validated::new(self.log.sth_client.get_checkpoint().await?)),
+            Some(_) => {
+                let cp = self.log.sth_client.get_checkpoint().await?;
+                let sth = self
+                    .log
+                    .sth_client
+                    .log()
+                    .cp_to_sth(&cp)
+                    .map_err(|err| ClientError::SignatureValidationFailed("checkpoint", err))?;
+
+                Ok(Validated::new(sth))
+            }
             None => Ok(Validated::new(self.log.sth_client.get_sth_v1().await?)),
         }
     }
