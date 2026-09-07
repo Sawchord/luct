@@ -13,7 +13,7 @@ impl<C: Client> CtClient<C> {
         // Fetch and parse checkpoint
         let (status, response) = self.client.get(&url, &[]).await?;
         self.check_status(&url, status, &response)?;
-        let checkpoint = Checkpoint::parse_checkpoint(&response)?;
+        let checkpoint = Checkpoint::parse(&response)?;
 
         // Validate checkpoint against key
         let sth = self

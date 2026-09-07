@@ -120,7 +120,7 @@ impl From<Checkpoint> for TreeHead {
 }
 
 impl Checkpoint {
-    pub fn parse_checkpoint(data: &str) -> Result<Self, ParseCheckpointError> {
+    pub fn parse(data: &str) -> Result<Self, ParseCheckpointError> {
         let mut data = data.lines();
 
         // Parse the origin
@@ -322,7 +322,7 @@ mod tests {
             };
 
             let cp_string = cp.to_checkoint_string();
-            let new_cp = Checkpoint::parse_checkpoint(&cp_string).unwrap();
+            let new_cp = Checkpoint::parse(&cp_string).unwrap();
 
             assert_eq!(cp, new_cp);
         }
@@ -330,7 +330,7 @@ mod tests {
 
     #[test]
     fn parse_and_validate_checkpoint_arche2026h1() {
-        let checkpoint = Checkpoint::parse_checkpoint(ARCHE2026H1_CHECKPOINT).unwrap();
+        let checkpoint = Checkpoint::parse(ARCHE2026H1_CHECKPOINT).unwrap();
 
         assert_eq!(checkpoint.origin, "arche2026h1.staging.ct.transparency.dev");
         assert_eq!(checkpoint.tree_size, 1822167730);
@@ -343,7 +343,7 @@ mod tests {
 
     #[test]
     fn parse_and_validate_checkpoint_sycamore2026h1() {
-        let checkpoint = Checkpoint::parse_checkpoint(SYCAMORE2026H1_CHECKPOINT).unwrap();
+        let checkpoint = Checkpoint::parse(SYCAMORE2026H1_CHECKPOINT).unwrap();
 
         assert_eq!(checkpoint.origin, "log.sycamore.ct.letsencrypt.org/2026h1");
         assert_eq!(checkpoint.tree_size, 804475391);
