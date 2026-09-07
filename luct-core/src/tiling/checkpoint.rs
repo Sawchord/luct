@@ -1,4 +1,7 @@
-use std::io::{Cursor, Read, Write};
+use std::{
+    borrow::Cow,
+    io::{Cursor, Read, Write},
+};
 
 use crate::{
     CtLog, LogId, SignatureValidationError, Version,
@@ -99,7 +102,7 @@ impl CtLog {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Checkpoint {
     origin: String,
     tree_size: u64,
@@ -181,7 +184,22 @@ impl Checkpoint {
         })
     }
 
-    // TODO: `as_string` function and roundtrip test
+    pub fn to_checkoint_string(&self) -> String {
+        let mut output: Vec<Cow<str>> = vec![
+            Cow::Borrowed(&self.origin),
+            Cow::Owned(self.tree_size.to_string()),
+            Cow::Owned(BASE64_STANDARD.encode(self.root_hash)),
+            Cow::Borrowed(""),
+        ];
+
+        output.extend(
+            self.signatures
+                .iter()
+                .map(|signature| Cow::Owned(signature.to_sig_string())),
+        );
+
+        output.join("\n")
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -207,7 +225,14 @@ impl Signature {
         Some(Self { name, id, body })
     }
 
-    // TODO: `as_string` function
+    fn to_sig_string(&self) -> String {
+        let mut data = vec![];
+        data.extend_from_slice(&self.id);
+        data.extend_from_slice(&self.body);
+        let data = BASE64_STANDARD.encode(&data);
+
+        format!("— {} {}", self.name, data)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -237,6 +262,11 @@ impl Decode for NoteSignature {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use rand::{
+        Rng, RngExt, SeedableRng,
+        distr::{Alphanumeric, SampleString},
+        rngs::ChaCha8Rng,
+    };
 
     const ARCHE2026H1_CHECKPOINT: &str =
         include_str!("../../../testdata/arche2026h1-signed-note.txt");
@@ -264,6 +294,41 @@ mod tests {
     ";
 
     #[test]
+    fn signature_roundtrip() {
+        let mut rng = ChaCha8Rng::seed_from_u64(6767);
+
+        for _ in 0..1000 {
+            let sig = random_signature(&mut rng);
+
+            let sig_str = sig.to_sig_string();
+            let new_sig = Signature::from_str(&sig_str).unwrap();
+
+            assert_eq!(sig, new_sig);
+        }
+    }
+
+    #[test]
+    fn checkpoint_roundtrip() {
+        let mut rng = ChaCha8Rng::seed_from_u64(6767);
+
+        for _ in 0..1000 {
+            let cp = Checkpoint {
+                origin: Alphanumeric.sample_string(&mut rng, 16),
+                tree_size: rng.random(),
+                root_hash: rng.random(),
+                signatures: std::iter::repeat_with(|| random_signature(&mut rng))
+                    .take(10)
+                    .collect(),
+            };
+
+            let cp_string = cp.to_checkoint_string();
+            let new_cp = Checkpoint::parse_checkpoint(&cp_string).unwrap();
+
+            assert_eq!(cp, new_cp);
+        }
+    }
+
+    #[test]
     fn parse_and_validate_checkpoint_arche2026h1() {
         let checkpoint = Checkpoint::parse_checkpoint(ARCHE2026H1_CHECKPOINT).unwrap();
 
@@ -287,5 +352,16 @@ mod tests {
         let log = CtLog::new(config);
 
         log.validate_checkpoint(&checkpoint).unwrap();
+    }
+
+    fn random_signature(rng: &mut impl Rng) -> Signature {
+        let mut body = vec![0u8; 100];
+        rng.fill(&mut body);
+
+        Signature {
+            name: Alphanumeric.sample_string(rng, 16),
+            id: rng.random(),
+            body,
+        }
     }
 }
