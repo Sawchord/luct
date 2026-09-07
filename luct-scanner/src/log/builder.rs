@@ -1,9 +1,12 @@
 use crate::{
     ScannerConfig, ScannerImpl,
-    log::{ScannerLog, ScannerLogInner, tiling::TileFetcher},
+    log::{ScannerLog, ScannerLogInner},
 };
 use futures::lock::Mutex;
-use luct_client::{CtClient, TileFetchStore};
+use luct_client::{
+    CtClient,
+    tiling::{TileFetchStore, TileFetcher},
+};
 use luct_core::CtLog;
 use luct_store::LruCacheStore;
 use std::sync::Arc;
