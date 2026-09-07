@@ -7,24 +7,17 @@ use luct_core::{
 use std::fmt::Debug;
 
 #[derive(Debug)]
-pub struct TileFetcher<SCT, STH> {
-    sct_fetcher: Tree<SCT, MemoryStore<u64, SignedCertificateTimestamp>>,
-    sth_fetcher: Tree<STH, MemoryStore<u64, SignedCertificateTimestamp>>,
-}
+pub struct TileFetcher<S>(Tree<S, MemoryStore<u64, SignedCertificateTimestamp>>);
 
-impl<SCT, STH> TileFetcher<SCT, STH> {
-    pub fn new(sct_store: SCT, sth_store: STH) -> Self {
-        Self {
-            sct_fetcher: Tree::new(sct_store, MemoryStore::default()),
-            sth_fetcher: Tree::new(sth_store, MemoryStore::default()),
-        }
+impl<S> TileFetcher<S> {
+    pub fn new(store: S) -> Self {
+        Self(Tree::new(store, MemoryStore::default()))
     }
 }
 
-impl<SCT, STH> TileFetcher<SCT, STH>
+impl<S> TileFetcher<S>
 where
-    SCT: IsTileFetchStore,
-    STH: IsTileFetchStore,
+    S: IsTileFetchStore,
 {
     pub async fn check_sct_inclusion(
         &self,
@@ -45,12 +38,10 @@ where
         );
 
         // Need to set the sth correctly for the async proof to work
-        self.sct_fetcher
-            .nodes()
-            .set_tree_size(tree_head.tree_size());
+        self.0.nodes().set_tree_size(tree_head.tree_size());
 
         let audit_proof = self
-            .sct_fetcher
+            .0
             .get_audit_proof(&tree_head, *leaf_index)
             .await
             .map_err(TilingError::AuditProofGenerationError)?;
@@ -97,12 +88,10 @@ where
         );
 
         // Need to set the sth correctly for the async proof to work
-        self.sth_fetcher
-            .nodes()
-            .set_tree_size(new_tree_head.tree_size());
+        self.0.nodes().set_tree_size(new_tree_head.tree_size());
 
         let consistency_proof = self
-            .sth_fetcher
+            .0
             .get_consistency_proof(&old_tree_head, &new_tree_head)
             .await
             .map_err(TilingError::ConsistencyProofGenerationError)?;

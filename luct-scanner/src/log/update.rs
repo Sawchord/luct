@@ -46,7 +46,12 @@ impl<S: ScannerImpl> ScannerLog<S> {
             );
 
             match &self.log.tiles {
-                Some(tiles) => tiles.check_sth_consistency(&old_sth, &new_sth).await?,
+                Some(tiles) => {
+                    tiles
+                        .sth_tiles
+                        .check_sth_consistency(&old_sth, &new_sth)
+                        .await?
+                }
                 None => {
                     self.log
                         .sth_client
