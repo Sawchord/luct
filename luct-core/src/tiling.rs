@@ -2,12 +2,19 @@ mod checkpoint;
 mod data_tile;
 mod tile;
 
-use crate::tree::{ProofGenerationError, ProofValidationError};
+use crate::{
+    store::StoreRead,
+    tree::{HashOutput, NodeKey, ProofGenerationError, ProofValidationError},
+};
 pub use checkpoint::{Checkpoint, ParseCheckpointError};
 pub use data_tile::{DataTile, DataTileId};
 use itertools::Itertools;
 use thiserror::Error;
 pub use tile::{Tile, TileId};
+
+pub trait IsTileFetchStore: StoreRead<Key = NodeKey, Value = HashOutput> {
+    fn set_tree_size(&self, tree_size: u64);
+}
 
 #[derive(Debug, Clone, PartialEq, Eq, Error)]
 pub enum TilingError {

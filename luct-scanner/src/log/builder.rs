@@ -3,8 +3,9 @@ use crate::{
     log::{ScannerLog, ScannerLogInner, tiling::TileFetcher},
 };
 use futures::lock::Mutex;
-use luct_client::CtClient;
+use luct_client::{CtClient, TileFetchStore};
 use luct_core::CtLog;
+use luct_store::LruCacheStore;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
@@ -22,9 +23,14 @@ impl<S: ScannerImpl> ScannerLog<S> {
 
         let sct_client = CtClient::new(log.config().clone(), impls.sct_client);
         let sth_client = CtClient::new(log.config().clone(), impls.sth_client);
-        let tiles = config
-            .is_tiling()
-            .then(|| TileFetcher::new(name.clone(), sct_client.clone(), sth_client.clone()));
+        let tiles = config.is_tiling().then(|| {
+            // TODO: Make cache caps configurable
+            let sct_store =
+                LruCacheStore::new(TileFetchStore::new(name.clone(), sct_client.clone()), 1000);
+            let sth_store =
+                LruCacheStore::new(TileFetchStore::new(name.clone(), sth_client.clone()), 1000);
+            TileFetcher::new(sct_store, sth_store)
+        });
 
         let log = Arc::new(ScannerLogInner::<S> {
             name,
