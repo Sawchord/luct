@@ -45,22 +45,9 @@ impl CtLog {
             return Err(SignatureValidationError::MalformedKey);
         }
 
-        // Find exactly one matching key in the list of keys
-        // TODO: Precompute id once during initialization, rather than recomputer it here all the time
-        let id = Self::compute_checkpoint_key_id(&origin, self.log_id());
-        let sigs = checkpoint
-            .signatures
-            .iter()
-            .filter(|sig| sig.name == checkpoint.origin)
-            .filter(|sig| sig.id == id)
-            .collect::<Vec<_>>();
-        if sigs.len() != 1 {
-            return Err(SignatureValidationError::MalformedSignature);
-        }
-        let sig = sigs[0];
+        let note_sig = checkpoint.get_node_signature(self.log_id())?;
 
         // Parse the key and reconstruct the `TreeHeadSignature`
-        let note_sig = NoteSignature::decode(&mut Cursor::new(&sig.body))?;
         let tree_head = TreeHeadSignature {
             version: Version::V1,
             timestamp: note_sig.timestamp,
@@ -79,21 +66,6 @@ impl CtLog {
             sha256_root_hash: checkpoint.root_hash,
             tree_head_signature: note_sig.signature,
         })
-    }
-
-    fn compute_checkpoint_key_id(origin: &str, log_id: &LogId) -> [u8; 4] {
-        let mut hash = Sha256::new();
-        hash.update(origin);
-        hash.update([0x0A, 0x05]);
-
-        match log_id {
-            LogId::V1(log_id) => hash.update(log_id.0),
-        }
-
-        let hash: [u8; 32] = hash.finalize().into();
-        let id: [u8; 4] = hash[0..4].try_into().unwrap();
-
-        id
     }
 
     fn url_to_origin(url: &Url) -> Option<String> {
@@ -199,6 +171,43 @@ impl Checkpoint {
         );
 
         output.join("\n")
+    }
+
+    /// Find the signature matching the log
+    fn get_node_signature(
+        &self,
+        log_id: &LogId,
+    ) -> Result<NoteSignature, SignatureValidationError> {
+        let id = Self::compute_checkpoint_key_id(&self.origin, log_id);
+        let sigs = self
+            .signatures
+            .iter()
+            .filter(|sig| sig.name == self.origin)
+            .filter(|sig| sig.id == id)
+            .collect::<Vec<_>>();
+
+        if sigs.len() != 1 {
+            return Err(SignatureValidationError::MalformedSignature);
+        }
+
+        let sig = NoteSignature::decode(&mut Cursor::new(&sigs[0].body))?;
+
+        Ok(sig)
+    }
+
+    fn compute_checkpoint_key_id(origin: &str, log_id: &LogId) -> [u8; 4] {
+        let mut hash = Sha256::new();
+        hash.update(origin);
+        hash.update([0x0A, 0x05]);
+
+        match log_id {
+            LogId::V1(log_id) => hash.update(log_id.0),
+        }
+
+        let hash: [u8; 32] = hash.finalize().into();
+        let id: [u8; 4] = hash[0..4].try_into().unwrap();
+
+        id
     }
 }
 
