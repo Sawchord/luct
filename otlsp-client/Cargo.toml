@@ -43,10 +43,6 @@ js-sys = { workspace = true }
 wasm-bindgen = { workspace = true }
 wasm-bindgen-futures = { workspace = true }
 
-# This needs to be imported here to set the "js" feature,
-# otherwise the crate would not compile to wasm
-getrandom = { version = "0.4", features = ["wasm_js"] }
-
 [target.'cfg(not(any(target_arch = "wasm32", target_arch = "wasm64")))'.dependencies]
 tokio = { workspace = true, features = ["rt"] }
 tungstenite = { workspace = true }
@@ -63,3 +59,8 @@ http-body-util = { workspace = true }
 
 tracing-wasm = { workspace = true }
 tracing-subscriber = { workspace = true }
+
+# This needs to be imported here to set the "js" feature,
+# otherwise the crate would not compile to wasm
+getrandom = { version = "0.4", features = ["wasm_js"] }
+old_getrandom = { package = "getrandom", version = "0.2", features = ["js"] }

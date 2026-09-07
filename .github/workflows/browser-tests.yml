@@ -15,4 +15,50 @@ jobs:
 
       - name: Build extension
         run: docker buildx build -f Dockerfile.browser-test --progress=plain .
+  browser-tests-2:
+      name: Run WASM unit tests in browser
+      runs-on: ubuntu-latest
+      steps:
+        - name: Checkout source code
+          uses: actions/checkout@v5
+
+        - name: Setup Rust toolchain
+          uses: dtolnay/rust-toolchain@master
+          with:
+            toolchain: 1.92.0
+            targets: wasm32-unknown-unknown
+        
+        - name: Install wasm-pack
+          run: curl https://rustwasm.github.io/wasm-pack/installer/init.sh -sSf | sh
+
+
+        - name: Cache cargo registry
+          uses: actions/cache@v5
+          with:
+            path: ~/.cargo/registry
+            key: ${{ runner.os }}-cargo-registry-${{ hashFiles('**/Cargo.lock') }}
+
+        - name: Cache cargo index
+          uses: actions/cache@v5
+          with:
+            path: ~/.cargo/git
+            key: ${{ runner.os }}-cargo-index-${{ hashFiles('**/Cargo.lock') }}
+
+        - name: Cache cargo build
+          uses: actions/cache@v5
+          with:
+            path: target
+            key: ${{ runner.os }}-cargo-test-target-wasm32-unknown-unknown-${{ hashFiles('**/Cargo.lock') }}
+          
+        - name: Run tests
+          run: |
+            cd otlsp-client
+            wasm-pack test --headless --firefox
+            cd ../luct-otlsp
+            wasm-pack test --headless --firefox
+            cd ../luct-client
+            wasm-pack test --headless --firefox 
+            cd ../luct-extension
+            wasm-pack test --headless --firefox
+
 

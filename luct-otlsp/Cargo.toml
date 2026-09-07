@@ -37,3 +37,8 @@ tracing-subscriber = { workspace = true }
 tracing-wasm = { workspace = true }
 
 serde_json = { workspace = true }
+
+# This needs to be imported here to set the "js" feature,
+# otherwise the crate would not compile to wasm
+getrandom = { version = "0.4", features = ["wasm_js"] }
+old_getrandom = { package = "getrandom", version = "0.2", features = ["js"] }
