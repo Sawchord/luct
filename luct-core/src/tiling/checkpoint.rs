@@ -132,6 +132,11 @@ impl Checkpoint {
         self.tree_size
     }
 
+    pub fn timestamp_for_log(&self, log_id: &LogId) -> Result<u64, SignatureValidationError> {
+        let note_sig = self.get_node_signature(log_id)?;
+        Ok(note_sig.timestamp)
+    }
+
     pub fn parse(data: &str) -> Result<Self, ParseCheckpointError> {
         let mut data = data.lines();
 

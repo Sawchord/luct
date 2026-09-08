@@ -10,13 +10,12 @@ use luct_core::{
 use luct_store::LruCacheStore;
 use std::{
     sync::{Arc, RwLock},
-    time::SystemTime,
+    time::{Duration, SystemTime, UNIX_EPOCH},
 };
 
 #[derive(Clone)]
 pub(crate) struct CheckpointLog<C: CheckpointerImpl> {
     log: Arc<CheckointLogInner<C>>,
-    last_update: SystemTime,
 }
 
 struct CheckointLogInner<C: CheckpointerImpl> {
@@ -26,13 +25,12 @@ struct CheckointLogInner<C: CheckpointerImpl> {
     #[allow(clippy::type_complexity)]
     tiles: Option<TileFetcher<LruCacheStore<TileFetchStore<C::CheckpointFetcher>>>>,
     toc: RwLock<String>,
+    last_update: RwLock<SystemTime>,
 }
 
 impl<C: CheckpointerImpl + std::fmt::Debug> std::fmt::Debug for CheckpointLog<C> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CheckpointLog")
-            .field("last_update", &self.last_update)
-            .finish()
+        f.debug_struct("CheckpointLog").finish()
     }
 }
 
@@ -66,6 +64,25 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
             .await;
 
         *self.log.toc.write().unwrap() = toc.join("\n");
+    }
+
+    async fn update_time(&self) -> Result<(), CheckpointerError> {
+        let (_tree_size, cp) = match self.log.store.last().await {
+            Some(cp) => cp,
+            None => {
+                *self.log.last_update.write().unwrap() = UNIX_EPOCH;
+                return Ok(());
+            }
+        };
+
+        let cp = Checkpoint::parse(&cp).map_err(ClientError::Checkpoint)?;
+        let timestamp = cp
+            .timestamp_for_log(self.log.fetcher.log().log_id())
+            .map_err(|err| ClientError::SignatureValidationFailed("timestamp", err))?;
+
+        *self.log.last_update.write().unwrap() = UNIX_EPOCH + Duration::from_millis(timestamp);
+
+        Ok(())
     }
 
     pub(crate) async fn update_sth(&self) -> Result<(), CheckpointerError> {
@@ -110,6 +127,7 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
             .await;
 
         self.update_toc().await;
+        self.update_time().await?;
 
         Ok(())
     }
