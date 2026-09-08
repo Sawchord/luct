@@ -4,26 +4,19 @@ use luct_client::{
     tiling::{TileFetchStore, TileFetcher},
 };
 use luct_core::{
-    store::{OrderedStoreRead, StoreWrite},
+    store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
     tiling::Checkpoint,
 };
 use luct_store::LruCacheStore;
-use std::{sync::Arc, time::SystemTime};
+use std::{
+    sync::{Arc, RwLock},
+    time::SystemTime,
+};
 
 #[derive(Clone)]
 pub(crate) struct CheckpointLog<C: CheckpointerImpl> {
     log: Arc<CheckointLogInner<C>>,
     last_update: SystemTime,
-    toc: String,
-}
-
-impl<C: CheckpointerImpl + std::fmt::Debug> std::fmt::Debug for CheckpointLog<C> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CheckpointLog")
-            .field("last_update", &self.last_update)
-            .field("toc", &self.toc)
-            .finish()
-    }
 }
 
 struct CheckointLogInner<C: CheckpointerImpl> {
@@ -32,14 +25,49 @@ struct CheckointLogInner<C: CheckpointerImpl> {
     store: LruCacheStore<C::CheckpointStore>,
     #[allow(clippy::type_complexity)]
     tiles: Option<TileFetcher<LruCacheStore<TileFetchStore<C::CheckpointFetcher>>>>,
+    toc: RwLock<String>,
+}
+
+impl<C: CheckpointerImpl + std::fmt::Debug> std::fmt::Debug for CheckpointLog<C> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("CheckpointLog")
+            .field("last_update", &self.last_update)
+            .finish()
+    }
 }
 
 // TODO: Load a checkpoint from store and client
 //  - Regenerate toc
 //  - Get last update
-// TODO: Generate and serve toc
+// TODO: Serve toc
 // TODO: Schedule new update
 impl<C: CheckpointerImpl> CheckpointLog<C> {
+    async fn update_toc(&self) -> () {
+        let mut toc: Vec<String> = vec![];
+
+        self.log
+            .store
+            .filter(|tree_size, cp| {
+                let cp = match Checkpoint::parse(cp) {
+                    Ok(cp) => cp,
+                    Err(err) => {
+                        tracing::warn!(
+                            "Failed to parse a checkpoint at height {}. Error: {:?}",
+                            tree_size,
+                            err
+                        );
+                        return false;
+                    }
+                };
+
+                toc.push(cp.tree_size().to_string());
+                false
+            })
+            .await;
+
+        *self.log.toc.write().unwrap() = toc.join("\n");
+    }
+
     pub(crate) async fn update_sth(&self) -> Result<(), CheckpointerError> {
         let new_cp = self.fetch_sth().await?;
 
@@ -81,7 +109,7 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
             .insert(new_cp.tree_size(), new_cp.to_checkoint_string())
             .await;
 
-        // TODO: Update the toc here
+        self.update_toc().await;
 
         Ok(())
     }

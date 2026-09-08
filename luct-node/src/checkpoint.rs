@@ -18,7 +18,7 @@ pub trait CheckpointerImpl {
 }
 
 /// A [`Checkpointer`] is a tool used to create and serve STH checkpoints
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct Checkpointer<C: CheckpointerImpl> {
     config: Arc<CheckpointerConfig>,
     logs: BTreeMap<LogId, CheckpointLog<C>>,
