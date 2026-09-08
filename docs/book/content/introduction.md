@@ -6,6 +6,20 @@ The purpose of this document is to help you understand what luCT does,
 in which ways using luCT makes your browsing more secure,
 and crucially, in which ways it **does not**.
 
+luCT is built on a stack of pre-existing technologies, namely
+- Tranport layer security (TLS)
+- Certificate authorities (CAs)
+- Certificate transparency logs (CTs)
+
+[In the first chapter](primer.md), we will give a brief introduction into
+what these technologies are, who runs them, and how they interact.
+
+[In the second chapter](audit.md), we will show how luCT ties into this, and
+what it can do on top these existing technologies.
+
+[The third chapter](security.md) will go in more detail into the design of luCT
+and it's threat model and features.
+
 > [!CAUTION]
 > luCT is a security tool and if you want to use it as such,
 > you need to understand what it can and can not do for you.
