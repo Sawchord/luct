@@ -47,3 +47,35 @@ revoke them and discover broken CAs.
 This is what the **certificate transparency** (CA) system does!.
 
 ## How certificate transparency works
+
+Certificate transparency is a system that has been around for more than ten years by now.
+Instead of simply creating a certificate and handing it back to the user,
+certificate authorities need to report their issued certificates to
+**certificate transparency logs**.
+
+The log returns a **signed certificate timestamp** (SCT) back to the certificate authority,
+which is included in the certificate.
+A SCT is a tiny bit of data that is signed by the log,
+which proves that the log has seen the certificate.
+Modern browsers require certificate to have at least two or three SCTs from
+different log operators, depending on the lifetime of the certificate.
+
+So, certificate authorities are effectively forced to do this,
+at least if they want to hand out certificates that work on the public web.
+
+The logs also include the certificate into an append only log.
+The log is not only a simple list, but a cryptographic structure called a [Merkle Tree](todo).
+A merkle tree allows representing the entire log concisely,
+using a single value called the **root** or in this context more commonly **head**.
+
+There are two types cryptographic proofs:
+
+1. An **inclusion proof** is a proof against a tree head,
+   showing that a certificate has been included in a log.
+2. An **extension proof** is a proof of one tree head against another,
+   proving that one tree is an extension of another,
+   i.e. it contains all entries of the previous tree (plus possibly some more).
+
+Aside from the log data,
+certificate transparency logs also regularly publish **signed tree heads** (STHs),
+i.e. a tree head with a signature using the log operators key.
