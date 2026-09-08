@@ -3,7 +3,7 @@
 - [Introduction](introduction.md)
 - [A primer on certificate transparency](primer.md)
     - [Certificate authorities](primer/ca.md)
-    - [Append only logs](primer/logs.md)
+    - [Certificate transparency logs](primer/logs.md)
     - [Signed certificate timestamps](primer/scts.md)
 - [Certificate auditing with luCT](audit.md)
     - [Monitors and auditors](audit/introduction.md)
