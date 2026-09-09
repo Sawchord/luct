@@ -9,6 +9,7 @@ use luct_core::{
     tiling::Checkpoint,
 };
 use luct_store::LruCacheStore;
+use rand::{Rng, RngExt};
 use std::{
     sync::{Arc, RwLock},
     time::{Duration, SystemTime, UNIX_EPOCH},
@@ -17,6 +18,7 @@ use std::{
 #[derive(Clone)]
 pub(crate) struct CheckpointLog<C: CheckpointerImpl> {
     log: Arc<CheckpointLogInner<C>>,
+    config: Arc<CheckpointerConfig>,
 }
 
 struct CheckpointLogInner<C: CheckpointerImpl> {
@@ -55,6 +57,7 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
         });
 
         let log = Self {
+            config: config.clone(),
             log: Arc::new(CheckpointLogInner {
                 name,
                 fetcher,
@@ -99,6 +102,18 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
 
     fn update_time(&self) {
         *self.log.last_update.write().unwrap() = SystemTime::now();
+    }
+
+    pub(crate) fn next_update(&self, rng: &mut impl Rng) -> SystemTime {
+        // Calculate a random extra duration between minimal and maximal duration
+        let duration_range =
+            (self.config.maximal_update_interval - self.config.minimal_update_interval).as_secs();
+        let extra_duration = Duration::from_secs(rng.random_range(0..duration_range));
+
+        // Calculate the next point in time for an update depending on the last update time
+        self.log.last_update.read().unwrap().to_owned()
+            + self.config.minimal_update_interval
+            + extra_duration
     }
 
     async fn init_time(&self) -> Result<(), CheckpointerError> {
