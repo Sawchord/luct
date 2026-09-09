@@ -18,8 +18,20 @@ pub(crate) struct Config {
     /// Time (in seconds) until a connection is terminated
     pub(crate) otlsp_timeout_seconds: Option<u64>,
 
-    /// Number of in-flight packets of an OTLSP channel (per directrion)
+    /// Number of in-flight packets of an OTLSP channel (per direction)
     pub(crate) otlsp_packet_buffer_size: Option<usize>,
+
+    /// Path at which to serve the checkpointer
+    pub(crate) checkpoint_path: Option<String>,
+
+    /// File path at which the checkpoints will be stored
+    pub(crate) checkpoint_store_path: Option<String>,
+
+    /// Minimal interval (in seconds) between checkpoints
+    pub(crate) minimal_checkpoint_interval: Option<u64>,
+
+    /// Maximal interval (in seconds) between checkpoints
+    pub(crate) maximal_checkpoint_interval: Option<u64>,
 
     /// Path at which to serve the metrics endpoint
     pub(crate) metrics_path: Option<String>,
