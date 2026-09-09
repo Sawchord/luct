@@ -5,7 +5,7 @@ use luct_client::{
 };
 use luct_core::{
     CtLog,
-    store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
+    store::{OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite},
     tiling::Checkpoint,
 };
 use luct_store::LruCacheStore;
@@ -72,6 +72,14 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
         log.init_time().await?;
 
         Ok(log)
+    }
+
+    pub(crate) fn serve_toc(&self) -> String {
+        self.log.toc.read().unwrap().clone()
+    }
+
+    pub(crate) async fn serve_checkpoint(&self, tree_size: u64) -> Option<String> {
+        self.log.store.get(tree_size).await
     }
 
     async fn update_toc(&self) -> () {
