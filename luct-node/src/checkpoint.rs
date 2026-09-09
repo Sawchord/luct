@@ -1,13 +1,11 @@
-use crate::checkpoint::{error::CheckpointerError, log::CheckpointLog};
+use crate::checkpoint::{config::CheckpointerConfig, error::CheckpointerError, log::CheckpointLog};
 use luct_client::Client;
 use luct_core::{CtLog, LogId, store::SearchableStore};
 use std::{collections::BTreeMap, sync::Arc};
 
+mod config;
 mod error;
 mod log;
-
-#[derive(Clone, Debug)]
-pub struct CheckpointerConfig {}
 
 /// Bundle trait for [`Checkpointer`]
 pub trait CheckpointerImpl {
