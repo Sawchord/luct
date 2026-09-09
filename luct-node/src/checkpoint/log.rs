@@ -1,4 +1,7 @@
-use crate::checkpoint::{CheckpointerImpl, config::CheckpointerConfig, error::CheckpointerError};
+use crate::checkpoint::{
+    CheckpointerImpl, config::CheckpointerConfig, error::CheckpointerError,
+    metrics::CheckpointerMetrics,
+};
 use luct_client::{
     ClientError, CtClient,
     tiling::{TileFetchStore, TileFetcher},
@@ -18,6 +21,7 @@ use std::{
 #[derive(Clone)]
 pub(crate) struct CheckpointLog<C: CheckpointerImpl> {
     config: Arc<CheckpointerConfig>,
+    metrics: CheckpointerMetrics,
     log: Arc<CheckointLogInner<C>>,
 }
 
@@ -42,6 +46,7 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
     pub async fn new(
         log: &CtLog,
         config: Arc<CheckpointerConfig>,
+        metrics: CheckpointerMetrics,
         store: C::CheckpointStore,
         fetcher: C::CheckpointFetcher,
     ) -> Result<Self, CheckpointerError> {
@@ -57,6 +62,7 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
 
         let log = Self {
             config: config.clone(),
+            metrics,
             log: Arc::new(CheckointLogInner {
                 name,
                 fetcher,
@@ -74,11 +80,15 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
     }
 
     pub(crate) fn serve_toc(&self) -> String {
+        self.metrics.toc_served(&self.log.name);
         self.log.toc.read().unwrap().clone()
     }
 
     pub(crate) async fn serve_checkpoint(&self, tree_size: u64) -> Option<String> {
-        self.log.store.get(tree_size).await
+        let cp = self.log.store.get(tree_size).await;
+        self.metrics.checkpoint_served(&self.log.name);
+
+        cp
     }
 
     async fn update_toc(&self) -> () {
@@ -133,7 +143,9 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
             .timestamp_for_log(self.log.fetcher.log().log_id())
             .map_err(|err| ClientError::SignatureValidationFailed("timestamp", err))?;
 
-        *self.log.last_update.write().unwrap() = UNIX_EPOCH + Duration::from_millis(timestamp);
+        let last_update = UNIX_EPOCH + Duration::from_millis(timestamp);
+        self.metrics.set_last_update(&self.log.name, last_update);
+        *self.log.last_update.write().unwrap() = last_update;
 
         Ok(())
     }
