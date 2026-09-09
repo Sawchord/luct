@@ -1900,6 +1900,7 @@ dependencies = [
  "luct-store",
  "otlsp-server",
  "prometheus",
+ "rand 0.10.2",
  "serde",
  "serde_json",
  "thiserror 2.0.20",
