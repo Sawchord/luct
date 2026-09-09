@@ -1890,6 +1890,7 @@ dependencies = [
  "axum-macros",
  "clap",
  "config",
+ "derive_builder",
  "dotenv",
  "eyre",
  "futures",
