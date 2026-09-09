@@ -5,7 +5,7 @@ use luct_client::{
 };
 use luct_core::{
     CtLog,
-    store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
+    store::{OrderedStoreRead, SearchableStoreRead, StoreRead, StoreWrite},
     tiling::Checkpoint,
 };
 use luct_store::LruCacheStore;
@@ -73,6 +73,14 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
         Ok(log)
     }
 
+    pub(crate) fn serve_toc(&self) -> String {
+        self.log.toc.read().unwrap().clone()
+    }
+
+    pub(crate) async fn serve_checkpoint(&self, tree_size: u64) -> Option<String> {
+        self.log.store.get(tree_size).await
+    }
+
     async fn update_toc(&self) -> () {
         let mut toc: Vec<String> = vec![];
 
@@ -106,7 +114,7 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
         let extra_duration = Duration::from_secs(rng.random_range(0..duration_range));
 
         // Calculate the next point in time for an update depending on the last update time
-        self.last_update.read().unwrap().to_owned()
+        self.log.last_update.read().unwrap().to_owned()
             + self.config.minimal_update_interval
             + extra_duration
     }
