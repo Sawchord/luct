@@ -1,6 +1,6 @@
-use crate::checkpoint::log::CheckpointLog;
+use crate::checkpoint::{error::CheckpointerError, log::CheckpointLog};
 use luct_client::Client;
-use luct_core::{store::SearchableStore, v1::LogId};
+use luct_core::{CtLog, LogId, store::SearchableStore};
 use std::{collections::BTreeMap, sync::Arc};
 
 mod error;
@@ -22,6 +22,28 @@ pub trait CheckpointerImpl {
 pub struct Checkpointer<C: CheckpointerImpl> {
     config: Arc<CheckpointerConfig>,
     logs: BTreeMap<LogId, CheckpointLog<C>>,
-    fetcher: Arc<C::CheckpointFetcher>,
-    store: C::CheckpointStore,
+    fetcher: C::CheckpointFetcher,
+}
+
+impl<C: CheckpointerImpl> Checkpointer<C> {
+    pub fn new(config: CheckpointerConfig, fetcher: C::CheckpointFetcher) -> Self {
+        Self {
+            config: Arc::new(config),
+            logs: BTreeMap::new(),
+            fetcher,
+        }
+    }
+
+    pub async fn add_log(
+        &mut self,
+        log: &CtLog,
+        store: C::CheckpointStore,
+    ) -> Result<&mut Self, CheckpointerError> {
+        let new_log =
+            CheckpointLog::new(log, self.config.clone(), store, self.fetcher.clone()).await?;
+        let log_id = log.log_id().clone();
+
+        self.logs.insert(log_id, new_log);
+        Ok(self)
+    }
 }

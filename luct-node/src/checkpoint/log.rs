@@ -1,9 +1,10 @@
-use crate::checkpoint::{CheckpointerImpl, error::CheckpointerError};
+use crate::checkpoint::{CheckpointerConfig, CheckpointerImpl, error::CheckpointerError};
 use luct_client::{
     ClientError, CtClient,
     tiling::{TileFetchStore, TileFetcher},
 };
 use luct_core::{
+    CtLog,
     store::{OrderedStoreRead, SearchableStoreRead, StoreWrite},
     tiling::Checkpoint,
 };
@@ -40,6 +41,40 @@ impl<C: CheckpointerImpl + std::fmt::Debug> std::fmt::Debug for CheckpointLog<C>
 // TODO: Serve toc
 // TODO: Schedule new update
 impl<C: CheckpointerImpl> CheckpointLog<C> {
+    pub async fn new(
+        log: &CtLog,
+        config: Arc<CheckpointerConfig>,
+        store: C::CheckpointStore,
+        fetcher: C::CheckpointFetcher,
+    ) -> Result<Self, CheckpointerError> {
+        let name = log.description().to_owned();
+        let fetcher = CtClient::new(log.config().clone(), fetcher);
+
+        let tiles = log.config().is_tiling().then(|| {
+            TileFetcher::new(LruCacheStore::new(
+                TileFetchStore::new(name.clone(), fetcher.clone()),
+                1000,
+            ))
+        });
+
+        let log = Self {
+            log: Arc::new(CheckointLogInner {
+                name,
+                fetcher,
+                // TODO: Make caps configurable
+                store: LruCacheStore::new(store, 1000),
+                tiles,
+                last_update: RwLock::new(UNIX_EPOCH),
+                toc: RwLock::new("".to_string()),
+            }),
+        };
+
+        log.update_toc().await;
+        log.update_time().await?;
+
+        Ok(log)
+    }
+
     async fn update_toc(&self) -> () {
         let mut toc: Vec<String> = vec![];
 
