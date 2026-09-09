@@ -6,10 +6,10 @@ use luct_client::Client;
 use luct_core::{CtLog, LogId, store::SearchableStore};
 use std::{collections::BTreeMap, sync::Arc};
 
-mod config;
+pub(crate) mod config;
 mod error;
 mod log;
-mod metrics;
+pub(crate) mod metrics;
 
 /// Bundle trait for [`Checkpointer`]
 pub trait CheckpointerImpl {
