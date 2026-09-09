@@ -35,9 +35,6 @@ impl<C: CheckpointerImpl + std::fmt::Debug> std::fmt::Debug for CheckpointLog<C>
     }
 }
 
-// TODO: Load a checkpoint from store and client
-//  - Regenerate toc
-//  - Get last update
 // TODO: Serve toc
 // TODO: Schedule new update
 impl<C: CheckpointerImpl> CheckpointLog<C> {
