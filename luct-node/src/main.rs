@@ -1,11 +1,13 @@
 #![forbid(unsafe_code)]
 
 use crate::{
-    args::Args, conf::Config, metrics::handle_metrics_request, otlsp::handle_otlsp_connection,
-    state::NodeState,
+    args::Args, checkpoint::CheckpointerImpl, conf::Config, metrics::handle_metrics_request,
+    otlsp::handle_otlsp_connection, state::NodeState,
 };
 use axum::{Router, routing::get};
 use clap::Parser;
+use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
+use luct_store::FilesystemStore;
 use tracing_subscriber::EnvFilter;
 
 mod args;
@@ -14,6 +16,20 @@ mod conf;
 mod metrics;
 mod otlsp;
 mod state;
+
+const USER_AGENT: &str = concat!(
+    "luct-checkpointer/",
+    env!("CARGO_PKG_VERSION"),
+    " (https://github.com/Sawchord/luct/)"
+);
+
+#[derive(Debug)]
+struct NodeCheckpointerImpl;
+
+impl CheckpointerImpl for NodeCheckpointerImpl {
+    type CheckpointFetcher = RequestDeduplicationClient<ReqwestClient>;
+    type CheckpointStore = FilesystemStore<u64, String>;
+}
 
 #[tokio::main(flavor = "current_thread")]
 async fn main() -> eyre::Result<()> {
@@ -37,7 +53,7 @@ async fn main() -> eyre::Result<()> {
         .unwrap();
 
     tracing::info!("Serving requests at {}", config.endpoint_addr);
-    let state = NodeState::new(config)?;
+    let state = NodeState::new(config).await?;
     let router = Router::new();
 
     let router = if let Some(metrics_path) = &state.config().metrics_path {
