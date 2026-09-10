@@ -12,14 +12,14 @@ use std::{path::PathBuf, sync::Arc, time::Duration};
 use url::Url;
 
 #[derive(Debug, Clone)]
-pub(crate) struct NodeState(Arc<NodeStateInner>);
+pub(crate) struct NodeState(pub(crate) Arc<NodeStateInner>);
 
 #[derive(Debug)]
-struct NodeStateInner {
-    config: Arc<Config>,
-    otlsp_state: OtlspState,
-    otlsp_urls: Vec<Url>,
-    checkpointer: Checkpointer<NodeCheckpointerImpl>,
+pub(crate) struct NodeStateInner {
+    pub(crate) config: Arc<Config>,
+    pub(crate) otlsp_state: OtlspState,
+    pub(crate) otlsp_urls: Vec<Url>,
+    pub(crate) checkpointer: Checkpointer<NodeCheckpointerImpl>,
 }
 
 impl NodeState {
