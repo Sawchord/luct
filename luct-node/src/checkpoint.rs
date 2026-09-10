@@ -1,7 +1,16 @@
-use crate::checkpoint::{
-    config::CheckpointerConfig, error::CheckpointerError, log::CheckpointLog,
-    metrics::CheckpointerMetrics,
+use crate::{
+    NodeCheckpointerImpl,
+    checkpoint::{
+        config::CheckpointerConfig, error::CheckpointerError, log::CheckpointLog,
+        metrics::CheckpointerMetrics,
+    },
+    state::NodeState,
 };
+use axum::{
+    extract::{Path, State},
+    response::Response,
+};
+use axum_macros::debug_handler;
 use luct_client::Client;
 use luct_core::{CtLog, LogId, store::SearchableStore};
 use std::{collections::BTreeMap, sync::Arc};
@@ -59,5 +68,60 @@ impl<C: CheckpointerImpl> Checkpointer<C> {
 
         self.logs.insert(log_id, new_log);
         Ok(self)
+    }
+}
+
+#[debug_handler]
+pub(crate) async fn handle_toc_request(state: State<NodeState>, log_id: Path<String>) -> Response {
+    let checkpointer = match state.0.try_get_log(&log_id) {
+        Ok(cp) => cp,
+        Err(response) => return *response,
+    };
+
+    let toc = checkpointer.serve_toc();
+    Response::builder().status(200).body(toc.into()).unwrap()
+}
+
+#[debug_handler]
+pub(crate) async fn handle_checkpoint_request(
+    state: State<NodeState>,
+    params: Path<(String, u64)>,
+) -> Response {
+    let checkpointer = match state.0.try_get_log(&params.0.0) {
+        Ok(cp) => cp,
+        Err(response) => return *response,
+    };
+
+    let Some(cp) = checkpointer.serve_checkpoint(params.0.1).await else {
+        return Response::builder()
+            .status(404)
+            .body("Could not find checkpoint with that tree_size".into())
+            .unwrap();
+    };
+
+    Response::builder().status(200).body(cp.into()).unwrap()
+}
+
+impl NodeState {
+    fn try_get_log(
+        &self,
+        log_id: &str,
+    ) -> Result<&CheckpointLog<NodeCheckpointerImpl>, Box<Response>> {
+        let log_id = luct_core::v1::LogId::try_from(log_id).map_err(|_| {
+            Response::builder()
+                .status(400)
+                .body("Failed to parse log id".into())
+                .unwrap()
+        })?;
+        let log_id = LogId::V1(log_id);
+
+        let log = self.0.checkpointer.logs.get(&log_id).ok_or_else(|| {
+            Response::builder()
+                .status(404)
+                .body("Unknown log id".into())
+                .unwrap()
+        })?;
+
+        Ok(log)
     }
 }
