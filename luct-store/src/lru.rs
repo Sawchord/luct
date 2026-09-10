@@ -7,10 +7,10 @@ use luct_core::{
     tiling::IsTileFetchStore,
 };
 use std::{
-    cell::RefCell,
     fmt::Debug,
     hash::Hash,
     ops::{Deref, DerefMut},
+    sync::Mutex,
 };
 
 /// A [`Store`](luct_core::store::Store) implementation that wraps an inner [`Store`](luct_core::store::Store)
@@ -23,7 +23,7 @@ pub struct LruCacheStore<S>
 where
     S: StoreBase,
 {
-    cache: RefCell<LruCache<S::Key, S::Value>>,
+    cache: Mutex<LruCache<S::Key, S::Value>>,
     inner: S,
 }
 
@@ -70,7 +70,7 @@ where
 {
     pub fn new(store: S, caps: usize) -> Self {
         Self {
-            cache: RefCell::new(LruCache::new(caps.try_into().unwrap())),
+            cache: Mutex::new(LruCache::new(caps.try_into().unwrap())),
             inner: store,
         }
     }
@@ -89,11 +89,11 @@ where
     S: StoreRead<Key: Clone + Hash + Eq, Value: Clone>,
 {
     async fn get(&self, key: Self::Key) -> Option<Self::Value> {
-        if let Some(val) = self.cache.borrow_mut().get(&key) {
+        if let Some(val) = self.cache.lock().unwrap().get(&key) {
             Some(val.clone())
         } else {
             let val = self.inner.get(key.clone()).await?;
-            self.cache.borrow_mut().put(key, val.clone());
+            self.cache.lock().unwrap().put(key, val.clone());
             Some(val)
         }
     }
@@ -108,14 +108,14 @@ where
     S: StoreWrite<Key: Clone + Hash + Eq, Value: Clone>,
 {
     async fn insert(&self, key: Self::Key, value: Self::Value) {
-        self.cache.borrow_mut().pop(&key);
+        self.cache.lock().unwrap().pop(&key);
         self.inner.insert(key.clone(), value.clone()).await;
-        self.cache.borrow_mut().push(key, value);
+        self.cache.lock().unwrap().push(key, value);
     }
 
     async fn delete(&self, key: Self::Key) -> bool {
         let contained = self.inner.delete(key.clone()).await;
-        self.cache.borrow_mut().pop(&key);
+        self.cache.lock().unwrap().pop(&key);
         contained
     }
 }
@@ -135,7 +135,7 @@ where
 {
     async fn append(&self, value: Self::Value) -> Self::Key {
         let new_key = self.inner.append(value.clone()).await;
-        self.cache.borrow_mut().push(new_key.clone(), value);
+        self.cache.lock().unwrap().push(new_key.clone(), value);
 
         new_key
     }
