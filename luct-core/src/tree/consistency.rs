@@ -1,5 +1,5 @@
 use crate::{
-    store::{StoreRead, Hashable},
+    store::{Hashable, StoreRead},
     tree::{HashOutput, Node, NodeKey, ProofGenerationError, ProofValidationError, Tree, TreeHead},
 };
 use futures::{FutureExt, future::join_all};
