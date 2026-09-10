@@ -1,43 +1,33 @@
-use crate::{conf::Config, state::NodeState};
+use crate::state::NodeState;
 use axum::{
     extract::{Query, State, WebSocketUpgrade},
     response::Response,
 };
 use axum_macros::debug_handler;
-use eyre::Context;
-use luct_core::log_list::v3::LogList;
+use luct_core::CtLog;
 use otlsp_server::{Destination, handle_connection};
 use std::collections::BTreeSet;
 use url::Url;
 
-impl Config {
-    /// Extract all urls the otlsp service needs to enable
-    pub(crate) fn get_otlsp_urls(&self) -> eyre::Result<Vec<Url>> {
-        let logs = std::fs::read_to_string(&self.log_list)
-            .with_context(|| format! {"Could not find log list file at {}", self.log_list})?;
-        let logs: LogList =
-            serde_json::from_str(&logs).with_context(|| "Failed to parse log list")?;
-        let logs = logs.currently_active_logs();
-        tracing::info!("Imported {} logs", logs.len());
+/// Extract all urls the otlsp service needs to enable
+pub(crate) fn get_otlsp_urls(logs: &[CtLog]) -> Vec<Url> {
+    let urls: BTreeSet<Url> = logs
+        .iter()
+        .map(|log| log.config().fetch_url().clone())
+        .chain(
+            logs.iter()
+                .filter_map(|log| log.config().tile_url().clone()),
+        )
+        // Remove the paths, we need to have access to the entire paths
+        .map(|mut url| {
+            url.set_path("");
+            url
+        })
+        .collect();
 
-        let urls: BTreeSet<Url> = logs
-            .iter()
-            .map(|log| log.config().fetch_url().clone())
-            .chain(
-                logs.iter()
-                    .filter_map(|log| log.config().tile_url().clone()),
-            )
-            // Remove the paths, we need to have access to the entire paths
-            .map(|mut url| {
-                url.set_path("");
-                url
-            })
-            .collect();
+    tracing::info!("Enabled {} urls", urls.len());
 
-        tracing::info!("Enabled {} urls", urls.len());
-
-        Ok(urls.into_iter().collect())
-    }
+    urls.into_iter().collect()
 }
 
 #[debug_handler]

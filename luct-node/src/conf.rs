@@ -1,4 +1,6 @@
 use config::{Config as Conf, Environment, File};
+use eyre::Context;
+use luct_core::{CtLog, log_list::v3::LogList};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -40,5 +42,16 @@ impl Config {
             .build()?;
 
         Ok(config.try_deserialize()?)
+    }
+
+    pub(crate) fn get_active_logs(&self) -> eyre::Result<Vec<CtLog>> {
+        let logs = std::fs::read_to_string(&self.log_list)
+            .with_context(|| format! {"Could not find log list file at {}", self.log_list})?;
+        let logs: LogList =
+            serde_json::from_str(&logs).with_context(|| "Failed to parse log list")?;
+        let logs = logs.currently_active_logs();
+        tracing::info!("Imported {} logs", logs.len());
+
+        Ok(logs)
     }
 }
