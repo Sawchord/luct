@@ -13,7 +13,11 @@ use axum::{
 use axum_macros::debug_handler;
 use luct_client::Client;
 use luct_core::{CtLog, LogId, store::SearchableStore};
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    sync::Arc,
+    time::{Duration, SystemTime},
+};
 
 pub(crate) mod config;
 mod error;
@@ -131,5 +135,46 @@ impl NodeState {
         })?;
 
         Ok(log)
+    }
+
+    pub(crate) fn schedule_updates(&self) {
+        for log in self.0.checkpointer.logs.values() {
+            let log = log.clone();
+            tokio::spawn(async move {
+                loop {
+                    let next_update = log.next_update(&mut rand::rng());
+                    let duration = next_update
+                        .duration_since(SystemTime::now())
+                        .map(|time| format!("in {} seconds", time.as_secs()))
+                        .unwrap_or(String::from("now"));
+
+                    tracing::info!(
+                        "Scheduled update for log {} at {:?}, which is {}",
+                        log.name(),
+                        next_update,
+                        duration,
+                    );
+
+                    let time_to_update = next_update
+                        .duration_since(SystemTime::now())
+                        .unwrap_or(Duration::default());
+                    tokio::time::sleep(time_to_update).await;
+
+                    match log.update_sth().await {
+                        Ok(()) => {
+                            tracing::info!("Updated log {} ", log.name())
+                        }
+                        Err(err) => {
+                            tracing::warn!(
+                                "Failed to update checkpoint of log {}: {:?}",
+                                log.name(),
+                                err
+                            );
+                            tokio::time::sleep(Duration::from_secs(60)).await;
+                        }
+                    }
+                }
+            });
+        }
     }
 }

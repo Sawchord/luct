@@ -77,6 +77,8 @@ async fn main() -> eyre::Result<()> {
     let router = if let Some(checkpoint_path) = &state.config().checkpoint_path {
         tracing::info!("Serving checkpoint endpoint at {}", checkpoint_path);
 
+        state.schedule_updates();
+
         router
             .route(
                 &format!("{}/{{log_id}}", checkpoint_path),
