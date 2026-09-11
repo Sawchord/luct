@@ -27,7 +27,7 @@ const USER_AGENT: &str = concat!(
     " (https://github.com/Sawchord/luct/)"
 );
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct NodeCheckpointerImpl;
 
 impl CheckpointerImpl for NodeCheckpointerImpl {

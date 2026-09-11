@@ -79,6 +79,10 @@ impl<C: CheckpointerImpl> CheckpointLog<C> {
         Ok(log)
     }
 
+    pub(crate) fn name(&self) -> &str {
+        &self.log.name
+    }
+
     pub(crate) fn serve_toc(&self) -> String {
         self.metrics.toc_served(&self.log.name);
         self.log.toc.read().unwrap().clone()
