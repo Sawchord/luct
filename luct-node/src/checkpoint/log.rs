@@ -41,7 +41,6 @@ impl<C: CheckpointerImpl + std::fmt::Debug> std::fmt::Debug for CheckpointLog<C>
     }
 }
 
-// TODO: Schedule new update
 impl<C: CheckpointerImpl> CheckpointLog<C> {
     pub async fn new(
         log: &CtLog,
