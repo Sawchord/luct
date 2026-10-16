@@ -3,7 +3,7 @@ use crate::utils::{
     codec_vec::CodecVec,
     u24::U24,
 };
-use base64::{Engine, prelude::BASE64_STANDARD};
+use base64::{Engine, engine::general_purpose::URL_SAFE, prelude::BASE64_STANDARD};
 pub(crate) use sct::SctList;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -50,7 +50,9 @@ impl TryFrom<&str> for LogId {
     type Error = ();
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let vec = BASE64_STANDARD.decode(value).map_err(|_| ())?;
+        let vec = BASE64_STANDARD
+            .decode(value)
+            .or_else(|_| URL_SAFE.decode(value).map_err(|_| ()))?;
         let array = vec.try_into().map_err(|_| ())?;
         Ok(Self(array))
     }
