@@ -1,13 +1,13 @@
 # luCT
 
-luCT (pronounced "lucid") is a digital self defense tool that adds an extra layer of security to HTTPs by auditing certificate's log inclusion proofs locally in real time, as you browse.
+luCT (pronounced "lucid") is a Firefox extension that checks whether website certificates have been recorded in public certificate logs. It adds an extra layer of security to HTTPS by verifying inclusion proofs locally as you browse.
 
 
 ## Quick Start
 
-1. Install the Firefox extension
+1. Install the [Firefox extension](https://download.luct.dev/luct.xpi)
 2. Browse normally
-3. Look for the <img src="./extension/luct/icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when CT inclusion is verified
+3. Look for the <img src="./extension/luct/icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when certificate logging is verified
 
 ![](docs/gifs/example-usage.gif)
 
@@ -30,7 +30,7 @@ To build and test luCT yourself, see the [build instructions.](./BUILD.md)
 
 ## How it works
 
-[Certificate transparency](https://en.wikipedia.org/wiki/Certificate_Transparency) helps to improve the security of the Web by requiring certificate authorities to log their certificates in an append only log.
+[Certificate Transparency (CT)](https://en.wikipedia.org/wiki/Certificate_Transparency) helps to improve the security of the Web by requiring certificate authorities to log publicly trusted certificates in append-only logs.
 Logs return a signed certificate timestamp (SCT) to the certificate authority.
 
 Browsers require that there are SCTs in a certificate when establishing a TLS connection and refuse connection otherwise.
@@ -38,7 +38,7 @@ However, the SCT is just a signed promise that the certificate will be included 
 Browsers do not actually follow the logs and check inclusion proofs of SCTs that they come by.
 
 luCT closes that gap by checking log inclusions while you browse.
-If everything checks out, it gives an additional checkmark indicator.
+When these checks pass, luCT displays a checkmark for verified log inclusion.
 It is planned to extend luCT over time, such that it includes more and more guarantees over time. 
 
 
@@ -65,20 +65,20 @@ The extension requires the following permissions:
 
 - `<all_urls>`, `webRequest`, `webRequestBlocking`
 
-    Are needed such that luCT can intercept the browsers HTTPs requests to extract the certificate chains used during TLS handshake.
-    The signed certificate timestamps are then extracted from these certificates.
+    These let luCT inspect HTTPS requests and extract the certificate chains used during the TLS handshake.
+    luCT then extracts the signed certificate timestamps from these certificates.
 
 - `activeTab` and `tabs`
 
-    Are needed to keep track of which tab is currently active, when tabs are being closed or their document url changes.
-    luCT needs to keep track of that, to display the correct safety status and sidebar information.
+    These let luCT track the active tab, closed tabs, and changes to page URLs.
+    This keeps the verification status and sidebar information matched to the current tab.
 
 
 - `storage`, `unlimitedStorage`
 
-    Is needed to enable storing data in the extension store.
-    luCT may store a couple megabytes of log data, in order to function correctly.
-    `unlimitedStorage` is needed such that it can exceed the 5 MB limit.
+    `storage` lets luCT store log data locally.
+    luCT may store several megabytes of log data to function properly.
+    `unlimitedStorage` allows this data to exceed the browser's usual storage quota.
 
 
 
@@ -125,5 +125,5 @@ At your discretion:
 
 This project is supported by a grant from [NLNet](https://nlnet.nl/project/luCT/).
 
-[<img src="https://nlnet.nl/logo/banner.svg" atl="luCT icon" height="60">](https://nlnet.nl)
-[<img src="https://nlnet.nl/image/logos/NGI0CommonsFund_tag.svg" atl="luCT icon" height="60">](https://nlnet.nl/core/)
+[<img src="https://nlnet.nl/logo/banner.svg" alt="NLnet" height="60">](https://nlnet.nl)
+[<img src="https://nlnet.nl/image/logos/NGI0CommonsFund_tag.svg" alt="NGI Zero Commons Fund" height="60">](https://nlnet.nl/core/)
