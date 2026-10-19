@@ -5,9 +5,13 @@ luCT (pronounced "lucid") is a Firefox extension that checks whether website cer
 
 ## Quick Start
 
-1. Install the [Firefox extension](https://download.luct.dev/luct.xpi)
+Requires **Firefox 144 or newer**. The download is an extension file (`.xpi`) hosted by the project.
+
+1. Open the [luCT download](https://download.luct.dev/luct.xpi) in Firefox and follow the installation prompts.
 2. Browse normally
 3. Look for the <img src="./extension/luct/icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when certificate logging is verified
+
+If Firefox saves the file instead, open **Add-ons and themes**, select **Extensions**, then use the gear menu to choose **Install Add-on From File…** and select the downloaded `.xpi` file. Review the requested permissions before confirming installation.
 
 ![](docs/gifs/example-usage.gif)
 

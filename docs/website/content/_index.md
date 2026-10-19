@@ -6,9 +6,13 @@ template = "index.html"
 
 ## Try it for yourself!
 
-1. [Download](https://download.luct.dev/luct.xpi) the Firefox extension
+Requires **Firefox 144 or newer**. The download is an extension file (`.xpi`) hosted by the project.
+
+1. Open the [luCT download](https://download.luct.dev/luct.xpi) in Firefox and follow the installation prompts.
 2. Browse normally
-3. Look for the <img src="./icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when certificate logging is verified
+3. Look for the <img src="./icons/luct_safe.svg" alt="luCT icon" width="12em"> indicator when CT inclusion is verified
+
+If Firefox saves the file instead, open **Add-ons and themes**, select **Extensions**, then use the gear menu to choose **Install Add-on From File…** and select the downloaded `.xpi` file. Review the requested permissions and confirm.
 
 <div>
     <img class="example" src="./gifs/example-usage.gif" alt="Example usage of luCT" />
