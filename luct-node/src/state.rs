@@ -29,6 +29,7 @@ impl NodeState {
 
         let otlsp_config = Arc::new(OtlspConfig {
             buffer_size: config.otlsp_packet_buffer_size.unwrap_or(100),
+            connection_timeout_seconds: config.otlsp_timeout_seconds.unwrap_or(30),
         });
 
         let mut cp_builder = CheckpointerConfig::builder();

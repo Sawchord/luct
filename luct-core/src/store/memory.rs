@@ -1,6 +1,5 @@
 use crate::store::{
-    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreRead,
-    StoreWrite, StoreBase,
+    AppendableStore, OrderedStoreRead, SearchableStoreRead, StoreBase, StoreRead, StoreWrite,
 };
 use std::{
     collections::BTreeMap,
