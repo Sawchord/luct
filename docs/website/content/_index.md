@@ -14,6 +14,10 @@ Requires **Firefox 144 or newer**. The download is an extension file (`.xpi`) ho
 
 If Firefox saves the file instead, open **Add-ons and themes**, select **Extensions**, then use the gear menu to choose **Install Add-on From File…** and select the downloaded `.xpi` file. Review the requested permissions and confirm.
 
+Click the luCT icon in Firefox's address bar to open the sidebar. A **spinner** means checks are in progress. A **green checkmark** means the certificate report passed luCT's logging checks. A **red cross** means it did not pass. Expand the log entries to inspect errors. Unavailable proof data can also cause this result.
+
+The address bar icon groups pending and unsuccessful checks, and there's the sidebar for details. Logging checks alone do not establish that a certificate was legitimately issued or that a website is trustworthy.
+
 <div>
     <img class="example" src="./gifs/example-usage.gif" alt="Example usage of luCT" />
 </div>
