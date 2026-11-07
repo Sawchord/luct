@@ -110,7 +110,7 @@ impl<S: ScannerImpl> Scanner<S> {
         Ok(())
     }
 
-    pub async fn refesh_all_sths(&self) -> Result<(), ScannerError> {
+    pub async fn refresh_all_sths(&self) -> Result<(), ScannerError> {
         let now = SystemTime::now();
         let updates = self
             .logs

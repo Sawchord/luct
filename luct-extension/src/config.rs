@@ -18,7 +18,7 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
     {
         Some(settings) => serde_json::from_str::<ExtensionConfig>(&settings),
         None => {
-            tracing::info!("Could not find a config. Initalizing with default");
+            tracing::info!("Could not find a config. Initializing with default");
             let settings = serde_json::from_str::<ExtensionConfig>("{}").unwrap();
             Ok(settings)
         }
@@ -133,7 +133,7 @@ pub fn browser_local_store() -> Result<Storage, String> {
         .transpose()
         .map_err(|err| err.as_string().unwrap())?
         .flatten()
-        .ok_or("Failed to retreive local store")?;
+        .ok_or("Failed to retrieve local store")?;
 
     Ok(store)
 }
@@ -151,7 +151,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn initalize_config() {
+    fn initialize_config() {
         load_config().unwrap();
     }
 }

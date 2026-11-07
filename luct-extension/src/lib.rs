@@ -152,7 +152,7 @@ impl Scanner {
     #[wasm_bindgen]
     pub async fn refresh_sths(&self) -> Result<(), String> {
         self.scanner
-            .refesh_all_sths()
+            .refresh_all_sths()
             .await
             .map_err(|err| err.to_string())?;
         Ok(())
@@ -207,7 +207,7 @@ impl Scanner {
     /// security context and will be intercepted by the browser
     fn is_recursion(&self, url: &str) -> Result<bool, String> {
         let url = Url::parse(url).map_err(|err| format!("{err}"))?;
-        let is_recusion = self.scanner.logs().any(|log| {
+        let is_recursion = self.scanner.logs().any(|log| {
             log.config().url().domain() == url.domain()
                 || log
                     .config()
@@ -217,7 +217,7 @@ impl Scanner {
                     == Some(url.domain())
         });
 
-        Ok(is_recusion)
+        Ok(is_recursion)
     }
 
     #[wasm_bindgen]
