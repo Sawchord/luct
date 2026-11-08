@@ -1,3 +1,14 @@
+# v0.2.3
+
+## Extension
+
+- Allow selecting OTLSP proxy support for SCT and STH independently
+- Delete expired reports
+
+## Node
+
+- STH checkpointing support
+
 # v0.2.2
 
 ## Extension
@@ -26,7 +37,7 @@
 
 ## CLI
 
-- Native oblivious TLS proxy support 
+- Native oblivious TLS proxy support
 - Configuration file for CLI
 
 ## Node
