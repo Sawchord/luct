@@ -187,7 +187,7 @@ mod test {
     async fn get_checkpoint() {
         test_tracing();
 
-        let client = get_client(SYC2027H2);
+        let client = get_sct_client(SYC2027H2);
         let _ = client.get_checkpoint().await.unwrap();
     }
 
@@ -206,7 +206,7 @@ mod test {
     async fn get_tile() {
         test_tracing();
 
-        let client = get_client(SYC2027H2);
+        let client = get_sct_client(SYC2027H2);
 
         let _ = client
             .get_tile(TileId::from_node_key(&NodeKey::leaf(1), 1000).unwrap())
@@ -217,7 +217,7 @@ mod test {
 
     // TODO: Test with parameters
 
-    fn get_client(log: &str) -> CtClient<OtlspClient> {
+    fn get_sct_client(log: &str) -> CtClient<OtlspClient> {
         let config: CtLogConfig = serde_json::from_str(log).unwrap();
         let client = OtlspClient::new(
             OtlspClientConfig::builder()
