@@ -35,7 +35,10 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionConfig {
     #[serde(default = "default_true")]
-    use_otlsp: bool,
+    sct_proxy: bool,
+
+    #[serde(default = "default_false")]
+    sth_proxy: bool,
 
     #[serde(default = "default_otlsp_url")]
     otlsp_url: String,
@@ -104,18 +107,31 @@ impl TryFrom<&ExtensionConfig> for ScannerConfig {
     }
 }
 
-impl TryFrom<&ExtensionConfig> for OtlspClientConfig {
-    type Error = String;
-
-    fn try_from(config: &ExtensionConfig) -> Result<Self, Self::Error> {
+impl ExtensionConfig {
+    pub(crate) fn sct_config(&self) -> Result<OtlspClientConfig, String> {
         let config = OtlspClientConfig::builder()
             .agent(USER_AGENT.to_string())
-            .proxy_url(if config.use_otlsp {
-                Some(Url::parse(&config.otlsp_url).map_err(|err| err.to_string())?)
+            .proxy_url(if self.sct_proxy {
+                Some(Url::parse(&self.otlsp_url).map_err(|err| err.to_string())?)
             } else {
                 None
             })
-            .connection_timeout(Duration::from_secs(config.otlsp_connection_timeout))
+            .connection_timeout(Duration::from_secs(self.otlsp_connection_timeout))
+            .build()
+            .map_err(|err| err.to_string())?;
+
+        Ok(config)
+    }
+
+    pub(crate) fn sth_config(&self) -> Result<OtlspClientConfig, String> {
+        let config = OtlspClientConfig::builder()
+            .agent(USER_AGENT.to_string())
+            .proxy_url(if self.sth_proxy {
+                Some(Url::parse(&self.otlsp_url).map_err(|err| err.to_string())?)
+            } else {
+                None
+            })
+            .connection_timeout(Duration::from_secs(self.otlsp_connection_timeout))
             .build()
             .map_err(|err| err.to_string())?;
 

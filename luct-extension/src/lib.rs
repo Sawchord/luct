@@ -4,12 +4,12 @@
 use crate::{browser_storage::BrowserStorage, config::load_config};
 use chrono::DateTime;
 use js_sys::{Array, Uint8Array};
-use luct_client::{deduplication::RequestDeduplicationClient, reqwest::ReqwestClient};
+use luct_client::deduplication::RequestDeduplicationClient;
 use luct_core::{
     CertificateChain as CertChain, Fingerprint, log_list::v3::LogList, store::MemoryStore,
     v1::SignedTreeHead,
 };
-use luct_otlsp::{OtlspClient, OtlspClientConfig};
+use luct_otlsp::OtlspClient;
 use luct_scanner::{Report, Scanner as CtScanner, ScannerConfig, ScannerImpl, Validated};
 use luct_store::{LruCacheStore, MetadataCacheStore};
 use std::sync::Arc;
@@ -33,7 +33,7 @@ struct ExtensionScannerImpl;
 
 impl ScannerImpl for ExtensionScannerImpl {
     type SctClient = RequestDeduplicationClient<OtlspClient>;
-    type SthClient = RequestDeduplicationClient<ReqwestClient>;
+    type SthClient = RequestDeduplicationClient<OtlspClient>;
     type ReportStore = LruCacheStore<BrowserStorage<Fingerprint, Report>>;
     type NonpersistentReportStore = MemoryStore<Fingerprint, Report>;
     type SthStore = MetadataCacheStore<BrowserStorage<u64, Validated<SignedTreeHead>>>;
@@ -107,10 +107,11 @@ impl Scanner {
 
         let extension_config = load_config()?;
         let scanner_config = ScannerConfig::try_from(&extension_config)?;
-        let otlsp_config = OtlspClientConfig::try_from(&extension_config)?;
 
-        let sct_client = RequestDeduplicationClient::new(OtlspClient::new(otlsp_config));
-        let sth_client = RequestDeduplicationClient::new(ReqwestClient::new(USER_AGENT));
+        let sct_client =
+            RequestDeduplicationClient::new(OtlspClient::new(extension_config.sct_config()?));
+        let sth_client =
+            RequestDeduplicationClient::new(OtlspClient::new(extension_config.sth_config()?));
 
         let report_cache =
             BrowserStorage::<Fingerprint, Report>::new_local_store("report".to_string())?;
