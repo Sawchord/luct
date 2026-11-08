@@ -34,9 +34,6 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionConfig {
-    #[serde(default = "default_false")]
-    validate_cert_chain: bool,
-
     #[serde(default = "default_true")]
     use_otlsp: bool,
 
@@ -98,7 +95,6 @@ impl TryFrom<&ExtensionConfig> for ScannerConfig {
 
     fn try_from(config: &ExtensionConfig) -> Result<Self, Self::Error> {
         let config = ScannerConfig::builder()
-            .validate_cert_chain(config.validate_cert_chain)
             .sth_freshness_threshold(Duration::from_secs(config.sth_freshness_threshold))
             .sth_update_threshold(Duration::from_secs(config.sth_update_threshold))
             .build()

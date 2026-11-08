@@ -8,14 +8,14 @@ use web_time::Duration;
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Builder)]
 #[builder(setter(into))]
 pub struct ScannerConfig {
-    /// Set whether the certificate chain should be validated by the scanner
-    ///
-    /// This is generally not necessary inside a browser, as the chain has already
-    /// been validated by the browser, but e.g. it might make sense when fetching the
-    /// chain from a file system.
-    #[builder(default)]
-    pub(crate) validate_cert_chain: bool,
-
+    // /// Set whether the certificate chain should be validated by the scanner
+    // ///
+    // /// This is generally not necessary inside a browser, as the chain has already
+    // /// been validated by the browser, but e.g. it might make sense when fetching the
+    // /// chain from a file system.
+    // TODO: This is currently unimplemented
+    //#[builder(default)]
+    //pub(crate) validate_cert_chain: bool,
     /// A STH that is younger than this time is considered fresh an STH that is older mature
     ///
     /// The policy evaluation requires a fresh STH to show that the log is still active
@@ -35,10 +35,5 @@ impl ScannerConfig {
     /// Return a [`ScannerConfigBuilder`]
     pub fn builder() -> ScannerConfigBuilder {
         ScannerConfigBuilder::default()
-    }
-
-    /// Returns `true`, if certificate chain validation is activated
-    pub fn validate_cert_chain(&self) -> bool {
-        self.validate_cert_chain
     }
 }
