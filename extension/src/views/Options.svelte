@@ -68,18 +68,28 @@
   </div>
   <div slot="content" class="card">
     <div class="card-content">
-      <label class="checkbox">
-        <input bind:checked={settings.validate_cert_chain} type="checkbox" />
-        Validate certificate chain
-      </label>
-
       <div class="field">
         <!-- svelte-ignore a11y-label-has-associated-control -->
-        <label class="label">Oblivious TLS proxy</label>
+        <label class="label">Use oblivious TLS proxy</label>
         <label class="checkbox">
-          <input bind:checked={settings.use_otlsp} type="checkbox" />
-          Use oblivious TLS proxy
+          <input bind:checked={settings.sct_proxy} type="checkbox" />
+          Proxy SCTs fetches
         </label>
+        <p class="help">
+          Signed certificate timestamps (SCTs) can leak to the log operator,
+          which websites you visit and are sensitive data.
+        </p>
+        <label class="checkbox">
+          <input bind:checked={settings.sth_proxy} type="checkbox" />
+          Proxy STHs fetches
+        </label>
+        <p class="help">
+          Signed tree heads (STHs) don't leak sensitive data to log operators,
+          other than the fact that you are using the log.
+        </p>
+
+        <!-- svelte-ignore a11y-label-has-associated-control -->
+        <label class="label">Oblivious TLS proxy url</label>
         <div>
           <div class="control">
             <input
