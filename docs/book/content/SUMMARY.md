@@ -5,7 +5,7 @@
   - [Certificate authorities](primer/ca.md)
   - [Certificate transparency logs](primer/logs.md)
   - [Signed certificate timestamps](primer/scts.md)
-- [Certificate auditing with luCT](audit.md)
+- [What is luCT](audit.md)
   - [Monitors and auditors](audit/introduction.md)
   - [Using luCT as an auditor](audit/luct.md)
 - [Security of luCT](security.md)
