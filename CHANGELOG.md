@@ -4,10 +4,15 @@
 
 - Allow selecting OTLSP proxy support for SCT and STH independently
 - Delete expired reports
+- Store data in memory only, if in incognito mode
 
 ## Node
 
 - STH checkpointing support
+
+## CLI
+
+- Include root store to display actual root
 
 # v0.2.2
 
