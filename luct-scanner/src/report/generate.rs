@@ -34,7 +34,16 @@ impl<S: ScannerImpl> Scanner<S> {
 
         let report = match self.get_report(cert_fp.clone(), is_nonpersistent).await {
             Some(report) => {
-                tracing::debug!("Found report for {} in cache", cert_fp.to_string());
+                let np_string = if is_nonpersistent {
+                    "non_persistent "
+                } else {
+                    ""
+                };
+                tracing::debug!(
+                    "Found report for {} in {}cache",
+                    cert_fp.to_string(),
+                    np_string
+                );
 
                 // We need to update the report. If we fail, this is likely because the report
                 // does no longer serialize, e.g. due to an update
@@ -55,8 +64,12 @@ impl<S: ScannerImpl> Scanner<S> {
         };
 
         let report = self.evaluate_policy(report, (self.time_source)());
-        if !is_nonpersistent && report.get_error().is_none() {
-            self.report_store.insert(cert_fp, report.clone()).await;
+        if report.get_error().is_none() {
+            if is_nonpersistent {
+                self.priv_report_store.insert(cert_fp, report.clone()).await
+            } else {
+                self.report_store.insert(cert_fp, report.clone()).await;
+            }
         }
 
         Ok(report)
