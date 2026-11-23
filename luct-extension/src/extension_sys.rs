@@ -13,7 +13,6 @@ pub fn browser() -> &'static JsThreadLocal<Browser> {
 extern "C" {
     pub type Browser;
 
-    #[cfg(feature = "firefox")]
     #[wasm_bindgen(thread_local_v2, js_name = browser)]
     static BROWSER: Browser;
 

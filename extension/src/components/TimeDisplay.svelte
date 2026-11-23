@@ -1,5 +1,5 @@
 <script>
-    export let time;
+  export let time;
 </script>
 
 <time>{new Date(time).toLocaleString()}</time>

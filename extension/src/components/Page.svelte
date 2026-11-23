@@ -1,24 +1,24 @@
 <div class="page-container">
-    {#if $$slots.header}
-        <header class="header header-slot">
-            <slot name="header"></slot>
-        </header>
-    {/if}
+  {#if $$slots.header}
+    <header class="header header-slot">
+      <slot name="header"></slot>
+    </header>
+  {/if}
 
-    {#if $$slots.footer}
-        <div class="content-slot">
-            <slot name="content"></slot>
-        </div>
-        <footer class="footer footer-slot">
-            <div class="content has-text-centered">
-                <slot name="footer"></slot>
-            </div>
-        </footer>
-    {:else}
-        <div class="">
-            <slot name="content"></slot>
-        </div>
-    {/if}
+  {#if $$slots.footer}
+    <div class="content-slot">
+      <slot name="content"></slot>
+    </div>
+    <footer class="footer footer-slot">
+      <div class="content has-text-centered">
+        <slot name="footer"></slot>
+      </div>
+    </footer>
+  {:else}
+    <div class="">
+      <slot name="content"></slot>
+    </div>
+  {/if}
 </div>
 
 <style lang="sass">

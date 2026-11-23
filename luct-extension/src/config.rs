@@ -18,7 +18,7 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
     {
         Some(settings) => serde_json::from_str::<ExtensionConfig>(&settings),
         None => {
-            tracing::info!("Could not find a config. Initalizing with default");
+            tracing::info!("Could not find a config. Initializing with default");
             let settings = serde_json::from_str::<ExtensionConfig>("{}").unwrap();
             Ok(settings)
         }
@@ -34,11 +34,11 @@ pub fn load_config() -> Result<ExtensionConfig, String> {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ExtensionConfig {
-    #[serde(default = "default_false")]
-    validate_cert_chain: bool,
-
     #[serde(default = "default_true")]
-    use_otlsp: bool,
+    sct_proxy: bool,
+
+    #[serde(default = "default_false")]
+    sth_proxy: bool,
 
     #[serde(default = "default_otlsp_url")]
     otlsp_url: String,
@@ -98,7 +98,6 @@ impl TryFrom<&ExtensionConfig> for ScannerConfig {
 
     fn try_from(config: &ExtensionConfig) -> Result<Self, Self::Error> {
         let config = ScannerConfig::builder()
-            .validate_cert_chain(config.validate_cert_chain)
             .sth_freshness_threshold(Duration::from_secs(config.sth_freshness_threshold))
             .sth_update_threshold(Duration::from_secs(config.sth_update_threshold))
             .build()
@@ -108,18 +107,31 @@ impl TryFrom<&ExtensionConfig> for ScannerConfig {
     }
 }
 
-impl TryFrom<&ExtensionConfig> for OtlspClientConfig {
-    type Error = String;
-
-    fn try_from(config: &ExtensionConfig) -> Result<Self, Self::Error> {
+impl ExtensionConfig {
+    pub(crate) fn sct_config(&self) -> Result<OtlspClientConfig, String> {
         let config = OtlspClientConfig::builder()
             .agent(USER_AGENT.to_string())
-            .proxy_url(if config.use_otlsp {
-                Some(Url::parse(&config.otlsp_url).map_err(|err| err.to_string())?)
+            .proxy_url(if self.sct_proxy {
+                Some(Url::parse(&self.otlsp_url).map_err(|err| err.to_string())?)
             } else {
                 None
             })
-            .connection_timeout(Duration::from_secs(config.otlsp_connection_timeout))
+            .connection_timeout(Duration::from_secs(self.otlsp_connection_timeout))
+            .build()
+            .map_err(|err| err.to_string())?;
+
+        Ok(config)
+    }
+
+    pub(crate) fn sth_config(&self) -> Result<OtlspClientConfig, String> {
+        let config = OtlspClientConfig::builder()
+            .agent(USER_AGENT.to_string())
+            .proxy_url(if self.sth_proxy {
+                Some(Url::parse(&self.otlsp_url).map_err(|err| err.to_string())?)
+            } else {
+                None
+            })
+            .connection_timeout(Duration::from_secs(self.otlsp_connection_timeout))
             .build()
             .map_err(|err| err.to_string())?;
 
@@ -133,7 +145,7 @@ pub fn browser_local_store() -> Result<Storage, String> {
         .transpose()
         .map_err(|err| err.as_string().unwrap())?
         .flatten()
-        .ok_or("Failed to retreive local store")?;
+        .ok_or("Failed to retrieve local store")?;
 
     Ok(store)
 }
@@ -151,7 +163,7 @@ mod tests {
     }
 
     #[wasm_bindgen_test]
-    fn initalize_config() {
+    fn initialize_config() {
         load_config().unwrap();
     }
 }

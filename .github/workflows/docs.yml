@@ -22,7 +22,7 @@ jobs:
           working_directory: docs/website
           output_dir: public
       - name: Upload artifacts
-        uses: actions/upload-pages-artifact@v3
+        uses: actions/upload-pages-artifact@v5
         with:
           path: docs/website/public
       - name: Deploy to GitHub Pages
